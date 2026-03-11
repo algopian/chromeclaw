@@ -34,7 +34,7 @@ const executeJsSchema = Type.Object({
   ),
   args: Type.Optional(
     Type.Record(Type.String(), Type.Unknown(), {
-      description: 'Arguments when executing — injected as top-level variables',
+      description: 'Arguments when executing — available as args.key (e.g. args.url, args.count)',
     }),
   ),
   files: Type.Optional(
@@ -138,6 +138,46 @@ const parseToolMetadata = (
 
   const promptHint = promptLines.length > 0 ? promptLines.join('\n') : undefined;
   return { name, description, params, path: filePath, promptHint };
+};
+
+// ── Auto-return helpers ─────────────────────────
+
+/**
+ * Strip leading single-line (//) and block comments from code.
+ */
+const stripLeadingComments = (code: string): string => {
+  let s = code;
+  while (true) {
+    s = s.trimStart();
+    if (s.startsWith('//')) {
+      const nl = s.indexOf('\n');
+      if (nl === -1) return '';
+      s = s.slice(nl + 1);
+    } else if (s.startsWith('/*')) {
+      const end = s.indexOf('*/');
+      if (end === -1) return '';
+      s = s.slice(end + 2);
+    } else {
+      break;
+    }
+  }
+  return s;
+};
+
+/**
+ * If `code` has no top-level `return` and starts with `(` (e.g. an IIFE),
+ * prepend `return ` so the value is captured by the outer async wrapper.
+ */
+const maybeAutoReturn = (code: string): string => {
+  const body = stripLeadingComments(code).trimStart();
+  // Already has a top-level return
+  if (body.startsWith('return ') || body.startsWith('return(')) return code;
+  // Bare IIFE — prepend return
+  if (body.startsWith('(')) {
+    const offset = code.length - body.length;
+    return code.slice(0, offset) + 'return ' + body;
+  }
+  return code;
 };
 
 // ── Sandbox tab management ──────────────────────
@@ -283,15 +323,9 @@ const executeCode = async (
     returnByValue: true,
   });
 
-  // 3. Build expression
-  let expression: string;
-  if (args && Object.keys(args).length > 0) {
-    const argsJson = JSON.stringify(args);
-    const paramNames = Object.keys(args).join(', ');
-    expression = `(async () => { const {${paramNames}} = ${argsJson}; ${code} })()`;
-  } else {
-    expression = `(async () => { ${code} })()`;
-  }
+  // 3. Build expression — always inject `args` variable
+  const argsJson = JSON.stringify(args ?? {});
+  let expression = `(async () => { const args = ${argsJson}; ${code} })()`;
 
   // If exportAs is set, wrap to store result on window.__modules
   if (exportAs) {
@@ -384,7 +418,7 @@ const executeCustomTool = async (
     if (!file) {
       return `Error: Workspace file not found: ${toolDef.path}`;
     }
-    return await executeCode(file.content, args);
+    return await executeCode(maybeAutoReturn(file.content), args);
   } catch (err) {
     return `Error executing custom tool "${toolDef.name}": ${err instanceof Error ? err.message : String(err)}`;
   }
@@ -403,7 +437,7 @@ const executeJs = async (args: ExecuteJsArgs): Promise<string> => {
         const agentId = await getActiveAgentId();
         const file = await getWorkspaceFile(args.path, agentId);
         if (!file) return `Error: Workspace file not found: ${args.path}`;
-        code = file.content;
+        code = maybeAutoReturn(file.content);
       } else if (args.code) {
         code = args.code;
       } else {
@@ -439,7 +473,8 @@ const executeJs = async (args: ExecuteJsArgs): Promise<string> => {
         parts.push(`
 // ── ${filePath} → __modules.${moduleName} ──
 window.__modules[${JSON.stringify(moduleName)}] = await (async function() {
-${file.content}
+const args = {};
+${maybeAutoReturn(file.content)}
 })();`);
       }
 
@@ -540,5 +575,7 @@ export {
   executeCode,
   executeCustomTool,
   parseToolMetadata,
+  maybeAutoReturn,
+  stripLeadingComments,
   _resetSandbox,
 };

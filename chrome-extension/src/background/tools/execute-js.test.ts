@@ -111,6 +111,8 @@ import {
   executeJs,
   executeCode,
   parseToolMetadata,
+  maybeAutoReturn,
+  stripLeadingComments,
   _resetSandbox,
 } from './execute-js';
 import type { AgentConfig } from '@storage-internal/chat-db';
@@ -184,7 +186,7 @@ describe('executeCode', () => {
   });
 
   it('passes arguments correctly', async () => {
-    const result = await executeCode('return x + y', { x: 10, y: 20 });
+    const result = await executeCode('return args.x + args.y', { x: 10, y: 20 });
     expect(result).toBe('30');
   });
 
@@ -414,7 +416,7 @@ describe('executeJs — execute', () => {
     await createWorkspaceFile({
       id: 'ws-script-1',
       name: 'tools/add.js',
-      content: 'return a + b',
+      content: 'return args.a + args.b',
       enabled: true,
       owner: 'agent',
       predefined: false,
@@ -780,5 +782,142 @@ describe('target tab (tabId)', () => {
     await expect(
       executeCode('return 1', undefined, undefined, 12345),
     ).rejects.toThrow('Tab 12345 not found');
+  });
+});
+
+// ── stripLeadingComments ────────────────────────
+
+describe('stripLeadingComments', () => {
+  it('strips single-line comments', () => {
+    expect(stripLeadingComments('// hello\n(foo)()')).toBe('(foo)()');
+  });
+
+  it('strips block comments', () => {
+    expect(stripLeadingComments('/* block */\n(foo)()')).toBe('(foo)()');
+  });
+
+  it('strips multiple leading comments', () => {
+    expect(stripLeadingComments('// line 1\n// line 2\n/* block */\n(foo)()')).toBe('(foo)()');
+  });
+
+  it('returns code unchanged when no leading comments', () => {
+    expect(stripLeadingComments('const x = 1;')).toBe('const x = 1;');
+  });
+});
+
+// ── maybeAutoReturn ─────────────────────────────
+
+describe('maybeAutoReturn', () => {
+  it('prepends return to IIFE', () => {
+    const code = '(() => { return { action: "test" }; })()';
+    const result = maybeAutoReturn(code);
+    expect(result).toBe('return (() => { return { action: "test" }; })()');
+  });
+
+  it('prepends return to IIFE with trailing semicolon', () => {
+    const code = '(() => { return 42; })();';
+    const result = maybeAutoReturn(code);
+    expect(result).toBe('return (() => { return 42; })();');
+  });
+
+  it('preserves leading comments and inserts return correctly', () => {
+    const code = '// @tool test\n(() => { return 1; })()';
+    const result = maybeAutoReturn(code);
+    expect(result).toBe('// @tool test\nreturn (() => { return 1; })()');
+  });
+
+  it('does NOT modify multi-statement code', () => {
+    const code = 'const x = 1;\nreturn x;';
+    expect(maybeAutoReturn(code)).toBe(code);
+  });
+
+  it('does NOT modify code already starting with return', () => {
+    const code = 'return 42;';
+    expect(maybeAutoReturn(code)).toBe(code);
+  });
+
+  it('does NOT modify code with top-level return in body', () => {
+    const code = 'const x = fetch("url");\nreturn x;';
+    expect(maybeAutoReturn(code)).toBe(code);
+  });
+
+  it('handles function IIFE', () => {
+    const code = '(function() { return "hi"; })()';
+    const result = maybeAutoReturn(code);
+    expect(result).toBe('return (function() { return "hi"; })()');
+  });
+});
+
+// ── Auto-return integration ─────────────────────
+
+describe('auto-return integration', () => {
+  it('workspace file with bare IIFE returns its value (not undefined)', async () => {
+    const now = Date.now();
+    await createWorkspaceFile({
+      id: 'ws-iife-1',
+      name: 'tools/iife.js',
+      content: '(() => { return { action: "test" }; })()',
+      enabled: true,
+      owner: 'agent',
+      predefined: false,
+      createdAt: now,
+      updatedAt: now,
+      agentId: TEST_AGENT_ID,
+    });
+
+    const result = await executeJs({
+      action: 'execute',
+      path: 'tools/iife.js',
+    });
+    const parsed = JSON.parse(result);
+    expect(parsed).toEqual({ action: 'test' });
+  });
+
+  it('bundle action with IIFE files captures module values', async () => {
+    const now = Date.now();
+    await createWorkspaceFile({
+      id: 'ws-bundle-iife',
+      name: 'bot/iife-mod.js',
+      content: '(() => { return { value: 99 }; })()',
+      enabled: true,
+      owner: 'agent',
+      predefined: false,
+      createdAt: now,
+      updatedAt: now,
+      agentId: TEST_AGENT_ID,
+    });
+
+    const result = await executeJs({
+      action: 'bundle',
+      files: ['bot/iife-mod.js'],
+      code: 'return window.__modules.iife_mod',
+    });
+
+    const parsed = JSON.parse(result);
+    expect(parsed).toEqual({ value: 99 });
+  });
+});
+
+// ── args always available ───────────────────────
+
+describe('args always available', () => {
+  it('args variable is available even with no args passed', async () => {
+    const result = await executeCode('return typeof args');
+    expect(result).toBe('object');
+  });
+
+  it('args is empty object when no args passed', async () => {
+    const result = await executeCode('return JSON.stringify(args)');
+    expect(result).toBe('{}');
+  });
+
+  it('args variable contains passed arguments', async () => {
+    const result = await executeCode('return args.x + args.y', { x: 3, y: 7 });
+    expect(result).toBe('10');
+  });
+
+  it('args variable contains all passed arguments', async () => {
+    const result = await executeCode('return args.x + args.y', { x: 5, y: 15 });
+    expect(result).toBe('20');
   });
 });
