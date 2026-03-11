@@ -53,6 +53,7 @@ export {
   listAgentMemoryFiles,
   updateWorkspaceFile,
   deleteWorkspaceFile,
+  deleteWorkspaceFilesByPrefix,
   getEnabledWorkspaceFiles,
   seedPredefinedWorkspaceFiles,
   bulkPutMemoryChunks,

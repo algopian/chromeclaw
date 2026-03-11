@@ -1,8 +1,8 @@
 /**
  * Import a skill from a .zip file.
  *
- * Extracts SKILL.md from the zip, validates its frontmatter, and returns
- * the workspace file path and content for the caller to create.
+ * Extracts all files from the zip, validates SKILL.md frontmatter, and returns
+ * the skill directory and all file contents for the caller to create.
  */
 
 import { parseSkillFrontmatter } from './skill-parser.js';
@@ -16,10 +16,15 @@ const toKebabCase = (str: string): string =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 
+interface SkillImportFile {
+  path: string; // relative path under skills/{name}/, e.g. "SKILL.md", "data/example.json"
+  content: string;
+}
+
 interface SkillImportResult {
   name: string;
-  path: string;
-  content: string;
+  skillDir: string; // e.g. "skills/my-skill"
+  files: SkillImportFile[];
 }
 
 /**
@@ -27,6 +32,8 @@ interface SkillImportResult {
  *
  * The zip must contain exactly one SKILL.md at the root or inside a single
  * top-level directory (e.g., `my-skill/SKILL.md`).
+ *
+ * Returns all files from the ZIP with paths relative to the skill directory.
  *
  * @throws Error on validation failure
  */
@@ -64,8 +71,8 @@ const importSkillFromZip = async (file: File): Promise<SkillImportResult> => {
     throw new Error('Failed to read SKILL.md from zip.');
   }
 
-  const content = await zipFile.async('string');
-  const metadata = parseSkillFrontmatter(content);
+  const skillMdContent = await zipFile.async('string');
+  const metadata = parseSkillFrontmatter(skillMdContent);
 
   if (!metadata) {
     throw new Error('SKILL.md has invalid or missing frontmatter. Required: name, description.');
@@ -78,12 +85,34 @@ const importSkillFromZip = async (file: File): Promise<SkillImportResult> => {
     throw new Error('Could not derive skill name from zip contents or frontmatter.');
   }
 
+  const skillDir = `skills/${skillName}`;
+
+  // Extract all non-directory files from the zip
+  const files: SkillImportFile[] = [];
+  const filePromises: Promise<void>[] = [];
+
+  zip.forEach((relativePath, zipEntry) => {
+    if (zipEntry.dir) return;
+    filePromises.push(
+      zipEntry.async('string').then(content => {
+        // Normalize path: strip top-level directory prefix if present
+        let normalizedPath = relativePath;
+        if (entry.dir && relativePath.startsWith(entry.dir + '/')) {
+          normalizedPath = relativePath.slice(entry.dir.length + 1);
+        }
+        files.push({ path: normalizedPath, content });
+      }),
+    );
+  });
+
+  await Promise.all(filePromises);
+
   return {
     name: metadata.name,
-    path: `skills/${skillName}/SKILL.md`,
-    content,
+    skillDir,
+    files,
   };
 };
 
-export type { SkillImportResult };
+export type { SkillImportResult, SkillImportFile };
 export { importSkillFromZip };

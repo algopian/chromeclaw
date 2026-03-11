@@ -317,6 +317,20 @@ const deleteWorkspaceFile = async (id: string): Promise<void> => {
   await chatDb.workspaceFiles.delete(id);
 };
 
+const deleteWorkspaceFilesByPrefix = async (
+  namePrefix: string,
+  agentId?: string,
+): Promise<number> => {
+  const all = agentId
+    ? await chatDb.workspaceFiles.where('agentId').equals(agentId).toArray()
+    : await chatDb.workspaceFiles.toArray();
+  const toDelete = all.filter(f => f.name.startsWith(namePrefix) && !f.predefined);
+  if (toDelete.length > 0) {
+    await chatDb.workspaceFiles.bulkDelete(toDelete.map(f => f.id));
+  }
+  return toDelete.length;
+};
+
 const getEnabledWorkspaceFiles = async (agentId?: string): Promise<DbWorkspaceFile[]> => {
   const all = agentId
     ? await chatDb.workspaceFiles.where('agentId').equals(agentId).toArray()
@@ -553,6 +567,7 @@ export {
   listAgentMemoryFiles,
   updateWorkspaceFile,
   deleteWorkspaceFile,
+  deleteWorkspaceFilesByPrefix,
   getEnabledWorkspaceFiles,
   seedPredefinedWorkspaceFiles,
   bulkPutMemoryChunks,
