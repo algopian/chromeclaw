@@ -29,8 +29,9 @@ Create a workspace file (e.g. \`tools/my-tool.js\`) using the \`write\` tool:
 // @param query string "The search term"
 // @param limit number "Max results to return"
 
-// Tool body — runs as an async IIFE. Args are injected as top-level variables.
+// Tool body — runs inside an async wrapper. Args are available via the \`args\` object.
 const results = [];
+const query = args.query;
 // ... implementation ...
 return JSON.stringify(results);
 \`\`\`
@@ -70,6 +71,11 @@ execute_javascript({ action: "unregister", path: "tools/my-tool.js" })
 - **Sandbox (default)**: Runs in an isolated tab — no access to page DOM or cookies. Safer.
 - **Browser tab**: Pass \`tabId\` to run in a specific tab's context (DOM access, cookies, etc.).
   Get tab IDs with \`browser({ action: 'tabs' })\`.
+- **Args**: Available as \`args.paramName\` (e.g. \`args.query\`, \`args.limit\`). Always an object,
+  even if no params are passed.
+- **Auto-return**: When executing a workspace file (via \`path\` or as a registered custom tool),
+  code starting with \`(\` (e.g. an IIFE) automatically gets \`return\` prepended so the value
+  is captured. Inline \`code\` does not get auto-return — use explicit \`return\`.
 - **Shared state**: \`window.__modules\` persists across calls in the same tab. Use \`exportAs\`
   to store a return value for later use.
 - **Console capture**: \`console.log/warn/error\` output is captured and returned with results.
@@ -97,7 +103,7 @@ is derived from the filename (e.g. \`api-client.js\` becomes \`api_client\`).
 // @description Count words in the given text
 // @param text string "The text to count words in"
 
-const words = text.trim().split(/\\s+/).filter(Boolean);
+const words = args.text.trim().split(/\\s+/).filter(Boolean);
 return JSON.stringify({ count: words.length });
 \`\`\`
 
