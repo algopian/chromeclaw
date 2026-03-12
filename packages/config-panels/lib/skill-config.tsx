@@ -5,7 +5,6 @@ import {
   listWorkspaceFiles,
   createWorkspaceFile,
   updateWorkspaceFile,
-  deleteWorkspaceFile,
   deleteWorkspaceFilesByPrefix,
 } from '@extension/storage';
 import {
@@ -20,7 +19,6 @@ import {
 } from '@extension/ui';
 import {
   ZapIcon,
-  PlusIcon,
   UploadIcon,
   TrashIcon,
   AlertTriangleIcon,
@@ -29,7 +27,7 @@ import { nanoid } from 'nanoid';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { DbWorkspaceFile } from '@extension/storage';
-import { SKILL_TEMPLATE, getSkillDisplayName } from './skill-display-utils.js';
+import { getSkillDisplayName } from './skill-display-utils.js';
 import type { SkillWithMeta } from './skill-display-utils.js';
 import { ConfirmDialog, emptyConfirm } from './confirm-dialog.js';
 import type { ConfirmDialogState } from './confirm-dialog.js';
@@ -113,38 +111,6 @@ const SkillConfig = ({ agentId, onMutate }: SkillConfigProps) => {
     [skills, agentId, notifyMutate, t],
   );
 
-  const handleNewSkill = useCallback(async () => {
-    const existing = await listWorkspaceFiles(agentId);
-    const existingNames = new Set(existing.map(f => f.name));
-    let skillName = 'untitled';
-    let path = `skills/${skillName}/SKILL.md`;
-    let counter = 2;
-    while (existingNames.has(path)) {
-      skillName = `untitled-${counter}`;
-      path = `skills/${skillName}/SKILL.md`;
-      counter++;
-    }
-    const displayName = skillName
-      .split('-')
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' ');
-    const template = SKILL_TEMPLATE.replace('name: Untitled', `name: ${displayName}`);
-    const now = Date.now();
-    const file: DbWorkspaceFile = {
-      id: nanoid(),
-      name: path,
-      content: template,
-      enabled: true,
-      owner: 'user',
-      predefined: false,
-      createdAt: now,
-      updatedAt: now,
-      ...(agentId ? { agentId } : {}),
-    };
-    await createWorkspaceFile(file);
-    await notifyMutate();
-  }, [agentId, notifyMutate]);
-
   const handleImportSkill = useCallback(() => {
     importInputRef.current?.click();
   }, []);
@@ -192,12 +158,11 @@ const SkillConfig = ({ agentId, onMutate }: SkillConfigProps) => {
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium">{t('skill_installedSkills')}</h3>
         <div className="flex gap-2">
-          <Button onClick={handleImportSkill} size="sm" variant="outline">
-            <UploadIcon className="mr-1 size-4" /> {t('skill_importZip')}
-          </Button>
-          <Button onClick={handleNewSkill} size="sm" variant="outline">
-            <PlusIcon className="mr-1 size-4" /> {t('skill_newSkill')}
-          </Button>
+          {agentId && (
+            <Button onClick={handleImportSkill} size="sm" variant="outline">
+              <UploadIcon className="mr-1 size-4" /> {t('skill_importZip')}
+            </Button>
+          )}
         </div>
       </div>
       {loading ? (

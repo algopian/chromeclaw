@@ -1,6 +1,6 @@
 {
   "name": "@extension/offscreen-channels",
-  "version": "0.8.1",
+  "version": "1.7.0",
   "description": "chrome extension - offscreen document for channel workers",
   "type": "module",
   "private": true,
