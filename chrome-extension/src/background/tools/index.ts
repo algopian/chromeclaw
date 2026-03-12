@@ -64,7 +64,6 @@ import {
   executeRename,
 } from './workspace';
 import { createLogger } from '../logging/logger-buffer';
-import { DOCUMENTS_ENABLED } from '@extension/env';
 import { toolConfigStorage, activeAgentStorage, getAgent } from '@extension/storage';
 import { Type } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
@@ -214,7 +213,7 @@ const getAgentTools = async (opts?: {
     });
   }
 
-  if (DOCUMENTS_ENABLED && isEnabled('create_document')) {
+  if (isEnabled('create_document')) {
     tools.push({
       name: 'create_document',
       label: 'Create Document',

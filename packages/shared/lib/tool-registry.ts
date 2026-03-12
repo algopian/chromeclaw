@@ -1,5 +1,3 @@
-import { DOCUMENTS_ENABLED } from '@extension/env';
-
 /**
  * Tool registry metadata — shared between background SW and UI.
  *
@@ -461,15 +459,10 @@ Summarize the key points naturally — do not just say "the subagent finished."`
   },
 ] as const;
 
-const filteredToolRegistryMeta: readonly ToolGroupMeta[] = toolRegistryMeta.filter(g => {
-  if (g.groupKey === 'documents' && !DOCUMENTS_ENABLED) return false;
-  return true;
-});
-
 /** Build default enabledTools map from registry metadata (keyed by tool name). */
 const getDefaultEnabledTools = (): Record<string, boolean> => {
   const defaults: Record<string, boolean> = {};
-  for (const group of filteredToolRegistryMeta) {
+  for (const group of toolRegistryMeta) {
     for (const tool of group.tools) {
       defaults[tool.name] = tool.defaultEnabled;
     }
@@ -492,7 +485,7 @@ const resolveToolPromptHints = (
   availableTools?: Set<string>,
 ): string[] => {
   const hints: string[] = [];
-  for (const group of filteredToolRegistryMeta) {
+  for (const group of toolRegistryMeta) {
     if (!group.promptHint) continue;
     if (group.tools.some(t => enabledTools[t.name] && (!availableTools || availableTools.has(t.name))))
       hints.push(group.promptHint);
@@ -521,7 +514,7 @@ const resolveToolListings = (
   availableTools?: Set<string>,
 ): ToolListingEntry[] => {
   const listings: ToolListingEntry[] = [];
-  for (const group of filteredToolRegistryMeta) {
+  for (const group of toolRegistryMeta) {
     for (const t of group.tools) {
       if (enabledTools[t.name] && (!availableTools || availableTools.has(t.name)))
         listings.push({ name: t.name, description: t.description });
@@ -539,7 +532,7 @@ const resolveToolListings = (
 
 export type { ToolMeta, ToolGroupMeta, ToolPromptHintSource, ToolListingEntry };
 export {
-  filteredToolRegistryMeta as toolRegistryMeta,
+  toolRegistryMeta,
   getDefaultEnabledTools,
   resolveToolPromptHints,
   resolveToolListings,

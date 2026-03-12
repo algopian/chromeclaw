@@ -33,7 +33,7 @@ const ConfigPanelContent = ({ activeTab, onOpenSession }: { activeTab: ConfigTab
     {activeTab === 'channels' && (
       <>
         <TelegramConfig />
-        {process.env.CEB_ENABLE_WHATSAPP !== 'false' && <WhatsAppConfig />}
+        <WhatsAppConfig />
       </>
     )}
     {activeTab === 'cron' && <CronConfig />}

@@ -1,4 +1,3 @@
-import { DOCUMENTS_ENABLED } from '@extension/env';
 import { createStorage, StorageEnum } from '../base/index.js';
 
 type WebSearchProvider = 'tavily' | 'browser';
@@ -46,7 +45,7 @@ const defaultDeepResearchConfig: DeepResearchConfig = {
 const defaultEnabledTools: Record<string, boolean> = {
   web_search: true,
   web_fetch: true,
-  create_document: DOCUMENTS_ENABLED,
+  create_document: true,
   browser: true,
   write: true,
   read: true,

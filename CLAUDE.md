@@ -136,8 +136,6 @@ CEB_EXAMPLE=example_env
 CEB_DEV_LOCALE=                  # Force locale for dev
 CEB_CI=                          # CI mode flag
 CEB_GOOGLE_CLIENT_ID=            # Google OAuth2 client ID (for Gmail/Calendar/Drive)
-CEB_ENABLE_DOCUMENTS=false       # Enable documents tool
-CEB_ENABLE_WHATSAPP=false        # Enable WhatsApp channel
 CEB_ENABLE_WEBGPU_MODELS=false   # Enable WebGPU local models
 ```
 
