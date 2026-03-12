@@ -343,8 +343,6 @@ Set in `.env` (copied from `.example.env` on install):
 | Variable | Description |
 |----------|-------------|
 | `CEB_GOOGLE_CLIENT_ID` | Google OAuth2 client ID (for Gmail/Calendar/Drive tools) |
-| `CEB_ENABLE_DOCUMENTS` | Enable documents tool (`false` by default) |
-| `CEB_ENABLE_WHATSAPP` | Enable WhatsApp channel (`false` by default) |
 | `CEB_ENABLE_WEBGPU_MODELS` | Enable WebGPU local models (`false` by default) |
 | `CEB_DEV_LOCALE` | Force locale for development |
 | `CEB_CI` | CI mode flag |
@@ -370,7 +368,9 @@ MIT — see [LICENSE](LICENSE).
 
 ### Third-party code
 
-This repository includes a bundled fork of [Baileys](https://github.com/WhiskeySockets/Baileys) (`packages/baileys/`), a TypeScript/JavaScript API for WhatsApp Web by WhiskeySockets. Baileys is licensed under the [MIT License](https://github.com/WhiskeySockets/Baileys/blob/master/LICENSE).
+- [Baileys](https://github.com/WhiskeySockets/Baileys) (`packages/baileys/`) — TypeScript/JavaScript API for WhatsApp Web by WhiskeySockets. Licensed under the [MIT License](https://github.com/WhiskeySockets/Baileys/blob/master/LICENSE).
+- [Vercel AI Chatbot](https://github.com/vercel/chatbot) — Chat UI components and patterns. Licensed under the [Apache License 2.0](https://github.com/vercel/chatbot/blob/main/LICENSE).
+- [Chrome Extension Boilerplate React Vite](https://github.com/nicedreamdo/nicedreamdo) — Extension scaffolding with React, Vite, and Turborepo by nicedreamdo. Licensed under the [MIT License](https://github.com/nicedreamdo/nicedreamdo/blob/main/LICENSE).
 
 ## Star History
 
