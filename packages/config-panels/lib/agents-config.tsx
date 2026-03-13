@@ -16,6 +16,7 @@ import {
   updateAgent,
   deleteAgent,
   seedPredefinedWorkspaceFiles,
+  copyGlobalSkillsToAgent,
   activeAgentStorage,
   toolConfigStorage,
 } from '@extension/storage';
@@ -1392,6 +1393,7 @@ const AgentsConfig = () => {
         updatedAt: now,
       });
       await seedPredefinedWorkspaceFiles('main');
+      await copyGlobalSkillsToAgent('main');
       agentList = await listAgents();
     }
     setAgents(agentList);
@@ -1462,6 +1464,7 @@ const AgentsConfig = () => {
     };
     await createAgent(newAgent);
     await seedPredefinedWorkspaceFiles(id);
+    await copyGlobalSkillsToAgent(id);
     setSelectedAgentId(id);
     await loadAgents();
     await loadFiles();

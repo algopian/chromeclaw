@@ -51,6 +51,8 @@ import {
   pruneOldSessions,
   reapCronSessions,
   _resetReaperThrottle,
+  copyGlobalSkillsToAgent,
+  copyGlobalSkillsToAllAgents,
 } from './chat-storage';
 import { describe, it, expect, beforeEach } from 'vitest';
 import type {
@@ -1077,16 +1079,16 @@ describe('Workspace File CRUD', () => {
 describe('seedPredefinedWorkspaceFiles', () => {
   it('seeds all predefined files for an agent', async () => {
     await seedPredefinedWorkspaceFiles('main');
-    // Agent-scoped: AGENTS, SOUL, USER, IDENTITY, TOOLS, MEMORY (6 non-skill files)
+    // Agent-scoped: all predefined files including skills (6 non-skill + 3 skills = 9)
     const agentFiles = await listWorkspaceFiles('main');
-    expect(agentFiles.length).toBeGreaterThanOrEqual(6);
+    expect(agentFiles.length).toBeGreaterThanOrEqual(9);
     expect(agentFiles.every(f => f.predefined)).toBe(true);
     expect(agentFiles.every(f => f.agentId === 'main')).toBe(true);
-    // Global: predefined skill files (daily-journal)
-    const globalSkills = await listSkillFiles();
-    expect(globalSkills.length).toBeGreaterThanOrEqual(1);
-    expect(globalSkills.every(f => f.predefined)).toBe(true);
-    expect(globalSkills.every(f => !f.agentId || f.agentId === '')).toBe(true);
+    // Skills are now agent-scoped, not global
+    const agentSkills = await listSkillFiles('main');
+    expect(agentSkills.length).toBeGreaterThanOrEqual(1);
+    expect(agentSkills.every(f => f.predefined)).toBe(true);
+    expect(agentSkills.every(f => f.agentId === 'main')).toBe(true);
   });
 
   it('does not re-create already existing predefined files', async () => {
@@ -1507,5 +1509,136 @@ describe('reapCronSessions', () => {
 
     const reaped = await reapCronSessions();
     expect(reaped).toBe(0);
+  });
+});
+
+describe('copyGlobalSkillsToAgent', () => {
+  it('copies non-predefined global skills to agent', async () => {
+    // Create global (no agentId) skill files
+    await createWorkspaceFile({
+      id: 'global-skill-1',
+      name: 'skills/my-skill/SKILL.md',
+      content: '---\nname: My Skill\n---\nHello',
+      enabled: true,
+      owner: 'user',
+      predefined: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    await createWorkspaceFile({
+      id: 'global-skill-2',
+      name: 'skills/my-skill/helper.md',
+      content: 'Helper content',
+      enabled: true,
+      owner: 'user',
+      predefined: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    await copyGlobalSkillsToAgent('agent-1');
+
+    const agentFiles = await chatDb.workspaceFiles.where('agentId').equals('agent-1').toArray();
+    expect(agentFiles).toHaveLength(2);
+    expect(agentFiles.map(f => f.name).sort()).toEqual([
+      'skills/my-skill/SKILL.md',
+      'skills/my-skill/helper.md',
+    ]);
+    expect(agentFiles[0]!.predefined).toBe(false);
+  });
+
+  it('skips already-existing agent skills (idempotent)', async () => {
+    await createWorkspaceFile({
+      id: 'global-skill-3',
+      name: 'skills/existing/SKILL.md',
+      content: 'Global version',
+      enabled: true,
+      owner: 'user',
+      predefined: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    // Agent already has this skill
+    await createWorkspaceFile({
+      id: 'agent-skill-3',
+      name: 'skills/existing/SKILL.md',
+      content: 'Agent version',
+      enabled: false,
+      owner: 'user',
+      predefined: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      agentId: 'agent-1',
+    });
+
+    await copyGlobalSkillsToAgent('agent-1');
+
+    const agentFiles = await chatDb.workspaceFiles.where('agentId').equals('agent-1').toArray();
+    expect(agentFiles).toHaveLength(1);
+    expect(agentFiles[0]!.content).toBe('Agent version');
+    expect(agentFiles[0]!.enabled).toBe(false);
+  });
+
+  it('does nothing when no global skills exist', async () => {
+    // Create a predefined global skill (should be ignored)
+    await createWorkspaceFile({
+      id: 'predefined-skill',
+      name: 'skills/daily-journal/SKILL.md',
+      content: 'Predefined',
+      enabled: true,
+      owner: 'user',
+      predefined: true,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    await copyGlobalSkillsToAgent('agent-1');
+
+    const agentFiles = await chatDb.workspaceFiles.where('agentId').equals('agent-1').toArray();
+    expect(agentFiles).toHaveLength(0);
+  });
+});
+
+describe('copyGlobalSkillsToAllAgents', () => {
+  it('copies global skills to all existing agents', async () => {
+    // Create two agents
+    const now = Date.now();
+    await createAgent({
+      id: 'agent-a',
+      name: 'Agent A',
+      identity: { displayName: 'A' },
+      isDefault: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await createAgent({
+      id: 'agent-b',
+      name: 'Agent B',
+      identity: { displayName: 'B' },
+      isDefault: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create a global skill
+    await createWorkspaceFile({
+      id: 'global-skill-1',
+      name: 'skills/test-skill/SKILL.md',
+      content: '---\nname: Test\n---\nHello',
+      enabled: true,
+      owner: 'user',
+      predefined: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    await copyGlobalSkillsToAllAgents();
+
+    const agentAFiles = await chatDb.workspaceFiles.where('agentId').equals('agent-a').toArray();
+    const agentBFiles = await chatDb.workspaceFiles.where('agentId').equals('agent-b').toArray();
+    expect(agentAFiles).toHaveLength(1);
+    expect(agentAFiles[0].name).toBe('skills/test-skill/SKILL.md');
+    expect(agentBFiles).toHaveLength(1);
+    expect(agentBFiles[0].name).toBe('skills/test-skill/SKILL.md');
   });
 });

@@ -57,6 +57,8 @@ export {
   deleteWorkspaceFilesByPrefix,
   getEnabledWorkspaceFiles,
   seedPredefinedWorkspaceFiles,
+  copyGlobalSkillsToAgent,
+  copyGlobalSkillsToAllAgents,
   bulkPutMemoryChunks,
   deleteMemoryChunksByFileId,
   deleteMemoryChunksByChatId,

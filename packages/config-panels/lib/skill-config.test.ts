@@ -34,12 +34,11 @@ describe('SkillConfig — skill list operations', () => {
   });
 
   it('global page shows only unscoped skills', async () => {
-    // Seeded predefined skills (daily-journal) are global
+    // Predefined skills are now agent-scoped, so global starts empty
     const globalSkills = await listSkillFiles();
-    const initialCount = globalSkills.length;
-    expect(initialCount).toBeGreaterThanOrEqual(1);
+    expect(globalSkills.length).toBe(0);
 
-    // Create another global (unscoped) skill
+    // Create a global (unscoped) skill
     const now = Date.now();
     await createWorkspaceFile({
       id: 'global-skill',
@@ -53,7 +52,7 @@ describe('SkillConfig — skill list operations', () => {
     });
 
     const updated = await listSkillFiles();
-    expect(updated.length).toBe(initialCount + 1);
+    expect(updated.length).toBe(1);
     expect(updated.find(f => f.id === 'global-skill')).toBeDefined();
 
     // Agent-scoped skills should NOT appear in global query
@@ -70,7 +69,7 @@ describe('SkillConfig — skill list operations', () => {
     });
 
     const afterAgent = await listSkillFiles();
-    expect(afterAgent.length).toBe(initialCount + 1);
+    expect(afterAgent.length).toBe(1);
   });
 
   it('displays skill name and description from frontmatter', async () => {
@@ -115,9 +114,9 @@ describe('SkillConfig — skill list operations', () => {
     };
     await createWorkspaceFile(file);
 
-    // Global skills: seeded daily-journal + skill-creator + tool-creator + the new one
+    // Global skills: predefined skills are now agent-scoped, so only the new one is global
     const globalSkills = await listSkillFiles();
-    expect(globalSkills.length).toBe(4);
+    expect(globalSkills.length).toBe(1);
     const created = globalSkills.find(f => f.id === 'test-new-skill');
     expect(created).toBeDefined();
     expect(isSkillFile(created!.name)).toBe(true);

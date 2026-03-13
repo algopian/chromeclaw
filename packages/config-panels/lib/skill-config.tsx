@@ -6,6 +6,7 @@ import {
   createWorkspaceFile,
   updateWorkspaceFile,
   deleteWorkspaceFilesByPrefix,
+  copyGlobalSkillsToAllAgents,
 } from '@extension/storage';
 import {
   Button,
@@ -144,6 +145,9 @@ const SkillConfig = ({ agentId, onMutate }: SkillConfigProps) => {
           };
           await createWorkspaceFile(wsFile);
         }
+        if (!agentId) {
+          await copyGlobalSkillsToAllAgents();
+        }
         await notifyMutate();
         toast.success(t('skill_importedSkill', result.name));
       } catch (err) {
@@ -158,11 +162,9 @@ const SkillConfig = ({ agentId, onMutate }: SkillConfigProps) => {
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium">{t('skill_installedSkills')}</h3>
         <div className="flex gap-2">
-          {agentId && (
-            <Button onClick={handleImportSkill} size="sm" variant="outline">
-              <UploadIcon className="mr-1 size-4" /> {t('skill_importZip')}
-            </Button>
-          )}
+          <Button onClick={handleImportSkill} size="sm" variant="outline">
+            <UploadIcon className="mr-1 size-4" /> {t('skill_importZip')}
+          </Button>
         </div>
       </div>
       {loading ? (

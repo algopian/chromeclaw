@@ -21,6 +21,7 @@ import {
   createAgent,
   updateAgent,
   seedPredefinedWorkspaceFiles,
+  copyGlobalSkillsToAgent,
   listSkillFiles,
   updateWorkspaceFile,
 } from '@extension/storage';
@@ -484,6 +485,7 @@ const Step3AgentSetup = ({
         };
         await createAgent(agent);
         await seedPredefinedWorkspaceFiles('main');
+        await copyGlobalSkillsToAgent('main');
       } else {
         await updateAgent(agent.id, {
           name: agentName.trim() || agent.name,
@@ -707,6 +709,7 @@ const Step5SkillsSetup = ({
           const existing = await listSkillFiles('main');
           if (existing.length === 0) {
             await seedPredefinedWorkspaceFiles(agent.id);
+            await copyGlobalSkillsToAgent(agent.id);
           }
         }
 

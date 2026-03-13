@@ -6,7 +6,10 @@ export const withUI = (tailwindConfig: Config): Config =>
   deepmerge(
     {
       presets: [globalConfig],
-      content: ['../../packages/ui/lib/**/*.tsx'],
+      content: [
+        '../../packages/ui/lib/**/*.tsx',
+        '../../node_modules/streamdown/dist/*.js',
+      ],
     } as Config,
     tailwindConfig,
   );

@@ -25,33 +25,33 @@ describe('parseSlashCommand', () => {
   });
 
   it('parses known commands', () => {
-    expect(parseSlashCommand('/help')).toEqual({ command: 'help', args: '' });
     expect(parseSlashCommand('/clear')).toEqual({ command: 'clear', args: '' });
     expect(parseSlashCommand('/compact')).toEqual({ command: 'compact', args: '' });
   });
 
   it('is case-insensitive', () => {
-    expect(parseSlashCommand('/HELP')).toEqual({ command: 'help', args: '' });
-    expect(parseSlashCommand('/Help')).toEqual({ command: 'help', args: '' });
+    expect(parseSlashCommand('/CLEAR')).toEqual({ command: 'clear', args: '' });
+    expect(parseSlashCommand('/Clear')).toEqual({ command: 'clear', args: '' });
   });
 
   it('returns null for unknown commands', () => {
     expect(parseSlashCommand('/unknown')).toBeNull();
     expect(parseSlashCommand('/foo')).toBeNull();
+    expect(parseSlashCommand('/help')).toBeNull();
   });
 
   it('handles leading and trailing whitespace', () => {
-    expect(parseSlashCommand('  /help  ')).toEqual({ command: 'help', args: '' });
+    expect(parseSlashCommand('  /clear  ')).toEqual({ command: 'clear', args: '' });
   });
 
   it('returns null when command is embedded in text', () => {
-    expect(parseSlashCommand('hey /help')).toBeNull();
+    expect(parseSlashCommand('hey /clear')).toBeNull();
     expect(parseSlashCommand('run /clear now')).toBeNull();
   });
 
   it('returns null for multi-line input with command', () => {
-    expect(parseSlashCommand('/help\nmore text')).toBeNull();
-    expect(parseSlashCommand('/clear\n')).toBeNull();
+    expect(parseSlashCommand('/clear\nmore text')).toBeNull();
+    expect(parseSlashCommand('/compact\n')).toBeNull();
   });
 
   it('returns null for empty input', () => {
@@ -60,7 +60,7 @@ describe('parseSlashCommand', () => {
   });
 
   it('returns null for slash with args', () => {
-    expect(parseSlashCommand('/help me')).toBeNull();
+    expect(parseSlashCommand('/clear me')).toBeNull();
   });
 });
 
@@ -68,10 +68,9 @@ describe('getSlashCommands', () => {
   it('returns all registered commands', () => {
     const cmds = getSlashCommands();
     const names = cmds.map(c => c.name);
-    expect(names).toContain('help');
     expect(names).toContain('clear');
     expect(names).toContain('compact');
-    expect(cmds.length).toBe(3);
+    expect(cmds.length).toBe(2);
   });
 
   it('each command has a name and description', () => {
@@ -84,18 +83,11 @@ describe('getSlashCommands', () => {
 });
 
 describe('executeSlashCommand', () => {
-  it('executes help command and appends system message', async () => {
+  it('executes clear command', async () => {
     const ctx = mockContext();
-    const result = await executeSlashCommand('help', ctx);
+    const result = await executeSlashCommand('clear', ctx);
     expect(result).toBe(true);
-    expect(ctx.appendSystemMessage).toHaveBeenCalledOnce();
     expect(ctx.clearInput).toHaveBeenCalledOnce();
-
-    const callArgs = (ctx.appendSystemMessage as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(callArgs[0]).toMatch(/^__cmd_response__help_/);
-    expect(callArgs[1]).toContain('/help');
-    expect(callArgs[1]).toContain('/clear');
-    expect(callArgs[1]).toContain('/compact');
   });
 
   it('returns false for unknown command', async () => {

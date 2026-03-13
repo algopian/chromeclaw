@@ -47,6 +47,36 @@ setTimeout(() => {
   });
 }, 1000);
 
+// ── Strip CORP headers for extension image loads ──
+// Google CDN (and other servers) set Cross-Origin-Resource-Policy: same-site,
+// which blocks <img> loads from chrome-extension:// pages.
+// This dynamic rule removes that header for image requests initiated by the extension.
+const CORP_STRIP_RULE_ID = 9999;
+chrome.declarativeNetRequest.updateDynamicRules({
+  removeRuleIds: [CORP_STRIP_RULE_ID],
+  addRules: [
+    {
+      id: CORP_STRIP_RULE_ID,
+      priority: 1,
+      action: {
+        type: chrome.declarativeNetRequest.RuleActionType.MODIFY_HEADERS,
+        responseHeaders: [
+          {
+            header: 'Cross-Origin-Resource-Policy',
+            operation: chrome.declarativeNetRequest.HeaderOperation.REMOVE,
+          },
+        ],
+      },
+      condition: {
+        resourceTypes: [chrome.declarativeNetRequest.ResourceType.IMAGE],
+        initiatorDomains: [chrome.runtime.id],
+      },
+    },
+  ],
+}).catch(err => {
+  console.error('[corp-strip] Failed to register CORP header rule:', err);
+});
+
 // ── Message Handlers ───────────────────────────
 
 type MessageHandler = (

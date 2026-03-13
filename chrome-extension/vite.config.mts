@@ -38,6 +38,22 @@ const shimNodeModules = (): Plugin => {
   };
 };
 
+/**
+ * Rollup plugin that replaces unused pi-ai OAuth modules with empty exports.
+ * These modules contain base64-encoded OAuth credentials decoded via atob(),
+ * which Chrome Web Store flags as "obfuscated code".
+ */
+const shimPiAiOAuth = (): Plugin => ({
+  name: 'shim-pi-ai-oauth',
+  enforce: 'pre',
+  load(id) {
+    if (id.includes('@mariozechner/pi-ai') && id.includes('/utils/oauth/') && !id.endsWith('.d.ts')) {
+      return 'export default {}';
+    }
+    return null;
+  },
+});
+
 const outDir = resolve(rootDir, '..', 'dist');
 export default defineConfig({
   define: {
@@ -59,6 +75,7 @@ export default defineConfig({
     IS_DEV && watchRebuildPlugin({ reload: true, id: 'chrome-extension-hmr' }),
     nodePolyfills(),
     shimNodeModules(),
+    shimPiAiOAuth(),
   ],
   publicDir: resolve(rootDir, 'public'),
   build: {

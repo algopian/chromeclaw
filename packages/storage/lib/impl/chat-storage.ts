@@ -364,11 +364,33 @@ const PREDEFINED_FILES = [
 const seedPredefinedWorkspaceFiles = async (agentId = 'main'): Promise<void> => {
   const now = Date.now();
 
-  // Seed agent-scoped non-skill workspace files
-  const agentExisting = await chatDb.workspaceFiles.where('agentId').equals(agentId).toArray();
-  const agentExistingNames = new Set(agentExisting.filter(f => f.predefined).map(f => f.name));
+  // Migrate existing global skill files to agent-scoped
+  const allFiles = await chatDb.workspaceFiles.toArray();
+  const globalSkills = allFiles.filter(f => f.predefined && isSkillFile(f.name) && (!f.agentId || f.agentId === ''));
+  const agentExistingNames = new Set(
+    allFiles.filter(f => f.agentId === agentId).map(f => f.name),
+  );
+  const migratedSkills = globalSkills
+    .filter(f => !agentExistingNames.has(f.name))
+    .map(f => ({
+      id: nanoid(),
+      name: f.name,
+      content: f.content,
+      enabled: f.enabled,
+      owner: f.owner,
+      predefined: true,
+      createdAt: now,
+      updatedAt: now,
+      agentId,
+    }));
+
+  // Seed agent-scoped predefined workspace files (including skills)
+  const agentExisting = allFiles.filter(f => f.agentId === agentId);
+  const agentExistingPredefinedNames = new Set(agentExisting.filter(f => f.predefined).map(f => f.name));
+  // Also exclude names we're about to migrate
+  const migratedNames = new Set(migratedSkills.map(f => f.name));
   const agentFiles = PREDEFINED_FILES
-    .filter(f => !isSkillFile(f.name) && !agentExistingNames.has(f.name))
+    .filter(f => !agentExistingPredefinedNames.has(f.name) && !migratedNames.has(f.name))
     .map(f => ({
       id: nanoid(),
       name: f.name,
@@ -381,29 +403,74 @@ const seedPredefinedWorkspaceFiles = async (agentId = 'main'): Promise<void> => 
       agentId,
     }));
 
-  // Seed global predefined skill files (shared across all agents)
+  const toCreate = [...migratedSkills, ...agentFiles];
+  if (toCreate.length > 0) {
+    await chatDb.workspaceFiles.bulkPut(toCreate);
+  }
+};
+
+const copyGlobalSkillsToAgent = async (agentId: string): Promise<void> => {
   const allFiles = await chatDb.workspaceFiles.toArray();
-  const globalSkillNames = new Set(
-    allFiles
-      .filter(f => f.predefined && isSkillFile(f.name) && (!f.agentId || f.agentId === ''))
-      .map(f => f.name),
+  // Global skill-related files: no agentId, under skills/ directory, non-predefined
+  const globalSkillFiles = allFiles.filter(
+    f => (!f.agentId || f.agentId === '') && f.name.startsWith('skills/') && !f.predefined,
   );
-  const globalSkills = PREDEFINED_FILES
-    .filter(f => isSkillFile(f.name) && !globalSkillNames.has(f.name))
+  if (globalSkillFiles.length === 0) return;
+
+  // Check what the agent already has to avoid duplicates
+  const agentFiles = await chatDb.workspaceFiles.where('agentId').equals(agentId).toArray();
+  const agentNames = new Set(agentFiles.map(f => f.name));
+
+  const now = Date.now();
+  const toCopy = globalSkillFiles
+    .filter(f => !agentNames.has(f.name))
     .map(f => ({
       id: nanoid(),
       name: f.name,
       content: f.content,
-      enabled: 'enabled' in f ? f.enabled : true,
-      owner: 'user' as const,
-      predefined: true,
+      enabled: f.enabled,
+      owner: f.owner,
+      predefined: false,
       createdAt: now,
       updatedAt: now,
+      agentId,
     }));
 
-  const toCreate = [...agentFiles, ...globalSkills];
-  if (toCreate.length > 0) {
-    await chatDb.workspaceFiles.bulkPut(toCreate);
+  if (toCopy.length > 0) {
+    await chatDb.workspaceFiles.bulkPut(toCopy);
+  }
+};
+
+const copyGlobalSkillsToAllAgents = async (): Promise<void> => {
+  const [agents, allFiles] = await Promise.all([
+    chatDb.agents.toArray(),
+    chatDb.workspaceFiles.toArray(),
+  ]);
+  const globalSkillFiles = allFiles.filter(
+    f => (!f.agentId || f.agentId === '') && f.name.startsWith('skills/') && !f.predefined,
+  );
+  if (globalSkillFiles.length === 0) return;
+
+  const now = Date.now();
+  for (const agent of agents) {
+    const agentFiles = allFiles.filter(f => f.agentId === agent.id);
+    const agentNames = new Set(agentFiles.map(f => f.name));
+    const toCopy = globalSkillFiles
+      .filter(f => !agentNames.has(f.name))
+      .map(f => ({
+        id: nanoid(),
+        name: f.name,
+        content: f.content,
+        enabled: f.enabled,
+        owner: f.owner,
+        predefined: false,
+        createdAt: now,
+        updatedAt: now,
+        agentId: agent.id,
+      }));
+    if (toCopy.length > 0) {
+      await chatDb.workspaceFiles.bulkPut(toCopy);
+    }
   }
 };
 
@@ -582,6 +649,8 @@ export {
   deleteWorkspaceFilesByPrefix,
   getEnabledWorkspaceFiles,
   seedPredefinedWorkspaceFiles,
+  copyGlobalSkillsToAgent,
+  copyGlobalSkillsToAllAgents,
   bulkPutMemoryChunks,
   deleteMemoryChunksByFileId,
   deleteMemoryChunksByChatId,
