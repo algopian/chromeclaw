@@ -361,8 +361,9 @@ CLI flags (set on the command line):
 
 MIT — see [LICENSE](LICENSE).
 
-### Third-party code
+### Acknowledgements
 
+- [pi-mono](https://github.com/nicedreamdo/pi-mono) (`@mariozechner/pi-ai` + `@mariozechner/pi-agent-core`) — Multi-provider LLM streaming and tool-calling core by Mario Zechner.
 - [Baileys](https://github.com/WhiskeySockets/Baileys) (`packages/baileys/`) — TypeScript/JavaScript API for WhatsApp Web by WhiskeySockets. Licensed under the [MIT License](https://github.com/WhiskeySockets/Baileys/blob/master/LICENSE).
 - [Vercel AI Chatbot](https://github.com/vercel/chatbot) — Chat UI components and patterns. Licensed under the [Apache License 2.0](https://github.com/vercel/chatbot/blob/main/LICENSE).
 - [Chrome Extension Boilerplate React Vite](https://github.com/nicedreamdo/nicedreamdo) — Extension scaffolding with React, Vite, and Turborepo by nicedreamdo. Licensed under the [MIT License](https://github.com/nicedreamdo/nicedreamdo/blob/main/LICENSE).
