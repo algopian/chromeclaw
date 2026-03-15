@@ -23,6 +23,7 @@ import { getToolConfig, getImplementedToolNames } from '../tools';
 import { maybeApplyTtsBatchedStream } from '../tts';
 import { createKeepAliveManager } from '../utils/keep-alive';
 import { buildSystemPrompt, resolveToolPromptHints, resolveToolListings } from '@extension/shared';
+import { IS_FIREFOX } from '@extension/env';
 import {
   createChat,
   addMessage,
@@ -317,6 +318,7 @@ const handleChannelMessageInner = async (
           runtimeMeta: {
             modelName: model.name,
             currentDate: new Date().toISOString().split('T')[0],
+            browser: IS_FIREFOX ? 'firefox' : 'chrome',
           },
           extraContext: channelExtraContext,
         });

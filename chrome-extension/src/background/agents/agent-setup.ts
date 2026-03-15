@@ -29,6 +29,7 @@ import {
   updateSessionTokens,
 } from '@extension/storage';
 import { nanoid } from 'nanoid';
+import { IS_FIREFOX } from '@extension/env';
 import type { ErrorCategory } from '../errors/error-classification';
 import type { ChatModel, ChatMessagePart, ModelApi, ModelProvider } from '@extension/shared';
 import type { DbChatModel, DbChat } from '@extension/storage';
@@ -639,6 +640,7 @@ export const buildHeadlessSystemPrompt = async (
     runtimeMeta: {
       modelName: model.name,
       currentDate: new Date().toISOString().split('T')[0],
+      browser: IS_FIREFOX ? 'firefox' : 'chrome',
     },
   });
 

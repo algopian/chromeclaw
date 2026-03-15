@@ -47,7 +47,7 @@ interface SystemPromptConfig {
   toolPromptHints?: string[];
   workspaceFiles?: { name: string; content: string; owner: 'user' | 'agent' }[];
   skills?: SkillEntry[];
-  runtimeMeta?: { modelName: string; currentDate: string; capabilities?: string[] };
+  runtimeMeta?: { modelName: string; currentDate: string; capabilities?: string[]; browser?: 'chrome' | 'firefox' };
   extraContext?: string;
 }
 
@@ -131,6 +131,15 @@ const buildRuntimeMetaSection = (config: SystemPromptConfig): string | null => {
   const parts = [`Current date: ${config.runtimeMeta.currentDate}`, `Model: ${config.runtimeMeta.modelName}`];
   if (config.runtimeMeta.capabilities?.length) {
     parts.push(`Capabilities: ${config.runtimeMeta.capabilities.join(', ')}`);
+  }
+  if (config.runtimeMeta.browser) {
+    parts.push(`Browser: ${config.runtimeMeta.browser === 'firefox' ? 'Firefox' : 'Chrome'}`);
+    if (config.runtimeMeta.browser === 'firefox') {
+      parts.push(
+        'Note: Chrome DevTools Protocol (chrome.debugger) is not available. ' +
+        'The debugger tool is disabled; all other tools work normally.',
+      );
+    }
   }
   return parts.join('. ') + '.';
 };
