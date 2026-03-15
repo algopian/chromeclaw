@@ -4,6 +4,7 @@ type ArtifactKind = 'text' | 'code' | 'sheet' | 'image';
 /** UI state for the currently-active artifact. */
 interface UIArtifact {
   documentId: string;
+  chatId?: string;
   title: string;
   kind: ArtifactKind;
   content: string;
