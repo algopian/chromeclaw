@@ -327,6 +327,12 @@ const runBrowserSearch = async (
     }
 
     // 4. All poll attempts returned empty — collect diagnostics and retry with simplified query
+    searchLog.warn('[browser] all poll attempts returned empty', {
+      tabId,
+      engine,
+      attempts: POLL_MAX_ATTEMPTS,
+      sanitizedQuery,
+    });
     let diagnostics: string | undefined;
     try {
       const diagResult = await executeBrowserText({
@@ -375,6 +381,7 @@ const runBrowserSearch = async (
     return [];
   } finally {
     // Always close the tab
+    searchLog.trace('[browser] closing search tab', { tabId });
     await executeBrowserText({ action: 'close', tabId }).catch(() => {
       // Ignore cleanup errors
     });

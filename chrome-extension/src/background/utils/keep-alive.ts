@@ -1,14 +1,10 @@
 /**
- * Keep-alive alarm manager for Chrome MV3 service workers.
+ * Keep-alive alarm manager for MV3 background scripts.
  *
- * Chrome's service worker can be suspended after 30 s of inactivity.
- * A periodic alarm prevents this while streams or background tasks are active.
- *
- * On Firefox the background page is persistent — alarms are unnecessary,
- * so all methods become no-ops.
+ * Both Chrome service workers and Firefox MV3 event pages can be suspended
+ * after ~30 s of inactivity. A periodic alarm prevents this while streams
+ * or background tasks are active.
  */
-
-import { IS_FIREFOX } from '@extension/env';
 
 interface KeepAliveManager {
   /** Increment the active-task counter and create the alarm if first. */
@@ -20,14 +16,10 @@ interface KeepAliveManager {
 }
 
 /**
- * Create a browser-agnostic keep-alive manager.
- * On Firefox every method is a no-op (persistent background page).
+ * Create a keep-alive manager backed by `chrome.alarms`.
+ * Works on both Chrome (service worker) and Firefox (MV3 event page).
  */
 const createKeepAliveManager = (alarmName: string): KeepAliveManager => {
-  if (IS_FIREFOX) {
-    return { acquire: () => {}, release: () => {}, clearOrphan: () => {} };
-  }
-
   let refCount = 0;
 
   return {

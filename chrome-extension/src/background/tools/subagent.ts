@@ -170,6 +170,7 @@ const runSubagentBackground = async (
   options?: SpawnSubagentOptions,
 ): Promise<void> => {
   acquireKeepAlive();
+  log.info('Subagent keep-alive acquired', { runId: run.runId });
   try {
     // Resolve model
     const model = await resolveDefaultModel();
@@ -185,6 +186,11 @@ const runSubagentBackground = async (
 
     // Get all agent tools (headless: true excludes subagent, scheduler, deep_research, agents_list)
     const allTools = await getAgentTools({ headless: true });
+
+    log.trace('Subagent tools resolved', {
+      runId: run.runId,
+      toolNames: allTools.map(t => t.name),
+    });
 
     // If caller specified a subset, filter to just those
     const requestedSet = args.tools ? new Set(args.tools) : null;
@@ -226,10 +232,22 @@ const runSubagentBackground = async (
           event: 'started',
           task: displayTask,
         })
-        .catch(() => {});
+        .catch(err =>
+          log.trace('Progress broadcast failed', {
+            event: 'started',
+            runId: run.runId,
+            error: String(err),
+          }),
+        );
     }
 
     // Run the agent — blocks until complete
+    log.info('Subagent calling runAgent', {
+      runId: run.runId,
+      modelId: model.id,
+      timeoutMs: (model.toolTimeoutSeconds ?? 600) * 1000,
+      toolCount: filteredTools.length,
+    });
     const result = await runAgent({
       model,
       systemPrompt,
@@ -238,6 +256,11 @@ const runSubagentBackground = async (
       signal: run.abortController.signal,
       chatId,
       onToolCallEnd: tc => {
+        log.trace('Subagent tool started', {
+          runId: run.runId,
+          toolName: tc.name,
+          toolCallId: tc.id,
+        });
         if (chatId) {
           chrome.runtime
             .sendMessage({
@@ -249,10 +272,23 @@ const runSubagentBackground = async (
               toolName: tc.name,
               args: truncateForProgress(tc.args),
             })
-            .catch(() => {});
+            .catch(err =>
+              log.trace('Progress broadcast failed', {
+                event: 'tool_start',
+                runId: run.runId,
+                toolName: tc.name,
+                error: String(err),
+              }),
+            );
         }
       },
       onToolResult: tr => {
+        log.trace('Subagent tool result', {
+          runId: run.runId,
+          toolName: tr.toolName,
+          toolCallId: tr.toolCallId,
+          isError: tr.isError,
+        });
         if (chatId) {
           chrome.runtime
             .sendMessage({
@@ -265,10 +301,21 @@ const runSubagentBackground = async (
               isError: tr.isError,
               result: truncateForProgress(tr.result),
             })
-            .catch(() => {});
+            .catch(err =>
+              log.trace('Progress broadcast failed', {
+                event: 'tool_done',
+                runId: run.runId,
+                toolName: tr.toolName,
+                error: String(err),
+              }),
+            );
         }
       },
       onTurnEnd: info => {
+        log.trace('Subagent turn end', {
+          runId: run.runId,
+          stepCount: info.stepCount,
+        });
         if (chatId) {
           chrome.runtime
             .sendMessage({
@@ -278,12 +325,27 @@ const runSubagentBackground = async (
               event: 'turn_end',
               stepCount: info.stepCount,
             })
-            .catch(() => {});
+            .catch(err =>
+              log.trace('Progress broadcast failed', {
+                event: 'turn_end',
+                runId: run.runId,
+                error: String(err),
+              }),
+            );
         }
       },
     });
 
     const durationMs = Date.now() - run.startedAt;
+
+    log.info('Subagent runAgent returned', {
+      runId: run.runId,
+      status: result.error ? 'failed' : 'completed',
+      durationMs,
+      stepCount: result.stepCount,
+      timedOut: result.timedOut,
+      error: result.error,
+    });
 
     // Update registry
     run.status = result.error ? 'failed' : 'completed';
@@ -315,6 +377,7 @@ const runSubagentBackground = async (
 
     // Inject system message into chat history so the LLM sees the result on next turn
     if (chatId) {
+      log.trace('Subagent injecting system message', { runId: run.runId, chatId });
       await addMessage({
         id: nanoid(),
         chatId,
@@ -327,6 +390,7 @@ const runSubagentBackground = async (
         ],
         createdAt: Date.now(),
       });
+      log.trace('Subagent system message injected', { runId: run.runId });
 
       // Broadcast to UI so it can reload messages
       chrome.runtime
@@ -338,7 +402,13 @@ const runSubagentBackground = async (
           findings,
           startedAt: run.startedAt,
         })
-        .catch(() => {});
+        .catch(err =>
+          log.trace('Progress broadcast failed', {
+            event: 'complete',
+            runId: run.runId,
+            error: String(err),
+          }),
+        );
     }
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
@@ -347,7 +417,11 @@ const runSubagentBackground = async (
     run.error = errorMsg;
     const displayTask = options?.label ?? args.task;
 
-    log.error('Subagent failed', { runId: run.runId, error: errorMsg });
+    log.error('Subagent failed', {
+      runId: run.runId,
+      error: errorMsg,
+      aborted: run.abortController.signal.aborted,
+    });
 
     // Call onComplete hook even on error so callers can handle cleanup
     let findings = `Error: ${errorMsg}`;
@@ -378,7 +452,12 @@ const runSubagentBackground = async (
           },
         ],
         createdAt: Date.now(),
-      }).catch(() => {});
+      }).catch(addErr =>
+        log.error('Subagent failed to inject error message', {
+          runId: run.runId,
+          error: String(addErr),
+        }),
+      );
 
       chrome.runtime
         .sendMessage({
@@ -389,10 +468,17 @@ const runSubagentBackground = async (
           findings,
           startedAt: run.startedAt,
         })
-        .catch(() => {});
+        .catch(sendErr =>
+          log.trace('Progress broadcast failed', {
+            event: 'complete-error',
+            runId: run.runId,
+            error: String(sendErr),
+          }),
+        );
     }
   } finally {
     releaseKeepAlive();
+    log.info('Subagent keep-alive released', { runId: run.runId });
   }
 };
 

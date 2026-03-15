@@ -317,8 +317,12 @@ const handleEvaluate = async (args: BrowserArgs): Promise<string> => {
   if (args.tabId == null) return 'Error: "tabId" is required for the "evaluate" action.';
   if (!args.expression) return 'Error: "expression" is required for the "evaluate" action.';
 
+  // Run in MAIN world so the expression executes in the page's JS context.
+  // The ISOLATED world (default) enforces the extension's CSP which blocks eval().
+  // MAIN world uses the target page's CSP, which typically allows eval.
   const results = await chrome.scripting.executeScript({
     target: { tabId: args.tabId },
+    world: 'MAIN' as any,
     func: (expr: string) => {
       try {
         const result = eval(expr);
