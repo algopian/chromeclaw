@@ -71,12 +71,15 @@ const LogViewer = () => {
 
   // Fetch logs on mount
   useEffect(() => {
-    chrome.runtime.sendMessage({ type: 'GET_LOGS' }).then((resp: Record<string, unknown>) => {
-      if (resp && Array.isArray(resp.entries)) {
-        setEntries(resp.entries as LogEntry[]);
-        setDropped((resp.dropped as number) ?? 0);
-      }
-    });
+    chrome.runtime
+      .sendMessage({ type: 'GET_LOGS' })
+      .then((resp: Record<string, unknown>) => {
+        if (resp && Array.isArray(resp.entries)) {
+          setEntries(resp.entries as LogEntry[]);
+          setDropped((resp.dropped as number) ?? 0);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Live mode
@@ -140,19 +143,25 @@ const LogViewer = () => {
   );
 
   const handleRefresh = useCallback(() => {
-    chrome.runtime.sendMessage({ type: 'GET_LOGS' }).then((resp: Record<string, unknown>) => {
-      if (resp && Array.isArray(resp.entries)) {
-        setEntries(resp.entries as LogEntry[]);
-        setDropped((resp.dropped as number) ?? 0);
-      }
-    });
+    chrome.runtime
+      .sendMessage({ type: 'GET_LOGS' })
+      .then((resp: Record<string, unknown>) => {
+        if (resp && Array.isArray(resp.entries)) {
+          setEntries(resp.entries as LogEntry[]);
+          setDropped((resp.dropped as number) ?? 0);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleClear = useCallback(() => {
-    chrome.runtime.sendMessage({ type: 'CLEAR_LOGS' }).then(() => {
-      setEntries([]);
-      setDropped(0);
-    });
+    chrome.runtime
+      .sendMessage({ type: 'CLEAR_LOGS' })
+      .then(() => {
+        setEntries([]);
+        setDropped(0);
+      })
+      .catch(() => {});
   }, []);
 
   const toggleExpanded = useCallback((id: number) => {

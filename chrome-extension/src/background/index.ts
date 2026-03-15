@@ -57,33 +57,39 @@ setTimeout(() => {
 // Google CDN (and other servers) set Cross-Origin-Resource-Policy: same-site,
 // which blocks <img> loads from chrome-extension:// pages.
 // This dynamic rule removes that header for image requests initiated by the extension.
+// NOTE: Use string literals for action type / header operation / resource type —
+// Firefox does not expose the Chrome-style enum objects (RuleActionType, HeaderOperation, etc.).
 const CORP_STRIP_RULE_ID = 9999;
-chrome.declarativeNetRequest
-  .updateDynamicRules({
-    removeRuleIds: [CORP_STRIP_RULE_ID],
-    addRules: [
-      {
-        id: CORP_STRIP_RULE_ID,
-        priority: 1,
-        action: {
-          type: chrome.declarativeNetRequest.RuleActionType.MODIFY_HEADERS,
-          responseHeaders: [
-            {
-              header: 'Cross-Origin-Resource-Policy',
-              operation: chrome.declarativeNetRequest.HeaderOperation.REMOVE,
-            },
-          ],
+try {
+  chrome.declarativeNetRequest
+    .updateDynamicRules({
+      removeRuleIds: [CORP_STRIP_RULE_ID],
+      addRules: [
+        {
+          id: CORP_STRIP_RULE_ID,
+          priority: 1,
+          action: {
+            type: 'modifyHeaders' as chrome.declarativeNetRequest.RuleActionType,
+            responseHeaders: [
+              {
+                header: 'Cross-Origin-Resource-Policy',
+                operation: 'remove' as chrome.declarativeNetRequest.HeaderOperation,
+              },
+            ],
+          },
+          condition: {
+            resourceTypes: ['image' as chrome.declarativeNetRequest.ResourceType],
+            initiatorDomains: [chrome.runtime.id],
+          },
         },
-        condition: {
-          resourceTypes: [chrome.declarativeNetRequest.ResourceType.IMAGE],
-          initiatorDomains: [chrome.runtime.id],
-        },
-      },
-    ],
-  })
-  .catch(err => {
-    console.error('[corp-strip] Failed to register CORP header rule:', err);
-  });
+      ],
+    })
+    .catch(err => {
+      console.error('[corp-strip] Failed to register CORP header rule:', err);
+    });
+} catch (err) {
+  console.error('[corp-strip] Failed to create CORP header rule:', err);
+}
 
 // ── Message Handlers ───────────────────────────
 
