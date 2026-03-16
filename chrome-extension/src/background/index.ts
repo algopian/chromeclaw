@@ -252,6 +252,13 @@ const messageHandlers: Record<string, MessageHandler> = {
     return { runs };
   },
 
+  TEST_CONNECTION: async request => {
+    const { completeText } = await import('./agents/stream-bridge');
+    const modelConfig = request.modelConfig as import('@extension/shared').ChatModel;
+    await completeText(modelConfig, '', 'hi', { maxTokens: 1 });
+    return { success: true };
+  },
+
   COMPACT_REQUEST: async request => {
     const chatId = request.chatId as string;
     const modelConfig = request.modelConfig as import('@extension/shared').ChatModel;
