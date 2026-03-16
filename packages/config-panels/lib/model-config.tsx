@@ -290,24 +290,31 @@ const ModelConfig = () => {
 
   const handleTestConnection = useCallback(async () => {
     setTestResult('loading');
+    setFormError('');
     try {
-      const baseUrl =
-        editForm.baseUrl || (editForm.provider === 'openai' ? 'https://api.openai.com/v1' : '');
-      if (!baseUrl) {
-        setTestResult('error');
-        setFormError(t('model_baseUrlNeeded'));
-        return;
-      }
-      const response = await fetch(`${baseUrl}/models`, {
-        headers: { Authorization: `Bearer ${editForm.apiKey}` },
+      const response = await chrome.runtime.sendMessage({
+        type: 'TEST_CONNECTION',
+        modelConfig: {
+          id: editForm.id || 'test',
+          name: editForm.name,
+          provider: editForm.provider,
+          modelId: editForm.modelId,
+          apiKey: editForm.apiKey,
+          baseUrl: editForm.baseUrl,
+          api: editForm.api,
+        },
       });
-      setTestResult(response.ok ? 'success' : 'error');
-      if (!response.ok) setFormError(`${t('model_connectionFailed')}: ${response.statusText}`);
+      if (response?.error) {
+        setTestResult('error');
+        setFormError(response.error);
+      } else {
+        setTestResult('success');
+      }
     } catch (err) {
       setTestResult('error');
       setFormError(err instanceof Error ? err.message : t('model_connectionFailed'));
     }
-  }, [editForm]);
+  }, [editForm, t]);
 
   // Ref to track the active download listener for cleanup on unmount/re-download
   const downloadListenerRef = useRef<((msg: Record<string, unknown>) => void) | null>(null);

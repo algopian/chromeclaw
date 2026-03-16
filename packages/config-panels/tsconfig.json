@@ -1,5 +1,5 @@
 {
-  "extends": "@extension/tsconfig/module",
+  "extends": "@extension/tsconfig/base",
   "compilerOptions": {
     "baseUrl": ".",
     "outDir": "dist"

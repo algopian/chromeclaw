@@ -272,6 +272,18 @@ const messageHandlers: Record<string, MessageHandler> = {
     return { runs };
   },
 
+  TEST_CONNECTION: async request => {
+    const modelConfig = request.modelConfig as import('@extension/shared').ChatModel;
+    if (!modelConfig?.provider) return { error: 'modelConfig is required' };
+    try {
+      const { completeText } = await import('./agents/stream-bridge');
+      await completeText(modelConfig, '', 'hi', { maxTokens: 1 });
+      return { success: true };
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Connection failed' };
+    }
+  },
+
   COMPACT_REQUEST: async request => {
     const chatId = request.chatId as string;
     const modelConfig = request.modelConfig as import('@extension/shared').ChatModel;
