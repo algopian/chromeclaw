@@ -226,12 +226,11 @@ const SidePanel = () => {
     loadModels();
   }, [loadModels]);
 
-  // Subscribe to selectedModelStorage so set_model action reflects in UI
+  // Subscribe to model storage changes so UI stays in sync with options page
   useEffect(() => {
-    const unsub = selectedModelStorage.subscribe(() => {
-      loadModels();
-    });
-    return unsub;
+    const unsub1 = selectedModelStorage.subscribe(() => loadModels());
+    const unsub2 = customModelsStorage.subscribe(() => loadModels());
+    return () => { unsub1(); unsub2(); };
   }, [loadModels]);
 
   // Network error detection

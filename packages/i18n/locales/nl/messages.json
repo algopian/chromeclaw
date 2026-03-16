@@ -1,0 +1,1215 @@
+{
+  "extensionDescription": {
+    "description": "Extension description",
+    "message": "ChromeClaw - Jouw persoonlijke AI-assistent in je browser. Elk besturingssysteem. Elk platform. 🦞"
+  },
+  "extensionName": {
+    "description": "Extension name",
+    "message": "ChromeClaw - Jouw persoonlijke AI-assistent in je browser. 🦞"
+  },
+  "displayErrorInfo": {
+    "message": "Fout opgetreden"
+  },
+  "displayErrorDescription": {
+    "message": "Sorry, er is iets misgegaan bij het laden van de pagina."
+  },
+  "displayErrorDetailsInfo": {
+    "message": "Foutdetails:"
+  },
+  "displayErrorUnknownErrorInfo": {
+    "message": "Onbekende fout"
+  },
+  "displayErrorReset": {
+    "message": "Opnieuw uitvoeren"
+  },
+  "firstRun_welcome": {
+    "message": "Welkom bij ChromeClaw"
+  },
+  "firstRun_addApiKey": {
+    "message": "Voeg je API-sleutel toe om te beginnen met chatten"
+  },
+  "firstRun_apiKeyRequired": {
+    "message": "API-sleutel is vereist (of stel een Base URL in voor proxy's zonder authenticatie)"
+  },
+  "firstRun_modelIdRequired": {
+    "message": "Model-ID is vereist"
+  },
+  "firstRun_saveFailed": {
+    "message": "Opslaan van model mislukt"
+  },
+  "firstRun_provider": {
+    "message": "Provider"
+  },
+  "firstRun_apiKey": {
+    "message": "API-sleutel"
+  },
+  "firstRun_apiKeyOptional": {
+    "message": "API-sleutel (optioneel voor proxy's)"
+  },
+  "firstRun_modelId": {
+    "message": "Model-ID"
+  },
+  "firstRun_baseUrl": {
+    "message": "Base URL (optioneel)"
+  },
+  "firstRun_baseUrlHint": {
+    "message": "Voor OpenAI-compatibele proxy's (ollama, copilot-api, enz.)"
+  },
+  "firstRun_startChatting": {
+    "message": "Begin met chatten"
+  },
+  "firstRun_stepModel": {
+    "message": "Model"
+  },
+  "firstRun_stepChannels": {
+    "message": "Kanalen"
+  },
+  "firstRun_stepAgent": {
+    "message": "Agent"
+  },
+  "firstRun_stepTools": {
+    "message": "Hulpmiddelen"
+  },
+  "firstRun_step2Title": {
+    "message": "Kanalen verbinden"
+  },
+  "firstRun_step2Description": {
+    "message": "Verbind optioneel een Telegram-bot om vanaf je telefoon te chatten."
+  },
+  "firstRun_step3Title": {
+    "message": "Pas je agent aan"
+  },
+  "firstRun_step3Description": {
+    "message": "Geef je AI-assistent een naam en persoonlijkheid."
+  },
+  "firstRun_step4Title": {
+    "message": "Hulpmiddelen inschakelen"
+  },
+  "firstRun_step4Description": {
+    "message": "Kies welke hulpmiddelen je AI-assistent mag gebruiken."
+  },
+  "firstRun_next": {
+    "message": "Volgende"
+  },
+  "firstRun_skip": {
+    "message": "Overslaan"
+  },
+  "firstRun_back": {
+    "message": "Terug"
+  },
+  "firstRun_skipSetup": {
+    "message": "Installatie overslaan →"
+  },
+  "firstRun_getStarted": {
+    "message": "Aan de slag"
+  },
+  "firstRun_telegramBotToken": {
+    "message": "Telegram Bot Token"
+  },
+  "firstRun_telegramValidate": {
+    "message": "Valideren"
+  },
+  "firstRun_telegramValidated": {
+    "message": "Token geldig"
+  },
+  "firstRun_telegramAllowedUsers": {
+    "message": "Toegestane gebruikers-ID's (kommagescheiden)"
+  },
+  "firstRun_whatsappNote": {
+    "message": "WhatsApp kan later worden verbonden via Instellingen > Kanalen (QR-code scannen vereist)."
+  },
+  "firstRun_agentName": {
+    "message": "Agentnaam"
+  },
+  "firstRun_agentEmoji": {
+    "message": "Agent-emoji"
+  },
+  "firstRun_stepSkills": {
+    "message": "Vaardigheden"
+  },
+  "firstRun_step5Title": {
+    "message": "Vaardigheden inschakelen"
+  },
+  "firstRun_step5Description": {
+    "message": "Vaardigheden zijn herbruikbare promptsjablonen die de mogelijkheden van je assistent uitbreiden."
+  },
+  "firstRun_noSkills": {
+    "message": "Nog geen vaardigheden beschikbaar. Je kunt later vaardigheden toevoegen in Instellingen."
+  },
+  "firstRun_advancedSetup": {
+    "message": "Geavanceerde installatie"
+  },
+  "chat_placeholder": {
+    "message": "Wat wil je weten?"
+  },
+  "chat_modelSelect": {
+    "message": "Model"
+  },
+  "chat_fileSizeError": {
+    "message": "Bestand \"$FILE_NAME$\" overschrijdt de limiet van 10MB.",
+    "placeholders": {
+      "file_name": {
+        "content": "$1"
+      }
+    }
+  },
+  "chat_fileReadError": {
+    "message": "Kan \"$FILE_NAME$\" niet lezen.",
+    "placeholders": {
+      "file_name": {
+        "content": "$1"
+      }
+    }
+  },
+  "chat_maxFilesError": {
+    "message": "Maximaal $MAX_FILES$ bestanden toegestaan.",
+    "placeholders": {
+      "max_files": {
+        "content": "$1"
+      }
+    }
+  },
+  "session_newSession": {
+    "message": "Nieuwe sessie"
+  },
+  "session_rename": {
+    "message": "Hernoemen"
+  },
+  "session_delete": {
+    "message": "Verwijderen"
+  },
+  "session_searchPlaceholder": {
+    "message": "Chats zoeken..."
+  },
+  "session_noMatching": {
+    "message": "Geen overeenkomende sessies"
+  },
+  "session_noSessions": {
+    "message": "Nog geen sessies"
+  },
+  "session_today": {
+    "message": "Vandaag"
+  },
+  "session_yesterday": {
+    "message": "Gisteren"
+  },
+  "session_last7Days": {
+    "message": "Afgelopen 7 dagen"
+  },
+  "session_last30Days": {
+    "message": "Afgelopen 30 dagen"
+  },
+  "session_older": {
+    "message": "Ouder"
+  },
+  "session_deleteTitle": {
+    "message": "Sessie verwijderen"
+  },
+  "session_deleteDescription": {
+    "message": "Dit verwijdert deze sessie en al zijn berichten permanent. Deze actie kan niet ongedaan worden gemaakt."
+  },
+  "session_deleteAllTitle": {
+    "message": "Alle sessies verwijderen?"
+  },
+  "session_deleteAllDescription": {
+    "message": "Dit verwijdert permanent alle sessies, berichten en artefacten. Dit kan niet ongedaan worden gemaakt."
+  },
+  "common_cancel": {
+    "message": "Annuleren"
+  },
+  "common_delete": {
+    "message": "Verwijderen"
+  },
+  "common_deleteAll": {
+    "message": "Alles verwijderen"
+  },
+  "common_save": {
+    "message": "Opslaan"
+  },
+  "common_saved": {
+    "message": "Opgeslagen"
+  },
+  "common_confirm": {
+    "message": "Bevestigen"
+  },
+  "common_ok": {
+    "message": "OK"
+  },
+  "common_loading": {
+    "message": "Laden..."
+  },
+  "common_error": {
+    "message": "Fout"
+  },
+  "common_on": {
+    "message": "AAN"
+  },
+  "common_off": {
+    "message": "UIT"
+  },
+  "common_enabled": {
+    "message": "Ingeschakeld"
+  },
+  "common_disabled": {
+    "message": "Uitgeschakeld"
+  },
+  "toolbar_elementary": {
+    "message": "Basisonderwijs"
+  },
+  "toolbar_middleSchool": {
+    "message": "Onderbouw"
+  },
+  "toolbar_keepLevel": {
+    "message": "Huidig niveau behouden"
+  },
+  "toolbar_highSchool": {
+    "message": "Bovenbouw"
+  },
+  "toolbar_college": {
+    "message": "HBO/Universiteit"
+  },
+  "toolbar_graduate": {
+    "message": "Postdoctoraal"
+  },
+  "toolbar_adjustReading": {
+    "message": "Pas het leesniveau aan naar $LEVEL$-niveau.",
+    "placeholders": {
+      "level": {
+        "content": "$1"
+      }
+    }
+  },
+  "slash_notEnoughMessages": {
+    "message": "Niet genoeg berichten om te comprimeren"
+  },
+  "slash_compacting": {
+    "message": "Gesprek wordt gecomprimeerd..."
+  },
+  "slash_noResponse": {
+    "message": "Geen reactie van de achtergrond (service worker is mogelijk herstart)"
+  },
+  "slash_conversationSummary": {
+    "message": "[Gespreksoverzicht]"
+  },
+  "slash_earlierCompacted": {
+    "message": "[Eerdere berichten gecomprimeerd]"
+  },
+  "slash_compactSuccess": {
+    "message": "Gesprek gecomprimeerd"
+  },
+  "slash_compactFailed": {
+    "message": "Comprimeren mislukt"
+  },
+  "slash_conversationCleared": {
+    "message": "Gesprek gewist"
+  },
+  "slash_availableCommands": {
+    "message": "Beschikbare opdrachten:"
+  },
+  "toast_offline": {
+    "message": "Je bent offline. Controleer je netwerkverbinding."
+  },
+  "toast_online": {
+    "message": "Weer online."
+  },
+  "toast_allSessionsCleared": {
+    "message": "Alle sessies gewist"
+  },
+  "toast_subagentFinished": {
+    "message": "Subagent voltooid: $TASK$",
+    "placeholders": {
+      "task": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_scheduledTask": {
+    "message": "Gepland: $TASK$",
+    "placeholders": {
+      "task": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_scheduledTaskFired": {
+    "message": "Geplande taak uitgevoerd"
+  },
+  "toast_newTelegramMessage": {
+    "message": "Nieuw Telegram-bericht"
+  },
+  "toast_view": {
+    "message": "Bekijken"
+  },
+  "settings_title": {
+    "message": "Instellingen"
+  },
+  "settings_description": {
+    "message": "Uiterlijk en voorkeuren configureren"
+  },
+  "settings_appearance": {
+    "message": "Uiterlijk"
+  },
+  "settings_theme": {
+    "message": "Thema"
+  },
+  "settings_themeSystem": {
+    "message": "Systeem"
+  },
+  "settings_themeLight": {
+    "message": "Licht"
+  },
+  "settings_themeDark": {
+    "message": "Donker"
+  },
+  "settings_language": {
+    "message": "Taal"
+  },
+  "settings_languageAuto": {
+    "message": "Automatisch (browserstandaard)"
+  },
+  "model_title": {
+    "message": "Modelconfiguratie"
+  },
+  "model_description": {
+    "message": "AI-modellen beheren voor chat"
+  },
+  "model_customModels": {
+    "message": "Aangepaste modellen"
+  },
+  "model_addModel": {
+    "message": "Model toevoegen"
+  },
+  "model_editModel": {
+    "message": "Model bewerken"
+  },
+  "model_noModels": {
+    "message": "Geen aangepaste modellen geconfigureerd. Voeg een model toe om te beginnen."
+  },
+  "model_downloadModel": {
+    "message": "Model downloaden"
+  },
+  "model_deleteCachedModel": {
+    "message": "Gecacht model verwijderen"
+  },
+  "model_deleteModel": {
+    "message": "Model verwijderen?"
+  },
+  "model_deleteCache": {
+    "message": "Gecacht model verwijderen?"
+  },
+  "model_downloaded": {
+    "message": "Gedownload"
+  },
+  "model_notDownloaded": {
+    "message": "Niet gedownload"
+  },
+  "model_localDescription": {
+    "message": "Configureer een lokaal model op het apparaat. Geen API-sleutel nodig."
+  },
+  "model_remoteDescription": {
+    "message": "Configureer de modelprovider en verbindingsdetails."
+  },
+  "model_name": {
+    "message": "Naam"
+  },
+  "model_apiFormat": {
+    "message": "API-formaat"
+  },
+  "model_autoDetect": {
+    "message": "Automatisch detecteren"
+  },
+  "model_chatCompletions": {
+    "message": "Chat Completions (/v1/chat/completions)"
+  },
+  "model_responses": {
+    "message": "Responses (/v1/responses)"
+  },
+  "model_codexResponses": {
+    "message": "Codex Responses (/v1/responses)"
+  },
+  "model_descriptionOptional": {
+    "message": "Beschrijving (optioneel)"
+  },
+  "model_supportsTools": {
+    "message": "Ondersteunt hulpmiddelen"
+  },
+  "model_supportsReasoning": {
+    "message": "Ondersteunt redenering"
+  },
+  "model_toolTimeout": {
+    "message": "Hulpmiddel-timeout (seconden)"
+  },
+  "model_toolTimeoutHint": {
+    "message": "Maximale tijd voor uitvoering van hulpmiddelen voordat wordt gestopt (standaard: 600s / 10 min)"
+  },
+  "model_contextWindow": {
+    "message": "Contextvenster (tokens)"
+  },
+  "model_contextWindowPlaceholder": {
+    "message": "Automatisch detecteren op basis van model-ID"
+  },
+  "model_contextWindowHint": {
+    "message": "Overschrijf de contextvenstergrootte voor comprimering. Laat leeg voor automatische detectie."
+  },
+  "model_downloading": {
+    "message": "Model downloaden..."
+  },
+  "model_downloadComplete": {
+    "message": "Download voltooid"
+  },
+  "model_downloadFailed": {
+    "message": "Download mislukt"
+  },
+  "model_testConnection": {
+    "message": "Verbinding testen"
+  },
+  "model_connectionFailed": {
+    "message": "Verbinding mislukt"
+  },
+  "model_baseUrlNeeded": {
+    "message": "Base URL nodig voor verbindingstest"
+  },
+  "model_nameRequired": {
+    "message": "Naam is vereist"
+  },
+  "model_providerRequired": {
+    "message": "Provider is vereist"
+  },
+  "model_baseUrlInvalid": {
+    "message": "Base URL moet beginnen met http:// of https://"
+  },
+  "model_huggingFaceModelId": {
+    "message": "HuggingFace Model-ID"
+  },
+  "skill_title": {
+    "message": "Vaardigheden"
+  },
+  "skill_description": {
+    "message": "Vaardigheden bieden taakspecifieke begeleiding die het LLM op aanvraag kan lezen via het leeshulpmiddel."
+  },
+  "skill_browserWarning": {
+    "message": "Vaardigheden draaien in de Chrome-browseromgeving — CLI-tools, Python-scripts en andere lokale programma's worden niet ondersteund."
+  },
+  "skill_installedSkills": {
+    "message": "Geïnstalleerde vaardigheden"
+  },
+  "skill_importZip": {
+    "message": "ZIP importeren"
+  },
+  "skill_newSkill": {
+    "message": "Nieuwe vaardigheid"
+  },
+  "skill_loadingSkills": {
+    "message": "Vaardigheden laden…"
+  },
+  "skill_noSkills": {
+    "message": "Geen vaardigheden geïnstalleerd"
+  },
+  "skill_deleted": {
+    "message": "Vaardigheid verwijderd"
+  },
+  "skill_importExists": {
+    "message": "Er bestaat al een vaardigheid op $PATH$. Verwijder deze eerst of hernoem de import.",
+    "placeholders": {
+      "path": {
+        "content": "$1"
+      }
+    }
+  },
+  "skill_importedSkill": {
+    "message": "Vaardigheid geïmporteerd: $SKILL_NAME$",
+    "placeholders": {
+      "skill_name": {
+        "content": "$1"
+      }
+    }
+  },
+  "skill_importFailed": {
+    "message": "Importeren van vaardigheid mislukt"
+  },
+  "skill_deleteConfirm": {
+    "message": "Vaardigheid \"$SKILL_NAME$\" verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "placeholders": {
+      "skill_name": {
+        "content": "$1"
+      }
+    }
+  },
+  "sessionMgr_title": {
+    "message": "Sessies"
+  },
+  "sessionMgr_searchPlaceholder": {
+    "message": "Sessies zoeken..."
+  },
+  "sessionMgr_noMatching": {
+    "message": "Geen overeenkomende sessies."
+  },
+  "sessionMgr_noSessions": {
+    "message": "Nog geen sessies."
+  },
+  "sessionMgr_clickToSelect": {
+    "message": "Klik om te selecteren, dubbelklik om te openen"
+  },
+  "sessionMgr_clickToSelectSidePanel": {
+    "message": "Klik om te selecteren, dubbelklik om te openen in zijpaneel"
+  },
+  "telegram_title": {
+    "message": "Telegram-bot"
+  },
+  "telegram_description": {
+    "message": "Verbind een Telegram-bot zodat je met je AI-assistent kunt chatten vanuit Telegram."
+  },
+  "telegram_enableBot": {
+    "message": "Telegram-bot inschakelen"
+  },
+  "telegram_botToken": {
+    "message": "Bot Token"
+  },
+  "telegram_validate": {
+    "message": "Valideren"
+  },
+  "telegram_tokenValid": {
+    "message": "Token geldig"
+  },
+  "telegram_invalidToken": {
+    "message": "Ongeldig token"
+  },
+  "telegram_allowedUserIds": {
+    "message": "Toegestane gebruikers-ID's"
+  },
+  "telegram_userIdsHint": {
+    "message": "Alleen berichten van deze Telegram-gebruikers-ID's worden verwerkt. Verkrijg je ID via @userinfobot. Moet numeriek zijn."
+  },
+  "telegram_noUsers": {
+    "message": "Nog geen gebruikers toegestaan. Voeg minstens één gebruikers-ID toe om berichten te ontvangen."
+  },
+  "telegram_loadFailed": {
+    "message": "Laden van configuratie mislukt"
+  },
+  "telegram_validationFailed": {
+    "message": "Validatie mislukt"
+  },
+  "telegram_saveFailed": {
+    "message": "Opslaan mislukt"
+  },
+  "telegram_toggleFailed": {
+    "message": "Schakelen mislukt"
+  },
+  "agents_newAgent": {
+    "message": "Nieuwe agent"
+  },
+  "agents_mainAgent": {
+    "message": "Hoofdagent"
+  },
+  "agents_deleteAgent": {
+    "message": "Agent verwijderen"
+  },
+  "agents_deleteAgentConfirm": {
+    "message": "Deze agent en al zijn gegevens verwijderen? Dit kan niet ongedaan worden gemaakt."
+  },
+  "agents_overview": {
+    "message": "Overzicht"
+  },
+  "agents_files": {
+    "message": "Bestanden"
+  },
+  "agents_tools": {
+    "message": "Hulpmiddelen"
+  },
+  "agents_skills": {
+    "message": "Vaardigheden"
+  },
+  "agents_workspaceFiles": {
+    "message": "Werkruimtebestanden"
+  },
+  "agents_agentCreated": {
+    "message": "Agent aangemaakt"
+  },
+  "agents_agentDeleted": {
+    "message": "Agent verwijderd"
+  },
+  "agents_deleteAgentFailed": {
+    "message": "Verwijderen van agent mislukt"
+  },
+  "agents_fileDeleted": {
+    "message": "Bestand verwijderd"
+  },
+  "agents_fileUploaded": {
+    "message": "Bestand geüpload"
+  },
+  "agents_fileRenamed": {
+    "message": "Bestand hernoemd"
+  },
+  "agents_cannotRenamePredefined": {
+    "message": "Kan map met voorgedefinieerde bestanden niet hernoemen"
+  },
+  "agents_cannotDeletePredefined": {
+    "message": "Kan map met voorgedefinieerde bestanden niet verwijderen"
+  },
+  "agents_folderRenamed": {
+    "message": "Map hernoemd"
+  },
+  "agents_folderDeleted": {
+    "message": "Map verwijderd"
+  },
+  "agents_folderEmpty": {
+    "message": "Map is leeg"
+  },
+  "agents_fileSaved": {
+    "message": "Bestand opgeslagen"
+  },
+  "agents_identity": {
+    "message": "Identiteit"
+  },
+  "agents_identityHint": {
+    "message": "Bewerk deze waarden in het IDENTITY.md-bestand onder het tabblad Bestanden."
+  },
+  "agents_notSet": {
+    "message": "(niet ingesteld)"
+  },
+  "agents_justNow": {
+    "message": "zojuist"
+  },
+  "agents_minutesAgo": {
+    "message": "$MINUTES$m geleden",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_hoursAgo": {
+    "message": "$HOURS$u geleden",
+    "placeholders": {
+      "hours": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_daysAgo": {
+    "message": "$DAYS$d geleden",
+    "placeholders": {
+      "days": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_monthsAgo": {
+    "message": "$MONTHS$ma geleden",
+    "placeholders": {
+      "months": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_deleteFile": {
+    "message": "Bestand verwijderen"
+  },
+  "agents_deleteFileConfirm": {
+    "message": "\"$FILE_NAME$\" verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "placeholders": {
+      "file_name": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_deleteFolder": {
+    "message": "Map verwijderen"
+  },
+  "agents_deleteFolderConfirm": {
+    "message": "Map \"$FOLDER_NAME$\" en alle $FILE_COUNT$ bestand(en) erin verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "placeholders": {
+      "folder_name": {
+        "content": "$1"
+      },
+      "file_count": {
+        "content": "$2"
+      }
+    }
+  },
+  "agents_renameFile": {
+    "message": "Bestand hernoemen"
+  },
+  "agents_renameFolder": {
+    "message": "Map hernoemen"
+  },
+  "agents_newFile": {
+    "message": "Nieuw bestand"
+  },
+  "agents_newFolder": {
+    "message": "Nieuwe map"
+  },
+  "agents_newFolderName": {
+    "message": "Nieuwe mapnaam"
+  },
+  "agents_upload": {
+    "message": "Uploaden"
+  },
+  "agents_edit": {
+    "message": "Bewerken"
+  },
+  "agents_download": {
+    "message": "Downloaden"
+  },
+  "agents_downloadFolderZip": {
+    "message": "Map downloaden als ZIP"
+  },
+  "agents_refresh": {
+    "message": "Vernieuwen"
+  },
+  "agents_importZip": {
+    "message": "ZIP importeren"
+  },
+  "optionsPage_title": {
+    "message": "ChromeClaw Instellingen"
+  },
+  "provider_openai": {
+    "message": "OpenAI"
+  },
+  "provider_anthropic": {
+    "message": "Anthropic"
+  },
+  "provider_google": {
+    "message": "Google"
+  },
+  "provider_openrouter": {
+    "message": "OpenRouter"
+  },
+  "provider_openaiCompatible": {
+    "message": "OpenAI-compatibel"
+  },
+  "provider_webgpu": {
+    "message": "WebGPU (op apparaat)"
+  },
+  "time_mAgo": {
+    "message": "$MINUTES$m geleden",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "time_hAgo": {
+    "message": "$HOURS$u geleden",
+    "placeholders": {
+      "hours": {
+        "content": "$1"
+      }
+    }
+  },
+  "time_dAgo": {
+    "message": "$DAYS$d geleden",
+    "placeholders": {
+      "days": {
+        "content": "$1"
+      }
+    }
+  },
+  "tabGroup_control": {
+    "message": "Besturing"
+  },
+  "tabGroup_agent": {
+    "message": "Agent"
+  },
+  "tabGroup_settings": {
+    "message": "Instellingen"
+  },
+  "tab_channels": {
+    "message": "Kanalen"
+  },
+  "tab_cronJobs": {
+    "message": "Cron Jobs"
+  },
+  "tab_sessions": {
+    "message": "Sessies"
+  },
+  "tab_usage": {
+    "message": "Gebruik"
+  },
+  "tab_agents": {
+    "message": "Agenten"
+  },
+  "tab_tools": {
+    "message": "Hulpmiddelen"
+  },
+  "tab_skills": {
+    "message": "Vaardigheden"
+  },
+  "tab_general": {
+    "message": "Algemeen"
+  },
+  "tab_models": {
+    "message": "Modellen"
+  },
+  "tab_actions": {
+    "message": "Acties"
+  },
+  "tab_logs": {
+    "message": "Logboeken"
+  },
+  "whatsapp_title": {
+    "message": "WhatsApp"
+  },
+  "whatsapp_description": {
+    "message": "Verbind WhatsApp om met je AI-assistent te chatten vanaf je telefoon. Gebruikt het WhatsApp Web-protocol — geen externe server nodig."
+  },
+  "whatsapp_connection": {
+    "message": "Verbinding"
+  },
+  "whatsapp_connect": {
+    "message": "Verbinden"
+  },
+  "whatsapp_disconnect": {
+    "message": "Verbreken"
+  },
+  "whatsapp_disconnected": {
+    "message": "Verbroken"
+  },
+  "whatsapp_connecting": {
+    "message": "Wachten op QR-scan..."
+  },
+  "whatsapp_connected": {
+    "message": "Verbonden"
+  },
+  "whatsapp_reconnecting": {
+    "message": "Opnieuw verbinden..."
+  },
+  "whatsapp_loggedOut": {
+    "message": "Uitgelogd"
+  },
+  "whatsapp_scanQr": {
+    "message": "Scan met WhatsApp"
+  },
+  "whatsapp_scanInstructions": {
+    "message": "Open WhatsApp op je telefoon → Instellingen → Gekoppelde apparaten → Koppel een apparaat"
+  },
+  "whatsapp_connectedMsg": {
+    "message": "WhatsApp verbonden en ontvangt berichten"
+  },
+  "whatsapp_reconnectingMsg": {
+    "message": "Opnieuw verbinden met WhatsApp..."
+  },
+  "whatsapp_allowedNumbers": {
+    "message": "Toegestane telefoonnummers"
+  },
+  "whatsapp_numbersHint": {
+    "message": "Alleen berichten van deze telefoonnummers worden verwerkt. Voer nummers in met landcode (bijv. +31612345678)."
+  },
+  "whatsapp_noNumbers": {
+    "message": "Nog geen nummers toegestaan. Voeg minstens één telefoonnummer toe om berichten te ontvangen."
+  },
+  "whatsapp_messageDirection": {
+    "message": "Berichtrichting"
+  },
+  "whatsapp_directionHint": {
+    "message": "Bepaal welke berichten door de AI-assistent worden verwerkt."
+  },
+  "whatsapp_processMyMessages": {
+    "message": "Mijn eigen berichten verwerken"
+  },
+  "whatsapp_processOthers": {
+    "message": "Berichten van anderen verwerken"
+  },
+  "whatsapp_connectionFailed": {
+    "message": "Verbinding mislukt"
+  },
+  "whatsapp_disconnectFailed": {
+    "message": "Verbreken mislukt"
+  },
+  "whatsapp_saveFailed": {
+    "message": "Opslaan mislukt"
+  },
+  "whatsapp_loadFailed": {
+    "message": "Laden van configuratie mislukt"
+  },
+  "cron_title": {
+    "message": "Cron Jobs"
+  },
+  "cron_description": {
+    "message": "Beheer geautomatiseerde taken aangemaakt door de AI-agent"
+  },
+  "cron_active": {
+    "message": "Actief"
+  },
+  "cron_stopped": {
+    "message": "Gestopt"
+  },
+  "cron_noJobs": {
+    "message": "Nog geen cron jobs. Vraag de AI om een taak voor je in te plannen."
+  },
+  "cron_runHistory": {
+    "message": "Uitvoeringsgeschiedenis"
+  },
+  "cron_noRuns": {
+    "message": "Nog geen uitvoeringen"
+  },
+  "cron_next": {
+    "message": "Volgende: $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "cron_last": {
+    "message": "Laatste: $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "cron_duration": {
+    "message": "Duur: $DURATION$",
+    "placeholders": {
+      "duration": {
+        "content": "$1"
+      }
+    }
+  },
+  "cron_onceAt": {
+    "message": "Eenmalig om $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "cron_every": {
+    "message": "Elke $INTERVAL$",
+    "placeholders": {
+      "interval": {
+        "content": "$1"
+      }
+    }
+  },
+  "usage_title": {
+    "message": "Gebruik"
+  },
+  "usage_description": {
+    "message": "Tokengebruik over alle sessies"
+  },
+  "usage_sessions": {
+    "message": "Sessies"
+  },
+  "usage_totalTokens": {
+    "message": "Totaal tokens"
+  },
+  "usage_input": {
+    "message": "Invoer"
+  },
+  "usage_output": {
+    "message": "Uitvoer"
+  },
+  "usage_average": {
+    "message": "Gemiddeld: $COUNT$ tokens/sessie",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "usage_sessionsByUsage": {
+    "message": "Sessies op gebruik"
+  },
+  "usage_compacted": {
+    "message": "$COUNT$x gecomprimeerd",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "usage_moreSessionsCount": {
+    "message": "...en nog $COUNT$ sessies",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_title": {
+    "message": "Voorgestelde acties"
+  },
+  "actions_description": {
+    "message": "Pas de startprompts aan die op het lege chatscherm worden getoond (max $MAX$)",
+    "placeholders": {
+      "max": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_heading": {
+    "message": "Acties"
+  },
+  "actions_resetDefaults": {
+    "message": "Standaardwaarden herstellen"
+  },
+  "actions_addAction": {
+    "message": "Actie toevoegen"
+  },
+  "actions_noActions": {
+    "message": "Geen voorgestelde acties geconfigureerd. Voeg er een toe of herstel de standaardwaarden."
+  },
+  "actions_actionNumber": {
+    "message": "Actie $NUMBER$",
+    "placeholders": {
+      "number": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_moveUp": {
+    "message": "Omhoog verplaatsen"
+  },
+  "actions_moveDown": {
+    "message": "Omlaag verplaatsen"
+  },
+  "actions_remove": {
+    "message": "Verwijderen"
+  },
+  "actions_labelPlaceholder": {
+    "message": "Knoplabel (getoond op chatscherm)"
+  },
+  "actions_promptPlaceholder": {
+    "message": "Volledige prompt die naar de AI wordt gestuurd bij klikken"
+  },
+  "tool_title": {
+    "message": "Hulpmiddelconfiguratie"
+  },
+  "tool_description": {
+    "message": "AI-hulpmiddelen in- of uitschakelen"
+  },
+  "tool_searchProvider": {
+    "message": "Zoekprovider"
+  },
+  "tool_selectProvider": {
+    "message": "Selecteer provider"
+  },
+  "tool_apiKey": {
+    "message": "API-sleutel"
+  },
+  "tool_searchEngine": {
+    "message": "Zoekmachine"
+  },
+  "tool_selectEngine": {
+    "message": "Selecteer zoekmachine"
+  },
+  "tool_noApiKey": {
+    "message": "Geen API-sleutel nodig — gebruikt browserautomatisering"
+  },
+  "tool_subTopics": {
+    "message": "Subonderwerpen"
+  },
+  "tool_iterationsPerTopic": {
+    "message": "Iteraties per onderwerp"
+  },
+  "tool_sourcesPerSearch": {
+    "message": "Bronnen per zoekopdracht"
+  },
+  "tool_timeout": {
+    "message": "Timeout (seconden)"
+  },
+  "tool_clientId": {
+    "message": "Client-ID"
+  },
+  "tool_connectGoogle": {
+    "message": "Google-account verbinden"
+  },
+  "tool_connecting": {
+    "message": "Verbinden..."
+  },
+  "tool_connectedAs": {
+    "message": "Verbonden als"
+  },
+  "tool_disconnect": {
+    "message": "Verbreken"
+  },
+  "tool_failedToConnect": {
+    "message": "Verbinden mislukt"
+  },
+  "tool_googleServices": {
+    "message": "Google-services"
+  },
+  "tool_enableGoogleHint": {
+    "message": "Verbind je Google-account om deze hulpmiddelen in te schakelen"
+  },
+  "tab_chat": {
+    "message": "Chat"
+  },
+  "log_title": {
+    "message": "Logboeken"
+  },
+  "log_description": {
+    "message": "Bekijk extensielogboeken voor foutopsporing. Logboeken worden in het geheugen opgeslagen en gewist bij herstart van de extensie."
+  },
+  "log_enableLogging": {
+    "message": "Logboekregistratie inschakelen"
+  },
+  "log_minLevel": {
+    "message": "Min. niveau:"
+  },
+  "log_allLevels": {
+    "message": "Alle niveaus"
+  },
+  "log_allCategories": {
+    "message": "Alle categorieën"
+  },
+  "log_searchPlaceholder": {
+    "message": "Berichten zoeken..."
+  },
+  "log_live": {
+    "message": "Live"
+  },
+  "log_stop": {
+    "message": "Stoppen"
+  },
+  "log_clear": {
+    "message": "Wissen"
+  },
+  "log_noEntries": {
+    "message": "Geen logboekitems"
+  },
+  "log_noMatch": {
+    "message": "Geen items komen overeen met filters"
+  },
+  "log_copyEntry": {
+    "message": "Item kopiëren"
+  },
+  "log_exportText": {
+    "message": "Exporteer tekst"
+  },
+  "log_exportJson": {
+    "message": "Exporteer JSON"
+  },
+  "log_copyAll": {
+    "message": "Alles kopiëren"
+  },
+  "log_copiedCount": {
+    "message": "$COUNT$ items gekopieerd naar klembord",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "log_entriesCount": {
+    "message": "$COUNT$ items",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "log_droppedCount": {
+    "message": "$COUNT$ verwijderd",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_title": {
+    "message": "Agenten"
+  }
+}
