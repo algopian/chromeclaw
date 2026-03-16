@@ -34,6 +34,7 @@ const DocumentPreview = ({ result, args }: DocumentPreviewProps) => {
           if (stored) {
             setArtifact({
               documentId,
+              chatId: stored.chatId,
               title,
               kind,
               content: stored.content,

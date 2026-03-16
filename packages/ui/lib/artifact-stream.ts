@@ -11,6 +11,7 @@ import type { Dispatch, SetStateAction } from 'react';
 const processArtifactToolCall = (
   part: ChatMessagePart,
   setArtifact: Dispatch<SetStateAction<UIArtifact>>,
+  chatId?: string,
 ): boolean => {
   if (part.type !== 'tool-call') return false;
 
@@ -26,6 +27,7 @@ const processArtifactToolCall = (
   setArtifact(prev => ({
     ...prev,
     documentId,
+    chatId,
     title,
     kind: kind as UIArtifact['kind'],
     isVisible: true,

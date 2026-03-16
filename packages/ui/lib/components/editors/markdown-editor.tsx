@@ -1,6 +1,7 @@
 import { cn } from '../../utils';
 import { Button, Separator } from '../ui';
 import { mermaid } from '@streamdown/mermaid';
+import type { LucideIcon } from 'lucide-react';
 import {
   BoldIcon,
   CodeIcon,
@@ -22,6 +23,13 @@ import type { EditorView } from '@codemirror/view';
 
 type MarkdownEditorMode = 'view' | 'raw' | 'split';
 
+type ToolbarAction = {
+  icon: LucideIcon;
+  title: string;
+  onClick: () => void;
+  disabled?: boolean;
+};
+
 type MarkdownEditorProps = {
   content: string;
   onChange?: (content: string) => void;
@@ -31,11 +39,12 @@ type MarkdownEditorProps = {
   showToolbar?: boolean;
   showModeToggle?: boolean;
   className?: string;
+  toolbarActions?: ToolbarAction[];
 };
 
 const mermaidPlugin = mermaid;
 
-const toolbarActions: {
+const formattingActions: {
   icon: typeof BoldIcon;
   title: string;
   action: (view: EditorView) => void;
@@ -145,6 +154,7 @@ const MarkdownEditor = ({
   showToolbar,
   showModeToggle,
   className,
+  toolbarActions,
 }: MarkdownEditorProps) => {
   const isEditable = !!onChange;
   const defaultMode: MarkdownEditorMode = isEditable ? 'raw' : 'view';
@@ -248,7 +258,7 @@ const MarkdownEditor = ({
         <div className="flex flex-wrap items-center gap-1 border-b px-2 py-1.5">
           {resolvedShowToolbar && (
             <div className="flex items-center gap-0.5">
-              {toolbarActions.map(({ icon: Icon, title, action }) => (
+              {formattingActions.map(({ icon: Icon, title, action }) => (
                 <Button
                   key={title}
                   variant="ghost"
@@ -297,6 +307,25 @@ const MarkdownEditor = ({
                 Split
               </Button>
             </div>
+          )}
+          {toolbarActions && toolbarActions.length > 0 && (
+            <>
+              <Separator orientation="vertical" className="mx-1 h-5" />
+              <div className="flex items-center gap-0.5">
+                {toolbarActions.map(({ icon: Icon, title, onClick, disabled }) => (
+                  <Button
+                    key={title}
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    title={title}
+                    disabled={disabled}
+                    onClick={onClick}>
+                    <Icon className="size-3.5" />
+                  </Button>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}

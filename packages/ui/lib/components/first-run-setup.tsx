@@ -30,6 +30,7 @@ import { useT } from '@extension/i18n';
 import type { TFunction } from '@extension/i18n';
 import {
   CheckIcon,
+  ChevronLeftIcon,
   KeyIcon,
   Loader2Icon,
   RocketIcon,
@@ -102,6 +103,30 @@ const iconMap: Record<string, ReactNode> = {
   HardDriveDownloadIcon: <HardDriveDownloadIcon className="size-4" />,
   MailIcon: <MailIcon className="size-4" />,
   CalendarIcon: <CalendarIcon className="size-4" />,
+};
+
+/* ---------- ensureDefaultAgent ---------- */
+
+const ensureDefaultAgent = async () => {
+  const agent = await getDefaultAgent();
+  if (!agent) {
+    await createAgent({
+      id: 'main',
+      name: 'Main Agent',
+      identity: { emoji: '\u{1F916}' },
+      isDefault: true,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    await seedPredefinedWorkspaceFiles('main');
+    await copyGlobalSkillsToAgent('main');
+  } else {
+    const existing = await listSkillFiles(agent.id);
+    if (existing.length === 0) {
+      await seedPredefinedWorkspaceFiles(agent.id);
+      await copyGlobalSkillsToAgent(agent.id);
+    }
+  }
 };
 
 /* ---------- StepIndicator ---------- */
@@ -208,7 +233,7 @@ const Step1ModelSetup = ({
   );
 
   return (
-    <>
+    <div className="flex min-h-0 flex-1 flex-col">
       <CardHeader className="text-center">
         <CardTitle className="flex items-center justify-center gap-2 text-xl">
           <RocketIcon className="size-5" />
@@ -216,7 +241,7 @@ const Step1ModelSetup = ({
         </CardTitle>
         <CardDescription>{t('firstRun_addApiKey')}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
         {error && (
           <div className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
             {error}
@@ -315,7 +340,7 @@ const Step1ModelSetup = ({
         </div>
 
         <Button
-          className="w-full"
+          className="mt-auto w-full"
           data-testid="setup-start-button"
           disabled={saving}
           onClick={handleNext}>
@@ -323,7 +348,7 @@ const Step1ModelSetup = ({
           {t('firstRun_next')}
         </Button>
       </CardContent>
-    </>
+    </div>
   );
 };
 
@@ -331,11 +356,11 @@ const Step1ModelSetup = ({
 
 const Step2ChannelSetup = ({
   onNext,
-  onSkip,
+  onBack,
   t,
 }: {
   onNext: () => void;
-  onSkip: () => void;
+  onBack: () => void;
   t: TFunction;
 }) => {
   const [botToken, setBotToken] = useState('');
@@ -373,7 +398,7 @@ const Step2ChannelSetup = ({
 
   const handleNext = useCallback(async () => {
     if (!botToken.trim()) {
-      onSkip();
+      onNext();
       return;
     }
     setSaving(true);
@@ -405,15 +430,15 @@ const Step2ChannelSetup = ({
     } finally {
       setSaving(false);
     }
-  }, [botToken, allowedUsers, botUsername, enableChannel, onNext, onSkip, t]);
+  }, [botToken, allowedUsers, botUsername, enableChannel, onNext, t]);
 
   return (
-    <>
+    <div className="flex min-h-0 flex-1 flex-col">
       <CardHeader className="text-center">
         <CardTitle className="text-xl">{t('firstRun_step2Title')}</CardTitle>
         <CardDescription>{t('firstRun_step2Description')}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
         {error && (
           <div className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
             {error}
@@ -477,16 +502,16 @@ const Step2ChannelSetup = ({
 
         <p className="text-muted-foreground text-xs">{t('firstRun_whatsappNote')}</p>
 
-        <div className="flex gap-2">
+        <div className="mt-auto flex items-center justify-between">
           <Button
-            className="flex-1"
-            data-testid="setup-skip-button"
-            onClick={onSkip}
-            variant="ghost">
-            {t('firstRun_skip')}
+            data-testid="setup-back-button"
+            onClick={onBack}
+            variant="link">
+            <ChevronLeftIcon className="mr-1 size-4" />
+            {t('firstRun_back')}
           </Button>
           <Button
-            className="flex-1"
+            data-testid="setup-next-button"
             disabled={saving}
             onClick={handleNext}>
             {saving && <Loader2Icon className="mr-2 size-4 animate-spin" />}
@@ -494,7 +519,7 @@ const Step2ChannelSetup = ({
           </Button>
         </div>
       </CardContent>
-    </>
+    </div>
   );
 };
 
@@ -502,11 +527,11 @@ const Step2ChannelSetup = ({
 
 const Step3AgentSetup = ({
   onNext,
-  onSkip,
+  onBack,
   t,
 }: {
   onNext: () => void;
-  onSkip: () => void;
+  onBack: () => void;
   t: TFunction;
 }) => {
   const [agentName, setAgentName] = useState('Main Agent');
@@ -546,12 +571,12 @@ const Step3AgentSetup = ({
   }, [agentName, agentEmoji, onNext, t]);
 
   return (
-    <>
+    <div className="flex min-h-0 flex-1 flex-col">
       <CardHeader className="text-center">
         <CardTitle className="text-xl">{t('firstRun_step3Title')}</CardTitle>
         <CardDescription>{t('firstRun_step3Description')}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
         {error && (
           <div className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
             {error}
@@ -581,16 +606,16 @@ const Step3AgentSetup = ({
           />
         </div>
 
-        <div className="flex gap-2">
+        <div className="mt-auto flex items-center justify-between">
           <Button
-            className="flex-1"
-            data-testid="setup-skip-button"
-            onClick={onSkip}
-            variant="ghost">
-            {t('firstRun_skip')}
+            data-testid="setup-back-button"
+            onClick={onBack}
+            variant="link">
+            <ChevronLeftIcon className="mr-1 size-4" />
+            {t('firstRun_back')}
           </Button>
           <Button
-            className="flex-1"
+            data-testid="setup-next-button"
             disabled={saving}
             onClick={handleNext}>
             {saving && <Loader2Icon className="mr-2 size-4 animate-spin" />}
@@ -598,7 +623,7 @@ const Step3AgentSetup = ({
           </Button>
         </div>
       </CardContent>
-    </>
+    </div>
   );
 };
 
@@ -606,11 +631,11 @@ const Step3AgentSetup = ({
 
 const Step4ToolsSetup = ({
   onNext,
-  onSkip,
+  onBack,
   t,
 }: {
   onNext: () => void;
-  onSkip: () => void;
+  onBack: () => void;
   t: TFunction;
 }) => {
   const groups = useMemo(
@@ -657,19 +682,19 @@ const Step4ToolsSetup = ({
   }, [enabledTools, onNext, t]);
 
   return (
-    <>
+    <div className="flex min-h-0 flex-1 flex-col">
       <CardHeader className="text-center">
         <CardTitle className="text-xl">{t('firstRun_step4Title')}</CardTitle>
         <CardDescription>{t('firstRun_step4Description')}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
         {error && (
           <div className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
             {error}
           </div>
         )}
 
-        <div className="max-h-[40vh] space-y-1 overflow-y-auto pr-1">
+        <div className="max-h-[300px] space-y-1 overflow-y-auto pr-1">
           {groups.map(group => {
             const allEnabled = group.tools.every(t => enabledTools[t.name]);
             return (
@@ -692,16 +717,16 @@ const Step4ToolsSetup = ({
           })}
         </div>
 
-        <div className="flex gap-2">
+        <div className="mt-auto flex items-center justify-between">
           <Button
-            className="flex-1"
-            data-testid="setup-skip-button"
-            onClick={onSkip}
-            variant="ghost">
-            {t('firstRun_skip')}
+            data-testid="setup-back-button"
+            onClick={onBack}
+            variant="link">
+            <ChevronLeftIcon className="mr-1 size-4" />
+            {t('firstRun_back')}
           </Button>
           <Button
-            className="flex-1"
+            data-testid="setup-next-button"
             disabled={saving}
             onClick={handleNext}>
             {saving && <Loader2Icon className="mr-2 size-4 animate-spin" />}
@@ -709,7 +734,7 @@ const Step4ToolsSetup = ({
           </Button>
         </div>
       </CardContent>
-    </>
+    </div>
   );
 };
 
@@ -724,9 +749,11 @@ interface SkillEntry {
 
 const Step5SkillsSetup = ({
   onComplete,
+  onBack,
   t,
 }: {
   onComplete: () => void;
+  onBack: () => void;
   t: TFunction;
 }) => {
   const [skills, setSkills] = useState<SkillEntry[]>([]);
@@ -737,26 +764,7 @@ const Step5SkillsSetup = ({
   useEffect(() => {
     const load = async () => {
       try {
-        // Ensure agent + workspace files exist so skills are seeded
-        const agent = await getDefaultAgent();
-        if (!agent) {
-          await createAgent({
-            id: 'main',
-            name: 'Main Agent',
-            identity: { emoji: '\u{1F916}' },
-            isDefault: true,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-          });
-          await seedPredefinedWorkspaceFiles('main');
-        } else {
-          // Agent exists but workspace files might not be seeded (e.g. Step 3 skipped)
-          const existing = await listSkillFiles('main');
-          if (existing.length === 0) {
-            await seedPredefinedWorkspaceFiles(agent.id);
-            await copyGlobalSkillsToAgent(agent.id);
-          }
-        }
+        await ensureDefaultAgent();
 
         const files = await listSkillFiles('main');
         const entries: SkillEntry[] = [];
@@ -801,12 +809,12 @@ const Step5SkillsSetup = ({
   }, [skills, onComplete, t]);
 
   return (
-    <>
+    <div className="flex min-h-0 flex-1 flex-col">
       <CardHeader className="text-center">
         <CardTitle className="text-xl">{t('firstRun_step5Title')}</CardTitle>
         <CardDescription>{t('firstRun_step5Description')}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
         {error && (
           <div className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
             {error}
@@ -845,16 +853,24 @@ const Step5SkillsSetup = ({
           </div>
         )}
 
-        <Button
-          className="w-full"
-          data-testid="setup-get-started-button"
-          disabled={saving || loading}
-          onClick={handleGetStarted}>
-          {saving && <Loader2Icon className="mr-2 size-4 animate-spin" />}
-          {t('firstRun_getStarted')}
-        </Button>
+        <div className="mt-auto flex items-center justify-between">
+          <Button
+            data-testid="setup-back-button"
+            onClick={onBack}
+            variant="link">
+            <ChevronLeftIcon className="mr-1 size-4" />
+            {t('firstRun_back')}
+          </Button>
+          <Button
+            data-testid="setup-get-started-button"
+            disabled={saving || loading}
+            onClick={handleGetStarted}>
+            {saving && <Loader2Icon className="mr-2 size-4 animate-spin" />}
+            {t('firstRun_getStarted')}
+          </Button>
+        </div>
       </CardContent>
-    </>
+    </div>
   );
 };
 
@@ -864,40 +880,50 @@ const FirstRunSetup = ({ onComplete }: FirstRunSetupProps) => {
   const t = useT();
   const [step, setStep] = useState(1);
 
-  const advancedLink = (
-    <div className="flex items-center justify-between pt-2">
-      <button
-        className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs"
-        onClick={() => chrome.runtime.openOptionsPage()}
-        type="button">
-        <SettingsIcon className="size-3" />
-        {t('firstRun_advancedSetup')}
-      </button>
-    </div>
-  );
+  const handleSkipSetup = useCallback(async () => {
+    await ensureDefaultAgent();
+    onComplete();
+  }, [onComplete]);
 
   return (
     <div className="bg-background flex h-dvh items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="flex h-[640px] w-full max-w-md flex-col">
         <div className="px-6 pt-6">
           <StepIndicator current={step} t={t} />
         </div>
 
-        <div key={step} className="animate-in fade-in duration-200">
+        <div key={step} className="animate-in fade-in flex flex-1 flex-col duration-200">
           {step === 1 && <Step1ModelSetup onNext={() => setStep(2)} t={t} />}
           {step === 2 && (
-            <Step2ChannelSetup onNext={() => setStep(3)} onSkip={() => setStep(3)} t={t} />
+            <Step2ChannelSetup onBack={() => setStep(1)} onNext={() => setStep(3)} t={t} />
           )}
           {step === 3 && (
-            <Step3AgentSetup onNext={() => setStep(4)} onSkip={() => setStep(4)} t={t} />
+            <Step3AgentSetup onBack={() => setStep(2)} onNext={() => setStep(4)} t={t} />
           )}
           {step === 4 && (
-            <Step4ToolsSetup onNext={() => setStep(5)} onSkip={() => setStep(5)} t={t} />
+            <Step4ToolsSetup onBack={() => setStep(3)} onNext={() => setStep(5)} t={t} />
           )}
-          {step === 5 && <Step5SkillsSetup onComplete={onComplete} t={t} />}
+          {step === 5 && <Step5SkillsSetup onBack={() => setStep(4)} onComplete={onComplete} t={t} />}
         </div>
 
-        <div className="px-6 pb-6">{advancedLink}</div>
+        <div className="flex items-center justify-between px-6 pb-6 pt-2">
+          <button
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs"
+            onClick={() => chrome.runtime.openOptionsPage()}
+            type="button">
+            <SettingsIcon className="size-3" />
+            {t('firstRun_advancedSetup')}
+          </button>
+          {step > 1 && (
+            <button
+              className="text-muted-foreground hover:text-foreground text-xs"
+              data-testid="setup-skip-setup"
+              onClick={handleSkipSetup}
+              type="button">
+              {t('firstRun_skipSetup')}
+            </button>
+          )}
+        </div>
       </Card>
     </div>
   );

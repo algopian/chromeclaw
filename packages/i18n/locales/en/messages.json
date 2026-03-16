@@ -94,6 +94,12 @@
   "firstRun_skip": {
     "message": "Skip"
   },
+  "firstRun_back": {
+    "message": "Back"
+  },
+  "firstRun_skipSetup": {
+    "message": "Skip setup \u2192"
+  },
   "firstRun_getStarted": {
     "message": "Get Started"
   },
