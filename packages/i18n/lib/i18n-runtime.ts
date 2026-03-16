@@ -1,7 +1,7 @@
 import enMessages from '../locales/en/messages.json' with { type: 'json' };
 import type { MessageKeyType, I18nValueType } from './types.js';
 
-type LocaleCode = 'auto' | 'en' | 'zh_CN' | 'zh_TW' | 'ja' | 'es' | 'de' | 'fr';
+type LocaleCode = 'auto' | 'en' | 'zh_CN' | 'zh_TW' | 'ja' | 'es' | 'de' | 'fr' | 'nl' | 'ru' | 'pt';
 
 type MessagesMap = Record<string, I18nValueType>;
 
@@ -13,6 +13,9 @@ const LOCALE_LABELS: Record<Exclude<LocaleCode, 'auto'>, string> = {
   es: 'Espa\u00F1ol',
   de: 'Deutsch',
   fr: 'Fran\u00E7ais',
+  nl: 'Nederlands',
+  ru: '\u0420\u0443\u0441\u0441\u043A\u0438\u0439',
+  pt: 'Portugu\u00EAs',
 };
 
 const LOCALE_OPTIONS: { value: LocaleCode; label: string }[] = [
@@ -24,6 +27,9 @@ const LOCALE_OPTIONS: { value: LocaleCode; label: string }[] = [
   { value: 'es', label: 'Espa\u00F1ol' },
   { value: 'de', label: 'Deutsch' },
   { value: 'fr', label: 'Fran\u00E7ais' },
+  { value: 'nl', label: 'Nederlands' },
+  { value: 'ru', label: '\u0420\u0443\u0441\u0441\u043A\u0438\u0439' },
+  { value: 'pt', label: 'Portugu\u00EAs' },
 ];
 
 // Lazy-load locale files via dynamic import
@@ -35,6 +41,9 @@ const localeLoaders: Record<string, () => Promise<MessagesMap>> = {
   es: () => import('../locales/es/messages.json', { with: { type: 'json' } }).then(m => m.default as unknown as MessagesMap),
   de: () => import('../locales/de/messages.json', { with: { type: 'json' } }).then(m => m.default as unknown as MessagesMap),
   fr: () => import('../locales/fr/messages.json', { with: { type: 'json' } }).then(m => m.default as unknown as MessagesMap),
+  nl: () => import('../locales/nl/messages.json', { with: { type: 'json' } }).then(m => m.default as unknown as MessagesMap),
+  ru: () => import('../locales/ru/messages.json', { with: { type: 'json' } }).then(m => m.default as unknown as MessagesMap),
+  pt: () => import('../locales/pt/messages.json', { with: { type: 'json' } }).then(m => m.default as unknown as MessagesMap),
 };
 
 // Singleton state

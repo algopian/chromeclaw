@@ -1,0 +1,1215 @@
+{
+  "extensionDescription": {
+    "description": "Extension description",
+    "message": "ChromeClaw - Ваш персональный AI-ассистент в браузере. Любая ОС. Любая платформа. \uD83E\uDD9E"
+  },
+  "extensionName": {
+    "description": "Extension name",
+    "message": "ChromeClaw - Ваш персональный AI-ассистент в браузере. \uD83E\uDD9E"
+  },
+  "displayErrorInfo": {
+    "message": "Произошла ошибка"
+  },
+  "displayErrorDescription": {
+    "message": "Извините, при загрузке страницы произошла ошибка."
+  },
+  "displayErrorDetailsInfo": {
+    "message": "Подробности ошибки:"
+  },
+  "displayErrorUnknownErrorInfo": {
+    "message": "Неизвестная ошибка"
+  },
+  "displayErrorReset": {
+    "message": "Запустить снова"
+  },
+  "firstRun_welcome": {
+    "message": "Добро пожаловать в ChromeClaw"
+  },
+  "firstRun_addApiKey": {
+    "message": "Добавьте API-ключ, чтобы начать общение"
+  },
+  "firstRun_apiKeyRequired": {
+    "message": "API-ключ обязателен (или укажите Base URL для прокси без авторизации)"
+  },
+  "firstRun_modelIdRequired": {
+    "message": "Идентификатор модели обязателен"
+  },
+  "firstRun_saveFailed": {
+    "message": "Не удалось сохранить модель"
+  },
+  "firstRun_provider": {
+    "message": "Провайдер"
+  },
+  "firstRun_apiKey": {
+    "message": "API-ключ"
+  },
+  "firstRun_apiKeyOptional": {
+    "message": "API-ключ (необязательно для прокси)"
+  },
+  "firstRun_modelId": {
+    "message": "Идентификатор модели"
+  },
+  "firstRun_baseUrl": {
+    "message": "Base URL (необязательно)"
+  },
+  "firstRun_baseUrlHint": {
+    "message": "Для OpenAI-совместимых прокси (ollama, copilot-api и т.д.)"
+  },
+  "firstRun_startChatting": {
+    "message": "Начать общение"
+  },
+  "firstRun_stepModel": {
+    "message": "Модель"
+  },
+  "firstRun_stepChannels": {
+    "message": "Каналы"
+  },
+  "firstRun_stepAgent": {
+    "message": "Агент"
+  },
+  "firstRun_stepTools": {
+    "message": "Инструменты"
+  },
+  "firstRun_step2Title": {
+    "message": "Подключение каналов"
+  },
+  "firstRun_step2Description": {
+    "message": "При желании подключите Telegram-бота для общения с телефона."
+  },
+  "firstRun_step3Title": {
+    "message": "Настройте вашего агента"
+  },
+  "firstRun_step3Description": {
+    "message": "Дайте вашему AI-ассистенту имя и характер."
+  },
+  "firstRun_step4Title": {
+    "message": "Включите инструменты"
+  },
+  "firstRun_step4Description": {
+    "message": "Выберите, какие инструменты может использовать ваш AI-ассистент."
+  },
+  "firstRun_next": {
+    "message": "Далее"
+  },
+  "firstRun_skip": {
+    "message": "Пропустить"
+  },
+  "firstRun_back": {
+    "message": "Назад"
+  },
+  "firstRun_skipSetup": {
+    "message": "Пропустить настройку \u2192"
+  },
+  "firstRun_getStarted": {
+    "message": "Начать"
+  },
+  "firstRun_telegramBotToken": {
+    "message": "Telegram Bot Token"
+  },
+  "firstRun_telegramValidate": {
+    "message": "Проверить"
+  },
+  "firstRun_telegramValidated": {
+    "message": "Токен действителен"
+  },
+  "firstRun_telegramAllowedUsers": {
+    "message": "Разрешённые ID пользователей (через запятую)"
+  },
+  "firstRun_whatsappNote": {
+    "message": "WhatsApp можно подключить позже в Настройки > Каналы (требуется сканирование QR-кода)."
+  },
+  "firstRun_agentName": {
+    "message": "Имя агента"
+  },
+  "firstRun_agentEmoji": {
+    "message": "Эмодзи агента"
+  },
+  "firstRun_stepSkills": {
+    "message": "Навыки"
+  },
+  "firstRun_step5Title": {
+    "message": "Включите навыки"
+  },
+  "firstRun_step5Description": {
+    "message": "Навыки — это переиспользуемые шаблоны промптов, расширяющие возможности вашего ассистента."
+  },
+  "firstRun_noSkills": {
+    "message": "Навыки пока недоступны. Вы можете добавить навыки позже в Настройках."
+  },
+  "firstRun_advancedSetup": {
+    "message": "Расширенная настройка"
+  },
+  "chat_placeholder": {
+    "message": "Что бы вы хотели узнать?"
+  },
+  "chat_modelSelect": {
+    "message": "Модель"
+  },
+  "chat_fileSizeError": {
+    "message": "Файл \"$FILE_NAME$\" превышает лимит в 10 МБ.",
+    "placeholders": {
+      "file_name": {
+        "content": "$1"
+      }
+    }
+  },
+  "chat_fileReadError": {
+    "message": "Не удалось прочитать \"$FILE_NAME$\".",
+    "placeholders": {
+      "file_name": {
+        "content": "$1"
+      }
+    }
+  },
+  "chat_maxFilesError": {
+    "message": "Максимум $MAX_FILES$ файлов.",
+    "placeholders": {
+      "max_files": {
+        "content": "$1"
+      }
+    }
+  },
+  "session_newSession": {
+    "message": "Новая сессия"
+  },
+  "session_rename": {
+    "message": "Переименовать"
+  },
+  "session_delete": {
+    "message": "Удалить"
+  },
+  "session_searchPlaceholder": {
+    "message": "Поиск чатов..."
+  },
+  "session_noMatching": {
+    "message": "Нет подходящих сессий"
+  },
+  "session_noSessions": {
+    "message": "Сессий пока нет"
+  },
+  "session_today": {
+    "message": "Сегодня"
+  },
+  "session_yesterday": {
+    "message": "Вчера"
+  },
+  "session_last7Days": {
+    "message": "Последние 7 дней"
+  },
+  "session_last30Days": {
+    "message": "Последние 30 дней"
+  },
+  "session_older": {
+    "message": "Ранее"
+  },
+  "session_deleteTitle": {
+    "message": "Удалить сессию"
+  },
+  "session_deleteDescription": {
+    "message": "Это навсегда удалит эту сессию и все её сообщения. Это действие нельзя отменить."
+  },
+  "session_deleteAllTitle": {
+    "message": "Удалить все сессии?"
+  },
+  "session_deleteAllDescription": {
+    "message": "Это навсегда удалит все сессии, сообщения и артефакты. Это действие нельзя отменить."
+  },
+  "common_cancel": {
+    "message": "Отмена"
+  },
+  "common_delete": {
+    "message": "Удалить"
+  },
+  "common_deleteAll": {
+    "message": "Удалить всё"
+  },
+  "common_save": {
+    "message": "Сохранить"
+  },
+  "common_saved": {
+    "message": "Сохранено"
+  },
+  "common_confirm": {
+    "message": "Подтвердить"
+  },
+  "common_ok": {
+    "message": "ОК"
+  },
+  "common_loading": {
+    "message": "Загрузка..."
+  },
+  "common_error": {
+    "message": "Ошибка"
+  },
+  "common_on": {
+    "message": "ВКЛ"
+  },
+  "common_off": {
+    "message": "ВЫКЛ"
+  },
+  "common_enabled": {
+    "message": "Включено"
+  },
+  "common_disabled": {
+    "message": "Отключено"
+  },
+  "toolbar_elementary": {
+    "message": "Начальный"
+  },
+  "toolbar_middleSchool": {
+    "message": "Средняя школа"
+  },
+  "toolbar_keepLevel": {
+    "message": "Оставить текущий уровень"
+  },
+  "toolbar_highSchool": {
+    "message": "Старшая школа"
+  },
+  "toolbar_college": {
+    "message": "Университет"
+  },
+  "toolbar_graduate": {
+    "message": "Аспирантура"
+  },
+  "toolbar_adjustReading": {
+    "message": "Пожалуйста, измените уровень чтения на уровень $LEVEL$.",
+    "placeholders": {
+      "level": {
+        "content": "$1"
+      }
+    }
+  },
+  "slash_notEnoughMessages": {
+    "message": "Недостаточно сообщений для сжатия"
+  },
+  "slash_compacting": {
+    "message": "Сжатие разговора..."
+  },
+  "slash_noResponse": {
+    "message": "Нет ответа от фонового процесса (service worker мог перезапуститься)"
+  },
+  "slash_conversationSummary": {
+    "message": "[Сводка разговора]"
+  },
+  "slash_earlierCompacted": {
+    "message": "[Предыдущие сообщения сжаты]"
+  },
+  "slash_compactSuccess": {
+    "message": "Разговор сжат"
+  },
+  "slash_compactFailed": {
+    "message": "Сжатие не удалось"
+  },
+  "slash_conversationCleared": {
+    "message": "Разговор очищен"
+  },
+  "slash_availableCommands": {
+    "message": "Доступные команды:"
+  },
+  "toast_offline": {
+    "message": "Вы не в сети. Проверьте подключение."
+  },
+  "toast_online": {
+    "message": "Снова онлайн."
+  },
+  "toast_allSessionsCleared": {
+    "message": "Все сессии очищены"
+  },
+  "toast_subagentFinished": {
+    "message": "Подагент завершил: $TASK$",
+    "placeholders": {
+      "task": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_scheduledTask": {
+    "message": "Запланировано: $TASK$",
+    "placeholders": {
+      "task": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_scheduledTaskFired": {
+    "message": "Запланированная задача выполнена"
+  },
+  "toast_newTelegramMessage": {
+    "message": "Новое сообщение в Telegram"
+  },
+  "toast_view": {
+    "message": "Просмотр"
+  },
+  "settings_title": {
+    "message": "Настройки"
+  },
+  "settings_description": {
+    "message": "Настройка внешнего вида и предпочтений"
+  },
+  "settings_appearance": {
+    "message": "Внешний вид"
+  },
+  "settings_theme": {
+    "message": "Тема"
+  },
+  "settings_themeSystem": {
+    "message": "Системная"
+  },
+  "settings_themeLight": {
+    "message": "Светлая"
+  },
+  "settings_themeDark": {
+    "message": "Тёмная"
+  },
+  "settings_language": {
+    "message": "Язык"
+  },
+  "settings_languageAuto": {
+    "message": "Авто (по умолчанию браузера)"
+  },
+  "model_title": {
+    "message": "Настройка моделей"
+  },
+  "model_description": {
+    "message": "Управление AI-моделями для чата"
+  },
+  "model_customModels": {
+    "message": "Пользовательские модели"
+  },
+  "model_addModel": {
+    "message": "Добавить модель"
+  },
+  "model_editModel": {
+    "message": "Редактировать модель"
+  },
+  "model_noModels": {
+    "message": "Пользовательские модели не настроены. Добавьте модель, чтобы начать."
+  },
+  "model_downloadModel": {
+    "message": "Скачать модель"
+  },
+  "model_deleteCachedModel": {
+    "message": "Удалить кэшированную модель"
+  },
+  "model_deleteModel": {
+    "message": "Удалить модель?"
+  },
+  "model_deleteCache": {
+    "message": "Удалить кэшированную модель?"
+  },
+  "model_downloaded": {
+    "message": "Скачано"
+  },
+  "model_notDownloaded": {
+    "message": "Не скачано"
+  },
+  "model_localDescription": {
+    "message": "Настройка локальной модели на устройстве. API-ключ не требуется."
+  },
+  "model_remoteDescription": {
+    "message": "Настройка провайдера модели и параметров подключения."
+  },
+  "model_name": {
+    "message": "Название"
+  },
+  "model_apiFormat": {
+    "message": "Формат API"
+  },
+  "model_autoDetect": {
+    "message": "Автоопределение"
+  },
+  "model_chatCompletions": {
+    "message": "Chat Completions (/v1/chat/completions)"
+  },
+  "model_responses": {
+    "message": "Responses (/v1/responses)"
+  },
+  "model_codexResponses": {
+    "message": "Codex Responses (/v1/responses)"
+  },
+  "model_descriptionOptional": {
+    "message": "Описание (необязательно)"
+  },
+  "model_supportsTools": {
+    "message": "Поддержка инструментов"
+  },
+  "model_supportsReasoning": {
+    "message": "Поддержка рассуждений"
+  },
+  "model_toolTimeout": {
+    "message": "Тайм-аут инструментов (секунды)"
+  },
+  "model_toolTimeoutHint": {
+    "message": "Максимальное время выполнения инструмента до остановки (по умолчанию: 600 с / 10 мин)"
+  },
+  "model_contextWindow": {
+    "message": "Контекстное окно (токены)"
+  },
+  "model_contextWindowPlaceholder": {
+    "message": "Автоопределение по ID модели"
+  },
+  "model_contextWindowHint": {
+    "message": "Переопределение размера контекстного окна для сжатия. Оставьте пустым для автоопределения."
+  },
+  "model_downloading": {
+    "message": "Скачивание модели..."
+  },
+  "model_downloadComplete": {
+    "message": "Скачивание завершено"
+  },
+  "model_downloadFailed": {
+    "message": "Ошибка скачивания"
+  },
+  "model_testConnection": {
+    "message": "Проверить подключение"
+  },
+  "model_connectionFailed": {
+    "message": "Ошибка подключения"
+  },
+  "model_baseUrlNeeded": {
+    "message": "Для проверки подключения необходим Base URL"
+  },
+  "model_nameRequired": {
+    "message": "Название обязательно"
+  },
+  "model_providerRequired": {
+    "message": "Провайдер обязателен"
+  },
+  "model_baseUrlInvalid": {
+    "message": "Base URL должен начинаться с http:// или https://"
+  },
+  "model_huggingFaceModelId": {
+    "message": "HuggingFace Model ID"
+  },
+  "skill_title": {
+    "message": "Навыки"
+  },
+  "skill_description": {
+    "message": "Навыки предоставляют специализированные инструкции, которые LLM может читать по запросу через инструмент чтения."
+  },
+  "skill_browserWarning": {
+    "message": "Навыки выполняются в среде браузера Chrome — инструменты командной строки, Python-скрипты и другие локальные программы не поддерживаются."
+  },
+  "skill_installedSkills": {
+    "message": "Установленные навыки"
+  },
+  "skill_importZip": {
+    "message": "Импорт ZIP"
+  },
+  "skill_newSkill": {
+    "message": "Новый навык"
+  },
+  "skill_loadingSkills": {
+    "message": "Загрузка навыков\u2026"
+  },
+  "skill_noSkills": {
+    "message": "Навыки не установлены"
+  },
+  "skill_deleted": {
+    "message": "Навык удалён"
+  },
+  "skill_importExists": {
+    "message": "Навык уже существует по пути $PATH$. Сначала удалите его или переименуйте импорт.",
+    "placeholders": {
+      "path": {
+        "content": "$1"
+      }
+    }
+  },
+  "skill_importedSkill": {
+    "message": "Импортирован навык: $SKILL_NAME$",
+    "placeholders": {
+      "skill_name": {
+        "content": "$1"
+      }
+    }
+  },
+  "skill_importFailed": {
+    "message": "Не удалось импортировать навык"
+  },
+  "skill_deleteConfirm": {
+    "message": "Удалить навык \"$SKILL_NAME$\"? Это действие нельзя отменить.",
+    "placeholders": {
+      "skill_name": {
+        "content": "$1"
+      }
+    }
+  },
+  "sessionMgr_title": {
+    "message": "Сессии"
+  },
+  "sessionMgr_searchPlaceholder": {
+    "message": "Поиск сессий..."
+  },
+  "sessionMgr_noMatching": {
+    "message": "Нет подходящих сессий."
+  },
+  "sessionMgr_noSessions": {
+    "message": "Сессий пока нет."
+  },
+  "sessionMgr_clickToSelect": {
+    "message": "Нажмите для выбора, дважды — для открытия"
+  },
+  "sessionMgr_clickToSelectSidePanel": {
+    "message": "Нажмите для выбора, дважды — для открытия в боковой панели"
+  },
+  "telegram_title": {
+    "message": "Telegram-бот"
+  },
+  "telegram_description": {
+    "message": "Подключите Telegram-бота, чтобы общаться с AI-ассистентом через Telegram."
+  },
+  "telegram_enableBot": {
+    "message": "Включить Telegram-бота"
+  },
+  "telegram_botToken": {
+    "message": "Bot Token"
+  },
+  "telegram_validate": {
+    "message": "Проверить"
+  },
+  "telegram_tokenValid": {
+    "message": "Токен действителен"
+  },
+  "telegram_invalidToken": {
+    "message": "Недействительный токен"
+  },
+  "telegram_allowedUserIds": {
+    "message": "Разрешённые ID пользователей"
+  },
+  "telegram_userIdsHint": {
+    "message": "Обрабатываются только сообщения от этих Telegram ID пользователей. Узнайте свой ID у @userinfobot. Должен быть числовым."
+  },
+  "telegram_noUsers": {
+    "message": "Пользователи пока не добавлены. Добавьте хотя бы один ID пользователя, чтобы начать получать сообщения."
+  },
+  "telegram_loadFailed": {
+    "message": "Не удалось загрузить конфигурацию"
+  },
+  "telegram_validationFailed": {
+    "message": "Проверка не удалась"
+  },
+  "telegram_saveFailed": {
+    "message": "Ошибка сохранения"
+  },
+  "telegram_toggleFailed": {
+    "message": "Ошибка переключения"
+  },
+  "agents_newAgent": {
+    "message": "Новый агент"
+  },
+  "agents_mainAgent": {
+    "message": "Основной агент"
+  },
+  "agents_deleteAgent": {
+    "message": "Удалить агента"
+  },
+  "agents_deleteAgentConfirm": {
+    "message": "Удалить этого агента и все его данные? Это действие нельзя отменить."
+  },
+  "agents_overview": {
+    "message": "Обзор"
+  },
+  "agents_files": {
+    "message": "Файлы"
+  },
+  "agents_tools": {
+    "message": "Инструменты"
+  },
+  "agents_skills": {
+    "message": "Навыки"
+  },
+  "agents_workspaceFiles": {
+    "message": "Файлы рабочей области"
+  },
+  "agents_agentCreated": {
+    "message": "Агент создан"
+  },
+  "agents_agentDeleted": {
+    "message": "Агент удалён"
+  },
+  "agents_deleteAgentFailed": {
+    "message": "Не удалось удалить агента"
+  },
+  "agents_fileDeleted": {
+    "message": "Файл удалён"
+  },
+  "agents_fileUploaded": {
+    "message": "Файл загружен"
+  },
+  "agents_fileRenamed": {
+    "message": "Файл переименован"
+  },
+  "agents_cannotRenamePredefined": {
+    "message": "Нельзя переименовать папку с предустановленными файлами"
+  },
+  "agents_cannotDeletePredefined": {
+    "message": "Нельзя удалить папку с предустановленными файлами"
+  },
+  "agents_folderRenamed": {
+    "message": "Папка переименована"
+  },
+  "agents_folderDeleted": {
+    "message": "Папка удалена"
+  },
+  "agents_folderEmpty": {
+    "message": "Папка пуста"
+  },
+  "agents_fileSaved": {
+    "message": "Файл сохранён"
+  },
+  "agents_identity": {
+    "message": "Идентичность"
+  },
+  "agents_identityHint": {
+    "message": "Измените эти значения в файле IDENTITY.md на вкладке Файлы."
+  },
+  "agents_notSet": {
+    "message": "(не задано)"
+  },
+  "agents_justNow": {
+    "message": "только что"
+  },
+  "agents_minutesAgo": {
+    "message": "$MINUTES$ мин назад",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_hoursAgo": {
+    "message": "$HOURS$ ч назад",
+    "placeholders": {
+      "hours": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_daysAgo": {
+    "message": "$DAYS$ дн назад",
+    "placeholders": {
+      "days": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_monthsAgo": {
+    "message": "$MONTHS$ мес назад",
+    "placeholders": {
+      "months": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_deleteFile": {
+    "message": "Удалить файл"
+  },
+  "agents_deleteFileConfirm": {
+    "message": "Удалить \"$FILE_NAME$\"? Это действие нельзя отменить.",
+    "placeholders": {
+      "file_name": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_deleteFolder": {
+    "message": "Удалить папку"
+  },
+  "agents_deleteFolderConfirm": {
+    "message": "Удалить папку \"$FOLDER_NAME$\" и все $FILE_COUNT$ файл(ов) внутри? Это действие нельзя отменить.",
+    "placeholders": {
+      "folder_name": {
+        "content": "$1"
+      },
+      "file_count": {
+        "content": "$2"
+      }
+    }
+  },
+  "agents_renameFile": {
+    "message": "Переименовать файл"
+  },
+  "agents_renameFolder": {
+    "message": "Переименовать папку"
+  },
+  "agents_newFile": {
+    "message": "Новый файл"
+  },
+  "agents_newFolder": {
+    "message": "Новая папка"
+  },
+  "agents_newFolderName": {
+    "message": "Имя новой папки"
+  },
+  "agents_upload": {
+    "message": "Загрузить"
+  },
+  "agents_edit": {
+    "message": "Редактировать"
+  },
+  "agents_download": {
+    "message": "Скачать"
+  },
+  "agents_downloadFolderZip": {
+    "message": "Скачать папку как ZIP"
+  },
+  "agents_refresh": {
+    "message": "Обновить"
+  },
+  "agents_importZip": {
+    "message": "Импорт ZIP"
+  },
+  "optionsPage_title": {
+    "message": "Настройки ChromeClaw"
+  },
+  "provider_openai": {
+    "message": "OpenAI"
+  },
+  "provider_anthropic": {
+    "message": "Anthropic"
+  },
+  "provider_google": {
+    "message": "Google"
+  },
+  "provider_openrouter": {
+    "message": "OpenRouter"
+  },
+  "provider_openaiCompatible": {
+    "message": "OpenAI-совместимый"
+  },
+  "provider_webgpu": {
+    "message": "WebGPU (на устройстве)"
+  },
+  "time_mAgo": {
+    "message": "$MINUTES$ мин назад",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "time_hAgo": {
+    "message": "$HOURS$ ч назад",
+    "placeholders": {
+      "hours": {
+        "content": "$1"
+      }
+    }
+  },
+  "time_dAgo": {
+    "message": "$DAYS$ дн назад",
+    "placeholders": {
+      "days": {
+        "content": "$1"
+      }
+    }
+  },
+  "tabGroup_control": {
+    "message": "Управление"
+  },
+  "tabGroup_agent": {
+    "message": "Агент"
+  },
+  "tabGroup_settings": {
+    "message": "Настройки"
+  },
+  "tab_channels": {
+    "message": "Каналы"
+  },
+  "tab_cronJobs": {
+    "message": "Задания Cron"
+  },
+  "tab_sessions": {
+    "message": "Сессии"
+  },
+  "tab_usage": {
+    "message": "Использование"
+  },
+  "tab_agents": {
+    "message": "Агенты"
+  },
+  "tab_tools": {
+    "message": "Инструменты"
+  },
+  "tab_skills": {
+    "message": "Навыки"
+  },
+  "tab_general": {
+    "message": "Общие"
+  },
+  "tab_models": {
+    "message": "Модели"
+  },
+  "tab_actions": {
+    "message": "Действия"
+  },
+  "tab_logs": {
+    "message": "Логи"
+  },
+  "whatsapp_title": {
+    "message": "WhatsApp"
+  },
+  "whatsapp_description": {
+    "message": "Подключите WhatsApp, чтобы общаться с AI-ассистентом с телефона. Используется протокол WhatsApp Web — внешний сервер не нужен."
+  },
+  "whatsapp_connection": {
+    "message": "Подключение"
+  },
+  "whatsapp_connect": {
+    "message": "Подключить"
+  },
+  "whatsapp_disconnect": {
+    "message": "Отключить"
+  },
+  "whatsapp_disconnected": {
+    "message": "Отключено"
+  },
+  "whatsapp_connecting": {
+    "message": "Ожидание сканирования QR..."
+  },
+  "whatsapp_connected": {
+    "message": "Подключено"
+  },
+  "whatsapp_reconnecting": {
+    "message": "Переподключение..."
+  },
+  "whatsapp_loggedOut": {
+    "message": "Выход выполнен"
+  },
+  "whatsapp_scanQr": {
+    "message": "Сканируйте через WhatsApp"
+  },
+  "whatsapp_scanInstructions": {
+    "message": "Откройте WhatsApp на телефоне \u2192 Настройки \u2192 Связанные устройства \u2192 Привязать устройство"
+  },
+  "whatsapp_connectedMsg": {
+    "message": "WhatsApp подключён и принимает сообщения"
+  },
+  "whatsapp_reconnectingMsg": {
+    "message": "Переподключение к WhatsApp..."
+  },
+  "whatsapp_allowedNumbers": {
+    "message": "Разрешённые номера телефонов"
+  },
+  "whatsapp_numbersHint": {
+    "message": "Обрабатываются только сообщения с этих номеров. Введите номера с кодом страны (например, +1234567890)."
+  },
+  "whatsapp_noNumbers": {
+    "message": "Номера пока не добавлены. Добавьте хотя бы один номер, чтобы начать получать сообщения."
+  },
+  "whatsapp_messageDirection": {
+    "message": "Направление сообщений"
+  },
+  "whatsapp_directionHint": {
+    "message": "Управление тем, какие сообщения обрабатываются AI-ассистентом."
+  },
+  "whatsapp_processMyMessages": {
+    "message": "Обрабатывать мои собственные сообщения"
+  },
+  "whatsapp_processOthers": {
+    "message": "Обрабатывать сообщения от других"
+  },
+  "whatsapp_connectionFailed": {
+    "message": "Ошибка подключения"
+  },
+  "whatsapp_disconnectFailed": {
+    "message": "Ошибка отключения"
+  },
+  "whatsapp_saveFailed": {
+    "message": "Ошибка сохранения"
+  },
+  "whatsapp_loadFailed": {
+    "message": "Не удалось загрузить конфигурацию"
+  },
+  "cron_title": {
+    "message": "Задания Cron"
+  },
+  "cron_description": {
+    "message": "Управление автоматизированными задачами, созданными AI-агентом"
+  },
+  "cron_active": {
+    "message": "Активно"
+  },
+  "cron_stopped": {
+    "message": "Остановлено"
+  },
+  "cron_noJobs": {
+    "message": "Заданий Cron пока нет. Попросите AI запланировать задачу для вас."
+  },
+  "cron_runHistory": {
+    "message": "История запусков"
+  },
+  "cron_noRuns": {
+    "message": "Запусков пока нет"
+  },
+  "cron_next": {
+    "message": "Следующий: $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "cron_last": {
+    "message": "Последний: $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "cron_duration": {
+    "message": "Длительность: $DURATION$",
+    "placeholders": {
+      "duration": {
+        "content": "$1"
+      }
+    }
+  },
+  "cron_onceAt": {
+    "message": "Однократно в $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "cron_every": {
+    "message": "Каждые $INTERVAL$",
+    "placeholders": {
+      "interval": {
+        "content": "$1"
+      }
+    }
+  },
+  "usage_title": {
+    "message": "Использование"
+  },
+  "usage_description": {
+    "message": "Использование токенов по всем сессиям"
+  },
+  "usage_sessions": {
+    "message": "Сессии"
+  },
+  "usage_totalTokens": {
+    "message": "Всего токенов"
+  },
+  "usage_input": {
+    "message": "Ввод"
+  },
+  "usage_output": {
+    "message": "Вывод"
+  },
+  "usage_average": {
+    "message": "В среднем: $COUNT$ токенов/сессию",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "usage_sessionsByUsage": {
+    "message": "Сессии по использованию"
+  },
+  "usage_compacted": {
+    "message": "$COUNT$x сжато",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "usage_moreSessionsCount": {
+    "message": "...и ещё $COUNT$ сессий",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_title": {
+    "message": "Предлагаемые действия"
+  },
+  "actions_description": {
+    "message": "Настройте стартовые подсказки на пустом экране чата (макс. $MAX$)",
+    "placeholders": {
+      "max": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_heading": {
+    "message": "Действия"
+  },
+  "actions_resetDefaults": {
+    "message": "Сбросить по умолчанию"
+  },
+  "actions_addAction": {
+    "message": "Добавить действие"
+  },
+  "actions_noActions": {
+    "message": "Предлагаемые действия не настроены. Добавьте или сбросьте по умолчанию."
+  },
+  "actions_actionNumber": {
+    "message": "Действие $NUMBER$",
+    "placeholders": {
+      "number": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_moveUp": {
+    "message": "Переместить вверх"
+  },
+  "actions_moveDown": {
+    "message": "Переместить вниз"
+  },
+  "actions_remove": {
+    "message": "Удалить"
+  },
+  "actions_labelPlaceholder": {
+    "message": "Текст кнопки (отображается на экране чата)"
+  },
+  "actions_promptPlaceholder": {
+    "message": "Полный промпт, отправляемый AI при нажатии"
+  },
+  "tool_title": {
+    "message": "Настройка инструментов"
+  },
+  "tool_description": {
+    "message": "Включение и отключение AI-инструментов"
+  },
+  "tool_searchProvider": {
+    "message": "Провайдер поиска"
+  },
+  "tool_selectProvider": {
+    "message": "Выберите провайдера"
+  },
+  "tool_apiKey": {
+    "message": "API-ключ"
+  },
+  "tool_searchEngine": {
+    "message": "Поисковая система"
+  },
+  "tool_selectEngine": {
+    "message": "Выберите систему"
+  },
+  "tool_noApiKey": {
+    "message": "API-ключ не нужен — используется автоматизация браузера"
+  },
+  "tool_subTopics": {
+    "message": "Подтемы"
+  },
+  "tool_iterationsPerTopic": {
+    "message": "Итераций на тему"
+  },
+  "tool_sourcesPerSearch": {
+    "message": "Источников на поиск"
+  },
+  "tool_timeout": {
+    "message": "Тайм-аут (секунды)"
+  },
+  "tool_clientId": {
+    "message": "Client ID"
+  },
+  "tool_connectGoogle": {
+    "message": "Подключить аккаунт Google"
+  },
+  "tool_connecting": {
+    "message": "Подключение..."
+  },
+  "tool_connectedAs": {
+    "message": "Подключено как"
+  },
+  "tool_disconnect": {
+    "message": "Отключить"
+  },
+  "tool_failedToConnect": {
+    "message": "Не удалось подключиться"
+  },
+  "tool_googleServices": {
+    "message": "Сервисы Google"
+  },
+  "tool_enableGoogleHint": {
+    "message": "Подключите аккаунт Google, чтобы включить эти инструменты"
+  },
+  "tab_chat": {
+    "message": "Чат"
+  },
+  "log_title": {
+    "message": "Логи"
+  },
+  "log_description": {
+    "message": "Просмотр логов расширения для отладки. Логи хранятся в памяти и очищаются при перезапуске расширения."
+  },
+  "log_enableLogging": {
+    "message": "Включить логирование"
+  },
+  "log_minLevel": {
+    "message": "Мин. уровень:"
+  },
+  "log_allLevels": {
+    "message": "Все уровни"
+  },
+  "log_allCategories": {
+    "message": "Все категории"
+  },
+  "log_searchPlaceholder": {
+    "message": "Поиск сообщений..."
+  },
+  "log_live": {
+    "message": "Живой"
+  },
+  "log_stop": {
+    "message": "Стоп"
+  },
+  "log_clear": {
+    "message": "Очистить"
+  },
+  "log_noEntries": {
+    "message": "Нет записей в логе"
+  },
+  "log_noMatch": {
+    "message": "Нет записей, соответствующих фильтрам"
+  },
+  "log_copyEntry": {
+    "message": "Копировать запись"
+  },
+  "log_exportText": {
+    "message": "Экспорт текста"
+  },
+  "log_exportJson": {
+    "message": "Экспорт JSON"
+  },
+  "log_copyAll": {
+    "message": "Копировать всё"
+  },
+  "log_copiedCount": {
+    "message": "Скопировано $COUNT$ записей в буфер обмена",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "log_entriesCount": {
+    "message": "$COUNT$ записей",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "log_droppedCount": {
+    "message": "$COUNT$ отброшено",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_title": {
+    "message": "Агенты"
+  }
+}
