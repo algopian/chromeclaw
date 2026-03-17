@@ -132,6 +132,26 @@ const pushToRingBuffer = <T>(buffer: T[], item: T): void => {
 // Per-tab attach promises to serialize concurrent ensureAttached calls
 const attachPromises = new Map<number, Promise<string | null>>();
 
+// Per-tab attach failure cache — prevents redundant attach attempts
+interface AttachFailure {
+  error: string;
+  timestamp: number;
+  origin: string;
+}
+const ATTACH_FAILURE_TTL_MS = 60_000;
+const attachFailureCache = new Map<number, AttachFailure>();
+
+/** Get the origin from a tab URL, or empty string if unavailable. */
+const getTabOrigin = async (tabId: number): Promise<string> => {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    if (tab.url) return new URL(tab.url).origin;
+  } catch {
+    // ignore
+  }
+  return '';
+};
+
 const doAttach = async (tabId: number): Promise<string | null> => {
   const session = getOrCreateSession(tabId);
 
@@ -151,10 +171,17 @@ const doAttach = async (tabId: number): Promise<string | null> => {
       session.attached = true;
       return null;
     }
-    return `Cannot attach debugger to this tab: ${msg}`;
+    const errorMsg = `Cannot attach debugger to this tab: ${msg}. This site blocks debugger access. Use browser content action or execute_javascript with tabId instead. Do NOT retry debugger for this tab.`;
+    // Cache the failure
+    const origin = await getTabOrigin(tabId);
+    attachFailureCache.set(tabId, { error: errorMsg, timestamp: Date.now(), origin });
+    return errorMsg;
   }
 
   session.attached = true;
+
+  // Clear any cached failure on successful attach
+  attachFailureCache.delete(tabId);
 
   // Enable domains
   await cdpSend(tabId, 'Runtime.enable');
@@ -168,6 +195,24 @@ const doAttach = async (tabId: number): Promise<string | null> => {
 const ensureAttached = async (tabId: number): Promise<string | null> => {
   const session = getOrCreateSession(tabId);
   if (session.attached) return null;
+
+  // Check attach failure cache
+  const cached = attachFailureCache.get(tabId);
+  if (cached) {
+    const age = Date.now() - cached.timestamp;
+    if (age < ATTACH_FAILURE_TTL_MS) {
+      // Check if origin has changed (tab navigated to different site)
+      const currentOrigin = await getTabOrigin(tabId);
+      if (currentOrigin === cached.origin || currentOrigin === '') {
+        return `${cached.error} (cached — previously failed ${Math.round(age / 1000)}s ago)`;
+      }
+      // Origin changed, clear cache and try again
+      attachFailureCache.delete(tabId);
+    } else {
+      // TTL expired
+      attachFailureCache.delete(tabId);
+    }
+  }
 
   // Serialize concurrent attach attempts for the same tab
   const pending = attachPromises.get(tabId);
@@ -188,6 +233,7 @@ const ensureAttached = async (tabId: number): Promise<string | null> => {
 
 chrome.debugger.onDetach.addListener((source, _reason) => {
   if (source.tabId != null) {
+    attachFailureCache.delete(source.tabId);
     cleanupSession(source.tabId);
   }
 });
@@ -240,6 +286,7 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
 
 // Cleanup session when tab is closed
 chrome.tabs.onRemoved.addListener(tabId => {
+  attachFailureCache.delete(tabId);
   if (sessions.has(tabId)) {
     try {
       chrome.debugger.detach({ tabId }, () => {
@@ -257,6 +304,9 @@ chrome.tabs.onRemoved.addListener(tabId => {
 // Wait helpers
 // ---------------------------------------------------------------------------
 
+/** Check if a URL is an SPA hash-based route. */
+const isSpaHashRoute = (url: string): boolean => url.includes('#/') || url.includes('#!/');
+
 const waitForLoad = (tabId: number, timeoutMs = 15000): Promise<void> =>
   new Promise((_resolve, reject) => {
     const resolve = _resolve;
@@ -266,7 +316,7 @@ const waitForLoad = (tabId: number, timeoutMs = 15000): Promise<void> =>
     }, timeoutMs);
 
     const listener = (source: chrome.debugger.Debuggee, method: string) => {
-      if (source.tabId === tabId && method === 'Page.loadEventFired') {
+      if (source.tabId === tabId && (method === 'Page.loadEventFired' || method === 'Page.frameStoppedLoading')) {
         clearTimeout(timer);
         chrome.debugger.onEvent.removeListener(listener);
         resolve();
@@ -274,6 +324,70 @@ const waitForLoad = (tabId: number, timeoutMs = 15000): Promise<void> =>
     };
     chrome.debugger.onEvent.addListener(listener);
   });
+
+interface CancellablePromise {
+  promise: Promise<void>;
+  cancel: () => void;
+}
+
+/**
+ * Wait for network idle — no in-flight requests for `quietMs`, up to `maxMs` total.
+ * Used for SPA navigations where load events may not fire.
+ * Returns a cancellable promise to avoid listener leaks when used in Promise.race.
+ */
+const waitForNetworkIdle = (tabId: number, quietMs = 1000, maxMs = 10000): CancellablePromise => {
+  let cleanup: (() => void) | null = null;
+
+  const promise = new Promise<void>(resolve => {
+    let inFlight = 0;
+    let quietTimer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
+    const teardown = () => {
+      if (cancelled) return;
+      cancelled = true;
+      chrome.debugger.onEvent.removeListener(listener);
+      if (quietTimer) clearTimeout(quietTimer);
+      clearTimeout(maxTimer);
+    };
+
+    const done = () => {
+      teardown();
+      resolve();
+    };
+
+    cleanup = teardown;
+
+    const maxTimer = setTimeout(done, maxMs);
+
+    const checkQuiet = () => {
+      if (cancelled) return;
+      if (inFlight <= 0) {
+        if (quietTimer) clearTimeout(quietTimer);
+        quietTimer = setTimeout(done, quietMs);
+      } else if (quietTimer) {
+        clearTimeout(quietTimer);
+        quietTimer = null;
+      }
+    };
+
+    const listener = (source: chrome.debugger.Debuggee, method: string) => {
+      if (cancelled || source.tabId !== tabId) return;
+      if (method === 'Network.requestWillBeSent') {
+        inFlight++;
+        checkQuiet();
+      } else if (method === 'Network.loadingFinished' || method === 'Network.loadingFailed') {
+        inFlight = Math.max(0, inFlight - 1);
+        checkQuiet();
+      }
+    };
+
+    chrome.debugger.onEvent.addListener(listener);
+    checkQuiet();
+  });
+
+  return { promise, cancel: () => cleanup?.() };
+};
 
 // ---------------------------------------------------------------------------
 // Snapshot algorithm
@@ -365,6 +479,7 @@ const STRUCTURAL_TAGS = new Set([
 const MAX_TEXT_LENGTH = 80;
 const MAX_DEPTH = 15;
 const MAX_NODES = 5000;
+const MAX_RESULT_CHARS = 30000;
 
 interface CDPNode {
   nodeId: number;
@@ -657,7 +772,12 @@ const handleNavigate = async (args: BrowserArgs): Promise<string> => {
   const navSession = getOrCreateSession(args.tabId);
   navSession.refMap.clear();
 
-  const loadPromise = waitForLoad(args.tabId);
+  // Clear attach failure cache — navigation to new page may succeed
+  attachFailureCache.delete(args.tabId);
+
+  const spaNav = isSpaHashRoute(args.url);
+  const loadTimeout = spaNav ? 20000 : 15000;
+  const loadPromise = waitForLoad(args.tabId, loadTimeout);
   const navResult = await cdpSend<{ frameId?: string; errorText?: string }>(
     args.tabId,
     'Page.navigate',
@@ -669,7 +789,14 @@ const handleNavigate = async (args: BrowserArgs): Promise<string> => {
     return `Error: Navigation failed — ${navResult.errorText}`;
   }
 
-  await loadPromise;
+  if (spaNav) {
+    // SPA hash navigations may not fire Page.loadEventFired — race with network idle
+    const networkIdle = waitForNetworkIdle(args.tabId);
+    await Promise.race([loadPromise, networkIdle.promise]);
+    networkIdle.cancel();
+  } else {
+    await loadPromise;
+  }
 
   const tab = await chrome.tabs.get(args.tabId);
   return `Navigated tab [${args.tabId}] to ${tab.url ?? args.url}. Run "snapshot" to see page content.`;
@@ -701,16 +828,32 @@ const handleSnapshot = async (args: BrowserArgs): Promise<string> => {
   if (args.tabId == null) return 'Error: "tabId" is required for the "snapshot" action.';
 
   const attachErr = await ensureAttached(args.tabId);
-  if (attachErr) return `Error: ${attachErr}`;
+  if (attachErr) {
+    return `Error: Cannot capture this page — the site blocks programmatic access (common with Google, banking, and enterprise apps). Detail: ${attachErr}. Try using execute_javascript with tabId to run JS in the page context instead, or ask the user to describe what they see.`;
+  }
 
-  return buildSnapshot(args.tabId);
+  let snapshot = await buildSnapshot(args.tabId);
+
+  // Warn on minimal content — use total snapshot length as a simple heuristic
+  if (snapshot.length < 200) {
+    snapshot += '\n\n[Note: This page returned very little visible content. The site may be blocking content extraction. Consider asking the user to describe the page content instead.]';
+  }
+
+  // Truncate oversized snapshots
+  if (snapshot.length > MAX_RESULT_CHARS) {
+    snapshot = snapshot.slice(0, MAX_RESULT_CHARS) + '\n\n[Snapshot truncated at 30000 chars. Full page has more content — use evaluate action with specific DOM queries to extract targeted data.]';
+  }
+
+  return snapshot;
 };
 
 const handleScreenshot = async (args: BrowserArgs): Promise<string | ScreenshotResult> => {
   if (args.tabId == null) return 'Error: "tabId" is required for the "screenshot" action.';
 
   const attachErr = await ensureAttached(args.tabId);
-  if (attachErr) return `Error: ${attachErr}`;
+  if (attachErr) {
+    return `Error: Cannot capture this page — the site blocks programmatic access (common with Google, banking, and enterprise apps). Detail: ${attachErr}. Try using execute_javascript with tabId to run JS in the page context instead, or ask the user to describe what they see.`;
+  }
 
   const params: Record<string, unknown> = { format: 'png' };
 
@@ -982,10 +1125,15 @@ export {
   isInteractive,
   formatInteractiveNode,
   truncateText,
+  collectTextContent,
   MAX_BUFFER,
   MAX_NODES,
   MAX_DEPTH,
   MAX_TEXT_LENGTH,
+  MAX_RESULT_CHARS,
+  attachFailureCache,
+  ATTACH_FAILURE_TTL_MS,
+  isSpaHashRoute,
 };
 export type {
   BrowserArgs,

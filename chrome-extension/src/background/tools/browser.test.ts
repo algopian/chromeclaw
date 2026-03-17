@@ -865,7 +865,7 @@ describe('session management', () => {
       action: 'snapshot',
       tabId: 1,
     } as BrowserArgs);
-    expect(result).toContain('Cannot attach');
+    expect(result).toContain('blocks programmatic access');
   });
 
   it('onDetach: cleans up session when user dismisses yellow bar', () => {
@@ -2018,5 +2018,891 @@ describe('walkNode — additional edge cases', () => {
 
     mod.walkNode(root, 0, ctx);
     expect(ctx.lines.join('\n')).toContain('From custom');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Attach failure caching
+// ---------------------------------------------------------------------------
+describe('attach failure caching', () => {
+  beforeEach(() => {
+    mod.attachFailureCache.clear();
+  });
+
+  it('caches attach failure and returns cached error on second attempt', async () => {
+    mockDebuggerAttach.mockImplementation((_target: unknown, _version: string, cb: () => void) => {
+      chrome.runtime.lastError = { message: 'Cannot access a chrome:// URL' };
+      cb();
+      chrome.runtime.lastError = undefined as unknown as typeof chrome.runtime.lastError;
+    });
+
+    // First attempt — fresh error
+    const result1 = await mod.executeBrowser({ action: 'snapshot', tabId: 1 } as BrowserArgs);
+    expect(result1).toContain('blocks programmatic access');
+
+    // Second attempt — should return cached error without calling attach again
+    mockDebuggerAttach.mockClear();
+    const result2 = await mod.executeBrowser({ action: 'snapshot', tabId: 1 } as BrowserArgs);
+    expect(result2).toContain('blocks programmatic access');
+    // Attach should not be called again due to cache
+    expect(mockDebuggerAttach).not.toHaveBeenCalled();
+  });
+
+  it('cache expires after TTL', async () => {
+    // Manually insert an expired cache entry
+    mod.attachFailureCache.set(1, {
+      error: 'old error',
+      timestamp: Date.now() - mod.ATTACH_FAILURE_TTL_MS - 1000,
+      origin: 'https://test.com',
+    });
+
+    // Should try to attach again (expired)
+    const result = await mod.executeBrowser({ action: 'snapshot', tabId: 1 } as BrowserArgs);
+    expect(mockDebuggerAttach).toHaveBeenCalled();
+    // If attach succeeds, should not return cached error
+    expect(result).not.toContain('cached');
+  });
+
+  it('cache cleared on debugger detach', () => {
+    mod.attachFailureCache.set(10, {
+      error: 'test error',
+      timestamp: Date.now(),
+      origin: 'https://test.com',
+    });
+    expect(mod.attachFailureCache.has(10)).toBe(true);
+
+    fireDebuggerDetach(10, 'canceled_by_user');
+    expect(mod.attachFailureCache.has(10)).toBe(false);
+  });
+
+  it('cache cleared when tab is removed', () => {
+    mod.attachFailureCache.set(42, {
+      error: 'test error',
+      timestamp: Date.now(),
+      origin: 'https://test.com',
+    });
+    expect(mod.attachFailureCache.has(42)).toBe(true);
+
+    // Fire tab removed
+    for (const listener of tabsOnRemovedListeners) {
+      listener(42);
+    }
+    expect(mod.attachFailureCache.has(42)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Snapshot truncation
+// ---------------------------------------------------------------------------
+describe('snapshot truncation', () => {
+  it('truncates snapshots exceeding MAX_RESULT_CHARS', async () => {
+    // Pre-attach the session to avoid attach flow
+    const session = mod.getOrCreateSession(1);
+    session.attached = true;
+
+    // Create a DOM that produces a very large snapshot
+    const manyNodes: CDPNode[] = [];
+    for (let i = 0; i < 500; i++) {
+      manyNodes.push({
+        nodeId: 100 + i,
+        backendNodeId: 100 + i,
+        nodeType: 1,
+        nodeName: 'P',
+        children: [
+          {
+            nodeId: 10000 + i,
+            backendNodeId: 10000 + i,
+            nodeType: 3,
+            nodeName: '#text',
+            nodeValue: 'A'.repeat(80),
+          } as CDPNode,
+        ],
+      } as CDPNode);
+    }
+
+    mockDebuggerSendCommand.mockImplementation(
+      (_target: unknown, method: string, _params: unknown, cb: (result: unknown) => void) => {
+        if (method === 'DOM.getDocument') {
+          cb({
+            root: {
+              nodeId: 1,
+              backendNodeId: 1,
+              nodeType: 9,
+              nodeName: '#document',
+              children: [
+                {
+                  nodeId: 2,
+                  backendNodeId: 2,
+                  nodeType: 1,
+                  nodeName: 'HTML',
+                  children: [
+                    {
+                      nodeId: 3,
+                      backendNodeId: 3,
+                      nodeType: 1,
+                      nodeName: 'BODY',
+                      children: manyNodes,
+                    },
+                  ],
+                },
+              ],
+            },
+          });
+        } else {
+          cb({});
+        }
+      },
+    );
+
+    const result = await mod.executeBrowser({ action: 'snapshot', tabId: 1 } as BrowserArgs);
+    expect(typeof result).toBe('string');
+    // The result should be truncated
+    expect(result.length).toBeLessThanOrEqual(mod.MAX_RESULT_CHARS + 200); // +200 for truncation message
+    expect(result).toContain('Snapshot truncated at 30000 chars');
+    expect(result).toContain('evaluate action');
+  });
+
+  it('appends minimal content hint when page has very little text', async () => {
+    // Pre-attach the session to avoid attach flow
+    const session = mod.getOrCreateSession(1);
+    session.attached = true;
+
+    mockDebuggerSendCommand.mockImplementation(
+      (_target: unknown, method: string, _params: unknown, cb: (result: unknown) => void) => {
+        if (method === 'DOM.getDocument') {
+          cb({
+            root: {
+              nodeId: 1,
+              backendNodeId: 1,
+              nodeType: 9,
+              nodeName: '#document',
+              children: [
+                {
+                  nodeId: 2,
+                  backendNodeId: 2,
+                  nodeType: 1,
+                  nodeName: 'HTML',
+                  children: [
+                    {
+                      nodeId: 3,
+                      backendNodeId: 3,
+                      nodeType: 1,
+                      nodeName: 'BODY',
+                      children: [],
+                    },
+                  ],
+                },
+              ],
+            },
+          });
+        } else {
+          cb({});
+        }
+      },
+    );
+
+    const result = await mod.executeBrowser({ action: 'snapshot', tabId: 1 } as BrowserArgs);
+    expect(result).toContain('very little visible content');
+    expect(result).toContain('asking the user to describe the page content');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SPA hash route detection
+// ---------------------------------------------------------------------------
+describe('isSpaHashRoute', () => {
+  it('detects hash-based SPA routes', () => {
+    expect(mod.isSpaHashRoute('https://analytics.google.com/#/report')).toBe(true);
+    expect(mod.isSpaHashRoute('https://app.example.com/#!/dashboard')).toBe(true);
+  });
+
+  it('returns false for normal URLs and plain hash fragments', () => {
+    expect(mod.isSpaHashRoute('https://example.com/page')).toBe(false);
+    expect(mod.isSpaHashRoute('https://example.com/page#anchor')).toBe(false);
+    expect(mod.isSpaHashRoute('https://example.com/page#!important')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// waitForLoad timeout behavior
+// ---------------------------------------------------------------------------
+describe('waitForLoad timeout behavior', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('rejects when page load event never fires', async () => {
+    // Ensure attach succeeds
+    mockDebuggerAttach.mockImplementation((_target: unknown, _version: string, cb: () => void) => {
+      chrome.runtime.lastError = undefined as unknown as typeof chrome.runtime.lastError;
+      cb();
+    });
+    mockDebuggerSendCommand.mockImplementation(
+      (_target: unknown, method: string, _params: unknown, cb: (result: unknown) => void) => {
+        if (method === 'Page.navigate') {
+          // Do NOT fire any load event
+          cb({});
+        } else {
+          cb({});
+        }
+      },
+    );
+
+    const navigatePromise = mod.executeBrowser({
+      action: 'navigate',
+      tabId: 1,
+      url: 'https://slow-site.example.com',
+    } as BrowserArgs);
+
+    // Advance past the 15s timeout
+    await vi.advanceTimersByTimeAsync(16000);
+
+    const result = await navigatePromise;
+    expect(result).toContain('Page load timed out');
+  });
+
+  it('resolves when Page.frameStoppedLoading fires', async () => {
+    mockDebuggerAttach.mockImplementation((_target: unknown, _version: string, cb: () => void) => {
+      chrome.runtime.lastError = undefined as unknown as typeof chrome.runtime.lastError;
+      cb();
+    });
+    mockDebuggerSendCommand.mockImplementation(
+      (_target: unknown, method: string, _params: unknown, cb: (result: unknown) => void) => {
+        if (method === 'Page.navigate') {
+          // Fire frameStoppedLoading shortly after
+          setTimeout(() => {
+            fireDebuggerEvent(1, 'Page.frameStoppedLoading', {});
+          }, 100);
+          cb({});
+        } else {
+          cb({});
+        }
+      },
+    );
+
+    const navigatePromise = mod.executeBrowser({
+      action: 'navigate',
+      tabId: 1,
+      url: 'https://example.com',
+    } as BrowserArgs);
+
+    await vi.advanceTimersByTimeAsync(200);
+
+    const result = await navigatePromise;
+    expect(result).toContain('Navigated tab [1]');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// waitForNetworkIdle behavior
+// ---------------------------------------------------------------------------
+describe('waitForNetworkIdle behavior', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('resolves after quiet period with no network activity (SPA nav)', async () => {
+    mockDebuggerAttach.mockImplementation((_target: unknown, _version: string, cb: () => void) => {
+      chrome.runtime.lastError = undefined as unknown as typeof chrome.runtime.lastError;
+      cb();
+    });
+    mockDebuggerSendCommand.mockImplementation(
+      (_target: unknown, method: string, _params: unknown, cb: (result: unknown) => void) => {
+        if (method === 'Page.navigate') {
+          // Don't fire Page.loadEventFired — let networkIdle win the race
+          cb({});
+        } else {
+          cb({});
+        }
+      },
+    );
+
+    const navigatePromise = mod.executeBrowser({
+      action: 'navigate',
+      tabId: 1,
+      url: 'https://app.example.com/#/dashboard',
+    } as BrowserArgs);
+
+    // Advance past quiet period (1000ms) + some margin
+    await vi.advanceTimersByTimeAsync(2000);
+
+    const result = await navigatePromise;
+    expect(result).toContain('Navigated tab [1]');
+  });
+
+  it('resolves on maxMs even with in-flight requests', async () => {
+    mockDebuggerAttach.mockImplementation((_target: unknown, _version: string, cb: () => void) => {
+      chrome.runtime.lastError = undefined as unknown as typeof chrome.runtime.lastError;
+      cb();
+    });
+    mockDebuggerSendCommand.mockImplementation(
+      (_target: unknown, method: string, _params: unknown, cb: (result: unknown) => void) => {
+        if (method === 'Page.navigate') {
+          // Keep firing requests continuously
+          const interval = setInterval(() => {
+            fireDebuggerEvent(1, 'Network.requestWillBeSent', {
+              request: { method: 'GET', url: 'https://api.example.com/poll' },
+            });
+          }, 500);
+          // Clear after maxMs
+          setTimeout(() => clearInterval(interval), 11000);
+          cb({});
+        } else {
+          cb({});
+        }
+      },
+    );
+
+    const navigatePromise = mod.executeBrowser({
+      action: 'navigate',
+      tabId: 1,
+      url: 'https://app.example.com/#/realtime',
+    } as BrowserArgs);
+
+    // Advance past maxMs (10000ms)
+    await vi.advanceTimersByTimeAsync(11000);
+
+    const result = await navigatePromise;
+    expect(result).toContain('Navigated tab [1]');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getTabOrigin — indirect via attach failure cache
+// ---------------------------------------------------------------------------
+describe('getTabOrigin — indirect via attach failure cache', () => {
+  beforeEach(() => {
+    mod.attachFailureCache.clear();
+  });
+
+  it('caches attach failure with correct tab origin', async () => {
+    mockTabsGet.mockResolvedValueOnce({
+      id: 1,
+      title: 'Test',
+      url: 'https://restricted.example.com/page',
+    } as chrome.tabs.Tab);
+
+    mockDebuggerAttach.mockImplementation((_target: unknown, _version: string, cb: () => void) => {
+      chrome.runtime.lastError = { message: 'Cannot access this tab' };
+      cb();
+      chrome.runtime.lastError = undefined as unknown as typeof chrome.runtime.lastError;
+    });
+
+    await mod.executeBrowser({ action: 'snapshot', tabId: 1 } as BrowserArgs);
+
+    const cached = mod.attachFailureCache.get(1);
+    expect(cached).toBeDefined();
+    expect(cached!.origin).toBe('https://restricted.example.com');
+  });
+
+  it('uses empty origin when tabs.get rejects', async () => {
+    mockTabsGet.mockRejectedValueOnce(new Error('No such tab'));
+
+    mockDebuggerAttach.mockImplementation((_target: unknown, _version: string, cb: () => void) => {
+      chrome.runtime.lastError = { message: 'Cannot access this tab' };
+      cb();
+      chrome.runtime.lastError = undefined as unknown as typeof chrome.runtime.lastError;
+    });
+
+    await mod.executeBrowser({ action: 'snapshot', tabId: 1 } as BrowserArgs);
+
+    const cached = mod.attachFailureCache.get(1);
+    expect(cached).toBeDefined();
+    expect(cached!.origin).toBe('');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ensureTabActive — indirect via action handlers
+// ---------------------------------------------------------------------------
+describe('ensureTabActive — indirect via action handlers', () => {
+  it('calls chrome.tabs.update with active:true during type', async () => {
+    const session = mod.getOrCreateSession(1);
+    session.attached = true;
+    session.refMap.set(1, { nodeId: 5, backendNodeId: 5 });
+
+    mockDebuggerSendCommand.mockImplementation(
+      (_target: unknown, method: string, _params: unknown, cb: (result: unknown) => void) => {
+        if (method === 'DOM.resolveNode') {
+          cb({ object: { objectId: 'obj-1' } });
+        } else {
+          cb({});
+        }
+      },
+    );
+
+    await mod.executeBrowser({
+      action: 'type',
+      tabId: 1,
+      ref: 1,
+      text: 'hello',
+    } as BrowserArgs);
+
+    expect(mockTabsUpdate).toHaveBeenCalledWith(1, { active: true });
+  });
+
+  it('calls chrome.tabs.update during navigate with active option', async () => {
+    mockDebuggerSendCommand.mockImplementation(
+      (_target: unknown, method: string, _params: unknown, cb: (result: unknown) => void) => {
+        if (method === 'Page.navigate') {
+          setTimeout(() => fireDebuggerEvent(1, 'Page.loadEventFired', {}), 10);
+        }
+        cb({});
+      },
+    );
+
+    await mod.executeBrowser({
+      action: 'navigate',
+      tabId: 1,
+      url: 'https://example.com',
+      active: true,
+    } as BrowserArgs);
+
+    expect(mockTabsUpdate).toHaveBeenCalledWith(1, { active: true });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Concurrent attach attempts
+// ---------------------------------------------------------------------------
+describe('concurrent attach attempts', () => {
+  beforeEach(() => {
+    mod.attachFailureCache.clear();
+    // Ensure attach succeeds
+    mockDebuggerAttach.mockImplementation((_target: unknown, _version: string, cb: () => void) => {
+      chrome.runtime.lastError = undefined as unknown as typeof chrome.runtime.lastError;
+      cb();
+    });
+  });
+
+  it('serializes concurrent attach calls to same tab', async () => {
+    mockDebuggerSendCommand.mockImplementation(
+      (_target: unknown, method: string, _params: unknown, cb: (result: unknown) => void) => {
+        if (method === 'DOM.getDocument') {
+          cb({
+            root: {
+              nodeId: 1,
+              backendNodeId: 1,
+              nodeType: 9,
+              nodeName: '#document',
+              children: [],
+            },
+          });
+        } else {
+          cb({});
+        }
+      },
+    );
+
+    const [result1, result2] = await Promise.all([
+      mod.executeBrowser({ action: 'snapshot', tabId: 1 } as BrowserArgs),
+      mod.executeBrowser({ action: 'snapshot', tabId: 1 } as BrowserArgs),
+    ]);
+
+    expect(result1).toContain('[page]');
+    expect(result2).toContain('[page]');
+    // Attach should only be called once for the same tab
+    expect(mockDebuggerAttach).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows parallel attach to different tabs', async () => {
+    mockDebuggerSendCommand.mockImplementation(
+      (_target: unknown, method: string, _params: unknown, cb: (result: unknown) => void) => {
+        if (method === 'DOM.getDocument') {
+          cb({
+            root: {
+              nodeId: 1,
+              backendNodeId: 1,
+              nodeType: 9,
+              nodeName: '#document',
+              children: [],
+            },
+          });
+        } else {
+          cb({});
+        }
+      },
+    );
+
+    await Promise.all([
+      mod.executeBrowser({ action: 'snapshot', tabId: 1 } as BrowserArgs),
+      mod.executeBrowser({ action: 'snapshot', tabId: 2 } as BrowserArgs),
+    ]);
+
+    expect(mockDebuggerAttach).toHaveBeenCalledTimes(2);
+  });
+
+  it('propagates attach error to all concurrent callers', async () => {
+    mockDebuggerAttach.mockImplementation((_target: unknown, _version: string, cb: () => void) => {
+      chrome.runtime.lastError = { message: 'Cannot access a chrome:// URL' };
+      cb();
+      chrome.runtime.lastError = undefined as unknown as typeof chrome.runtime.lastError;
+    });
+
+    const [result1, result2] = await Promise.all([
+      mod.executeBrowser({ action: 'snapshot', tabId: 1 } as BrowserArgs),
+      mod.executeBrowser({ action: 'snapshot', tabId: 1 } as BrowserArgs),
+    ]);
+
+    expect(result1).toContain('blocks programmatic access');
+    expect(result2).toContain('blocks programmatic access');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Navigate with DNS/network failures
+// ---------------------------------------------------------------------------
+describe('navigate with DNS/network failures', () => {
+  beforeEach(() => {
+    mockDebuggerAttach.mockImplementation((_target: unknown, _version: string, cb: () => void) => {
+      chrome.runtime.lastError = undefined as unknown as typeof chrome.runtime.lastError;
+      cb();
+    });
+  });
+
+  it('returns error for net::ERR_NAME_NOT_RESOLVED', async () => {
+    mockDebuggerSendCommand.mockImplementation(
+      (_target: unknown, method: string, _params: unknown, cb: (result: unknown) => void) => {
+        if (method === 'Page.navigate') {
+          cb({ errorText: 'net::ERR_NAME_NOT_RESOLVED' });
+        } else {
+          cb({});
+        }
+      },
+    );
+
+    const result = await mod.executeBrowser({
+      action: 'navigate',
+      tabId: 1,
+      url: 'https://doesnotexist.example',
+    } as BrowserArgs);
+    expect(result).toContain('Navigation failed');
+    expect(result).toContain('ERR_NAME_NOT_RESOLVED');
+  });
+
+  it('returns error for net::ERR_CONNECTION_REFUSED', async () => {
+    mockDebuggerSendCommand.mockImplementation(
+      (_target: unknown, method: string, _params: unknown, cb: (result: unknown) => void) => {
+        if (method === 'Page.navigate') {
+          cb({ errorText: 'net::ERR_CONNECTION_REFUSED' });
+        } else {
+          cb({});
+        }
+      },
+    );
+
+    const result = await mod.executeBrowser({
+      action: 'navigate',
+      tabId: 1,
+      url: 'https://localhost:9999',
+    } as BrowserArgs);
+    expect(result).toContain('Navigation failed');
+    expect(result).toContain('ERR_CONNECTION_REFUSED');
+  });
+
+  it('clears refMap on navigation', async () => {
+    const session = mod.getOrCreateSession(1);
+    session.attached = true;
+    session.refMap.set(1, { nodeId: 5, backendNodeId: 5 });
+    session.refMap.set(2, { nodeId: 6, backendNodeId: 6 });
+
+    mockDebuggerSendCommand.mockImplementation(
+      (_target: unknown, method: string, _params: unknown, cb: (result: unknown) => void) => {
+        if (method === 'Page.navigate') {
+          cb({ errorText: 'net::ERR_CONNECTION_REFUSED' });
+        } else {
+          cb({});
+        }
+      },
+    );
+
+    await mod.executeBrowser({
+      action: 'navigate',
+      tabId: 1,
+      url: 'https://localhost:9999',
+    } as BrowserArgs);
+
+    expect(session.refMap.size).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Screenshot fullPage edge cases
+// ---------------------------------------------------------------------------
+describe('screenshot fullPage edge cases', () => {
+  beforeEach(() => {
+    mockDebuggerAttach.mockImplementation((_target: unknown, _version: string, cb: () => void) => {
+      chrome.runtime.lastError = undefined as unknown as typeof chrome.runtime.lastError;
+      cb();
+    });
+  });
+
+  it('sets device metrics to content dimensions', async () => {
+    let metricsParams: Record<string, unknown> | null = null;
+    mockDebuggerSendCommand.mockImplementation(
+      (_target: unknown, method: string, params: unknown, cb: (result: unknown) => void) => {
+        if (method === 'Page.getLayoutMetrics') {
+          cb({ contentSize: { width: 1440, height: 8000 } });
+        } else if (method === 'Emulation.setDeviceMetricsOverride') {
+          metricsParams = params as Record<string, unknown>;
+          cb({});
+        } else if (method === 'Page.captureScreenshot') {
+          cb({ data: 'base64data' });
+        } else {
+          cb({});
+        }
+      },
+    );
+
+    await mod.executeBrowser({
+      action: 'screenshot',
+      tabId: 1,
+      fullPage: true,
+    } as BrowserArgs);
+
+    expect(metricsParams).not.toBeNull();
+    expect(metricsParams!.width).toBe(1440);
+    expect(metricsParams!.height).toBe(8000);
+    expect(metricsParams!.deviceScaleFactor).toBe(1);
+  });
+
+  it('restores device metrics after successful capture', async () => {
+    const calledMethods: string[] = [];
+    mockDebuggerSendCommand.mockImplementation(
+      (_target: unknown, method: string, _params: unknown, cb: (result: unknown) => void) => {
+        calledMethods.push(method);
+        if (method === 'Page.getLayoutMetrics') {
+          cb({ contentSize: { width: 800, height: 3000 } });
+        } else if (method === 'Page.captureScreenshot') {
+          cb({ data: 'base64data' });
+        } else {
+          cb({});
+        }
+      },
+    );
+
+    await mod.executeBrowser({
+      action: 'screenshot',
+      tabId: 1,
+      fullPage: true,
+    } as BrowserArgs);
+
+    const clearIdx = calledMethods.lastIndexOf('Emulation.clearDeviceMetricsOverride');
+    const captureIdx = calledMethods.lastIndexOf('Page.captureScreenshot');
+    expect(clearIdx).toBeGreaterThan(captureIdx);
+  });
+
+  it('restores device metrics when capture throws', async () => {
+    const calledMethods: string[] = [];
+    mockDebuggerSendCommand.mockImplementation(
+      (_target: unknown, method: string, _params: unknown, cb: (result: unknown) => void) => {
+        calledMethods.push(method);
+        if (method === 'Page.getLayoutMetrics') {
+          cb({ contentSize: { width: 800, height: 3000 } });
+        } else if (method === 'Page.captureScreenshot') {
+          throw new Error('Capture failed');
+        } else {
+          cb({});
+        }
+      },
+    );
+
+    const result = await mod.executeBrowser({
+      action: 'screenshot',
+      tabId: 1,
+      fullPage: true,
+    } as BrowserArgs);
+
+    // Should have tried to clear metrics even after failure
+    expect(calledMethods).toContain('Emulation.clearDeviceMetricsOverride');
+    expect(result).toContain('Error');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// collectTextContent
+// ---------------------------------------------------------------------------
+describe('collectTextContent', () => {
+  it('collects only direct text children', () => {
+    const node: CDPNode = {
+      nodeId: 1,
+      backendNodeId: 1,
+      nodeType: 1,
+      nodeName: 'BUTTON',
+      children: [
+        { nodeId: 2, backendNodeId: 2, nodeType: 3, nodeName: '#text', nodeValue: 'Click ' } as CDPNode,
+        {
+          nodeId: 3,
+          backendNodeId: 3,
+          nodeType: 1,
+          nodeName: 'SPAN',
+          children: [
+            { nodeId: 4, backendNodeId: 4, nodeType: 3, nodeName: '#text', nodeValue: 'here' } as CDPNode,
+          ],
+        } as CDPNode,
+      ],
+    };
+
+    const text = mod.collectTextContent(node);
+    expect(text).toBe('Click ');
+    expect(text).not.toContain('here');
+  });
+
+  it('returns empty string for element with no text nodes', () => {
+    const node: CDPNode = {
+      nodeId: 1,
+      backendNodeId: 1,
+      nodeType: 1,
+      nodeName: 'BUTTON',
+      children: [
+        {
+          nodeId: 2,
+          backendNodeId: 2,
+          nodeType: 1,
+          nodeName: 'SVG',
+          children: [],
+        } as CDPNode,
+      ],
+    };
+
+    const text = mod.collectTextContent(node);
+    expect(text).toBe('');
+  });
+
+  it('returns nodeValue for text nodes', () => {
+    const textNode: CDPNode = {
+      nodeId: 1,
+      backendNodeId: 1,
+      nodeType: 3,
+      nodeName: '#text',
+      nodeValue: 'Hello world',
+    };
+
+    const text = mod.collectTextContent(textNode);
+    expect(text).toBe('Hello world');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Empty/malformed DOM in snapshot
+// ---------------------------------------------------------------------------
+describe('empty/malformed DOM in snapshot', () => {
+  const makeCtx = (): SnapshotContext => ({
+    refCounter: 0,
+    nodeCount: 0,
+    refMap: new Map(),
+    lines: [],
+  });
+
+  it('handles document with no children', () => {
+    const ctx = makeCtx();
+    const root: CDPNode = {
+      nodeId: 1,
+      backendNodeId: 1,
+      nodeType: 9,
+      nodeName: '#document',
+      children: [],
+    };
+
+    mod.walkNode(root, 0, ctx);
+    expect(ctx.lines).toHaveLength(0);
+    expect(ctx.nodeCount).toBeGreaterThanOrEqual(0);
+  });
+
+  it('handles node with undefined children', () => {
+    const ctx = makeCtx();
+    const root: CDPNode = {
+      nodeId: 1,
+      backendNodeId: 1,
+      nodeType: 9,
+      nodeName: '#document',
+      children: undefined,
+    };
+
+    // Should not throw
+    mod.walkNode(root, 0, ctx);
+    expect(ctx.lines).toHaveLength(0);
+  });
+
+  it('walks into iframe contentDocument', () => {
+    const ctx = makeCtx();
+    const iframe: CDPNode = {
+      nodeId: 1,
+      backendNodeId: 1,
+      nodeType: 1,
+      nodeName: 'IFRAME',
+      attributes: ['src', 'about:blank'],
+      children: [],
+      contentDocument: {
+        nodeId: 10,
+        backendNodeId: 10,
+        nodeType: 9,
+        nodeName: '#document',
+        children: [
+          {
+            nodeId: 11,
+            backendNodeId: 11,
+            nodeType: 1,
+            nodeName: 'P',
+            children: [
+              {
+                nodeId: 12,
+                backendNodeId: 12,
+                nodeType: 3,
+                nodeName: '#text',
+                nodeValue: 'Iframe content here',
+              } as CDPNode,
+            ],
+          } as CDPNode,
+        ],
+      },
+    };
+
+    mod.walkNode(iframe, 0, ctx);
+    const output = ctx.lines.join('\n');
+    expect(output).toContain('[iframe]');
+    expect(output).toContain('Iframe content here');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// browserToolDef.formatResult
+// ---------------------------------------------------------------------------
+describe('browserToolDef.formatResult', () => {
+  // Import browserToolDef lazily since mod is re-imported on each test
+  it('formats ScreenshotResult as image content block', async () => {
+    const { browserToolDef } = mod;
+    const screenshotResult = {
+      __type: 'screenshot' as const,
+      base64: 'iVBORw0KGgoAAAA',
+      mimeType: 'image/png',
+      width: 100,
+      height: 100,
+    };
+
+    const formatted = browserToolDef.formatResult!(screenshotResult);
+    expect(formatted.content).toHaveLength(2);
+    expect(formatted.content[0].type).toBe('text');
+    expect(formatted.content[0].text).toContain('100\u00d7100');
+    expect(formatted.content[1].type).toBe('image');
+    expect(formatted.content[1].data).toBe('iVBORw0KGgoAAAA');
+    expect(formatted.content[1].mimeType).toBe('image/png');
+  });
+
+  it('formats plain string as text content block', () => {
+    const { browserToolDef } = mod;
+    const result = browserToolDef.formatResult!('Open tabs (2):\n[1] Tab One');
+
+    expect(result.content).toHaveLength(1);
+    expect(result.content[0].type).toBe('text');
+    expect(result.content[0].text).toBe('Open tabs (2):\n[1] Tab One');
   });
 });

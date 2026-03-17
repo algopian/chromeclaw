@@ -2,7 +2,7 @@
 // web_fetch tool — fetch and extract content from a URL.
 // ---------------------------------------------------------------------------
 
-import { normalizeCacheKey, readCache, writeCache, withTimeout } from './web-shared';
+import { normalizeCacheKey, readCache, readResponseText, writeCache, withTimeout } from './web-shared';
 import { createLogger } from '../logging/logger-buffer';
 import { Type } from '@sinclair/typebox';
 import type { CacheEntry } from './web-shared';
@@ -172,11 +172,43 @@ const executeWebFetch = async (args: WebFetchArgs): Promise<WebFetchResult> => {
     }
   }
 
+  // Validate URL before attempting fetch
+  try {
+    new URL(url);
+  } catch {
+    return { text: '', status: 0, error: `Invalid URL: "${url}". Ensure the URL includes a protocol (e.g., https://).` };
+  }
+
   const fetchInit: RequestInit = { signal: withTimeout(30) };
   if (method) fetchInit.method = method;
   if (body) fetchInit.body = body;
   if (headers) fetchInit.headers = headers;
-  const response = await fetch(url, fetchInit);
+
+  let response: Response;
+  try {
+    response = await fetch(url, fetchInit);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+
+    let detail: string;
+    if ((err instanceof DOMException && (err.name === 'AbortError' || err.name === 'TimeoutError')) ||
+        msg.includes('aborted') || msg.includes('timeout')) {
+      detail = `Request timed out after 30 seconds. The server may be slow or unreachable.`;
+    } else {
+      detail = `Network error: ${msg}. Possible causes: CORS policy blocking the request, SSL/TLS error, DNS resolution failure, or the server is unreachable. Try using the browser tool to navigate to the URL instead.`;
+    }
+
+    log.trace('[webFetch] fetch failed', { url, error: msg });
+    return { text: '', status: 0, error: detail };
+  }
+
+  // Handle non-2xx responses for binary mode early (no useful content to extract)
+  if (!response.ok && extractMode === 'binary') {
+    const errorBody = await readResponseText(response);
+    const detail = `HTTP ${response.status} ${response.statusText}${errorBody ? `: ${errorBody}` : ''}`;
+    log.trace('[webFetch] non-OK response', { url, status: response.status });
+    return { text: '', status: response.status, error: detail };
+  }
 
   // ── Binary mode: return base64 data URI ──
   if (extractMode === 'binary') {
@@ -253,6 +285,12 @@ const executeWebFetch = async (args: WebFetchArgs): Promise<WebFetchResult> => {
 
   const result: WebFetchResult = { text, title, status: response.status };
 
+  // Flag non-2xx responses with error detail while preserving extracted content
+  if (!response.ok) {
+    result.error = `HTTP ${response.status} ${response.statusText}`;
+    log.trace('[webFetch] non-OK response', { url, status: response.status });
+  }
+
   // Cache successful text results (skip for POST — non-idempotent)
   if (!isPost && response.ok && text.length > 0) {
     writeCache(FETCH_CACHE, cacheKey, result);
@@ -261,7 +299,7 @@ const executeWebFetch = async (args: WebFetchArgs): Promise<WebFetchResult> => {
   return result;
 };
 
-export { webFetchSchema, executeWebFetch, FETCH_CACHE, extractText, decodeEntities };
+export { webFetchSchema, executeWebFetch, FETCH_CACHE, extractText, decodeEntities, uint8ToBase64 };
 export type { WebFetchArgs, WebFetchResult };
 
 // ── Tool registration ──
