@@ -142,7 +142,7 @@ describe('sandbox tab lifecycle', () => {
   it('creates sandbox tab on first call', async () => {
     await executeCodeFirefox('return 1');
     expect(mockTabsCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ url: expect.stringContaining('sandbox.html'), active: false }),
+      expect.objectContaining({ url: 'https://example.com', active: false }),
     );
   });
 

@@ -80,6 +80,7 @@ import {
   UsersIcon,
   WrenchIcon,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import JSZip from 'jszip';
