@@ -23,8 +23,12 @@ const manifest = {
   name: '__MSG_extensionName__',
   browser_specific_settings: {
     gecko: {
-      id: 'chromeclaw@example.com',
-      strict_min_version: '109.0',
+      id: 'chromeclaw@algopian1.gmail.com',
+      strict_min_version: '113.0',
+      data_collection_permissions: {
+        required: ['none'],
+        optional: [],
+      },
     },
   },
   version: packageJson.version,
