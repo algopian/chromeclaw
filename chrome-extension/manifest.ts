@@ -69,6 +69,11 @@ const manifest = {
         enabled: true,
         path: 'rules/whatsapp-origin.json',
       },
+      {
+        id: 'strip_extension_origin',
+        enabled: true,
+        path: 'rules/strip-extension-origin.json',
+      },
     ],
   },
   options_ui: {
