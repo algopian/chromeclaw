@@ -18,9 +18,10 @@ import type { SseStreamAdapter } from '../sse-stream-adapter';
  * GLM uses non-standard closing tags for tool_call. Known variants:
  * - `</tool_call的工具结果>` — Chinese suffix ("tool result")
  * - `</tool_call〉` — fullwidth right angle bracket U+3009 instead of >
+ * - `</tool_call＞` — fullwidth greater-than sign U+FF1E instead of >
  * We normalize all variants to standard `</tool_call>`.
  */
-const GLM_TOOL_CALL_CLOSE_RE = /<\/tool_call[^>]*[>〉]/g;
+const GLM_TOOL_CALL_CLOSE_RE = /<\/tool_call[^>]*[>〉＞]/g;
 const GLM_TOOL_CALL_CLOSE_STD = '</tool_call>';
 
 const createGlmStreamAdapter = (): SseStreamAdapter => {

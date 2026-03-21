@@ -203,6 +203,44 @@ describe('createXmlTagParser', () => {
     ]);
   });
 
+  it('flush() strips incomplete closing tag with Chinese suffix (e.g. "</tool_call的工具")', () => {
+    const parser = createXmlTagParser();
+    parser.feed('<tool_call id="t1" name="search">');
+    parser.feed('{"q":"test"}\n</tool_call的工具');
+    const events = parser.flush();
+    expect(events).toEqual([
+      {
+        type: 'tool_call',
+        id: 't1',
+        name: 'search',
+        arguments: { q: 'test' },
+      },
+    ]);
+  });
+
+  it('flush() handles tool_call body with no trailing incomplete tag', () => {
+    const parser = createXmlTagParser();
+    parser.feed('<tool_call id="t1" name="search">{"q":"test"}');
+    const events = parser.flush();
+    expect(events).toEqual([
+      {
+        type: 'tool_call',
+        id: 't1',
+        name: 'search',
+        arguments: { q: 'test' },
+      },
+    ]);
+  });
+
+  it('flush() with only incomplete closing tag and no body emits empty result', () => {
+    const parser = createXmlTagParser();
+    parser.feed('<tool_call id="t1" name="search">');
+    parser.feed('</tool_call');
+    const events = parser.flush();
+    // After stripping incomplete closing tag, toolCallBuffer is empty — nothing to emit
+    expect(events).toEqual([]);
+  });
+
   it('buffers attribute-based tool_call tag arriving in small chunks', () => {
     const parser = createXmlTagParser();
 

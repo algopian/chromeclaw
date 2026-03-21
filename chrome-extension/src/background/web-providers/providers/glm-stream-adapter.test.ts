@@ -84,6 +84,25 @@ describe('createGlmStreamAdapter', () => {
       expect(result!.feedText).not.toContain('〉');
     });
 
+    it('normalizes </tool_call＞ (fullwidth greater-than U+FF1E) to </tool_call>', () => {
+      const adapter = createGlmStreamAdapter();
+      const text = '<tool_call id="a1" name="web_search">{"query":"test"}\n</tool_call\uFF1E';
+      const result = adapter.processEvent({ parsed: textEvent(text), delta: text });
+      expect(result!.feedText).toContain('</tool_call>');
+      expect(result!.feedText).not.toContain('\uFF1E');
+    });
+
+    it('normalizes multiple non-standard closing tags in same text', () => {
+      const adapter = createGlmStreamAdapter();
+      const text = '<tool_call id="a" name="t1">{"a":1}</tool_call的工具结果>\nresult\n<tool_call id="b" name="t2">{"b":2}</tool_call＞';
+      const result = adapter.processEvent({ parsed: textEvent(text), delta: text });
+      expect(result!.feedText).not.toContain('的工具结果');
+      expect(result!.feedText).not.toContain('\uFF1E');
+      // Both should be normalized to standard </tool_call>
+      const matches = result!.feedText.match(/<\/tool_call>/g);
+      expect(matches).toHaveLength(2);
+    });
+
     it('preserves standard </tool_call> as-is', () => {
       const adapter = createGlmStreamAdapter();
       const text = '<tool_call id="a1" name="web_search">{"query":"test"}</tool_call>';
