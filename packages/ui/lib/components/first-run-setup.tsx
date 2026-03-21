@@ -53,7 +53,6 @@ import {
   CalendarIcon,
   ZapIcon,
 } from 'lucide-react';
-import { parseSkillFrontmatter } from '@extension/shared';
 import { IS_FIREFOX } from '@extension/env';
 import { nanoid } from 'nanoid';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -65,6 +64,7 @@ type FirstRunSetupProps = {
 };
 
 const providers = [
+  { value: 'web', label: 'Web (Browser Session Zero Token)', defaultModel: '', defaultBase: '' },
   { value: 'openai', label: 'OpenAI', defaultModel: 'gpt-4o', defaultBase: '' },
   {
     value: 'anthropic',
@@ -80,7 +80,6 @@ const providers = [
     defaultBase: 'https://openrouter.ai/api/v1',
   },
   { value: 'custom', label: 'OpenAI Compatible', defaultModel: '', defaultBase: '' },
-  { value: 'web', label: 'Web (Browser Session Zero Token)', defaultModel: '', defaultBase: '' },
 ];
 
 const TOTAL_STEPS = IS_FIREFOX ? 6 : 5;
@@ -167,15 +166,15 @@ const StepIndicator = ({ current, t }: { current: number; t: TFunction }) => (
 /* ---------- Step 1: Model Setup ---------- */
 
 const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) => {
-  const [provider, setProvider] = useState('openai');
+  const [provider, setProvider] = useState('web');
   const [apiKey, setApiKey] = useState('');
-  const [modelId, setModelId] = useState('gpt-4o');
+  const [modelId, setModelId] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [supportsTools, setSupportsTools] = useState(true);
   const [supportsReasoning, setSupportsReasoning] = useState(true);
-  const [webProviderId, setWebProviderId] = useState('');
+  const [webProviderId, setWebProviderId] = useState('gemini-web');
 
   const handleProviderChange = useCallback((value: string) => {
     setProvider(value);

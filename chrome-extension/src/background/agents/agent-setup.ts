@@ -438,7 +438,7 @@ export const runAgent = async (opts: RunAgentOpts): Promise<RunAgentResult> => {
 
   // 1. Build pi-mono primitives (shared across attempts)
   const { model: piModel } = chatModelToPiModel(model);
-  const streamFn = createStreamFn(model);
+  const streamFn = createStreamFn(model, chatId);
   let tools =
     toolsOverride ??
     (model.supportsTools !== false

@@ -149,7 +149,7 @@ describe('createGeminiStreamAdapter', () => {
       expect(result).toEqual({
         feedText: '<tool_call id="t1" name="search">{"q":"test"}</tool_call>',
       });
-      expect(adapter.shouldAbort()).toBe(true);
+      expect(adapter.shouldAbort()).toBe(false);
     });
 
     it('does not suppress text that does not start with "think\\n"', () => {
@@ -195,13 +195,13 @@ describe('createGeminiStreamAdapter', () => {
       expect(adapter.shouldAbort()).toBe(false);
     });
 
-    it('shouldAbort returns true after </tool_call> is seen', () => {
+    it('shouldAbort always returns false (never abort early for Gemini)', () => {
       const adapter = createGeminiStreamAdapter();
       adapter.processEvent({
         parsed: textChunk('<tool_call id="a1" name="web_search">{"query":"test"}</tool_call>'),
         delta: '<tool_call id="a1" name="web_search">{"query":"test"}</tool_call>',
       });
-      expect(adapter.shouldAbort()).toBe(true);
+      expect(adapter.shouldAbort()).toBe(false);
     });
 
     it('flush returns null (no state to flush)', () => {

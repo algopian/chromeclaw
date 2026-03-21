@@ -67,8 +67,8 @@ const defaultModelIds: Record<string, string> = {
 
 const emptyForm: ModelFormData = {
   name: '',
-  modelId: 'gpt-4o',
-  provider: 'openai',
+  modelId: '',
+  provider: 'web',
   description: '',
   apiKey: '',
   baseUrl: '',

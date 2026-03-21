@@ -83,8 +83,6 @@ const createGeminiStreamAdapter = (): SseStreamAdapter => {
   let thinkPrefixLen = 0;
   /** Whether we've finished detecting the think prefix. */
   let prefixResolved = false;
-  /** Whether a complete </tool_call> was seen — signals bridge to abort early. */
-  let hasCompleteToolCall = false;
 
   return {
     processEvent({ parsed }) {
@@ -129,19 +127,17 @@ const createGeminiStreamAdapter = (): SseStreamAdapter => {
 
       const textDelta = effectiveFull.slice(effectivePrev.length);
 
-      // Detect complete tool calls so shouldAbort can signal the bridge
-      if (textDelta.includes('</tool_call>')) {
-        hasCompleteToolCall = true;
-      }
-
       return { feedText: textDelta };
     },
 
     flush: () => null,
 
-    // Abort the stream once a tool call is fully received, so the bridge
-    // can execute the tool without waiting for Gemini's trailing metadata chunks.
-    shouldAbort: () => hasCompleteToolCall,
+    // Never abort early — Gemini may emit multiple tool calls in a single
+    // response (e.g. parallel web_search + browser). Aborting after the first
+    // </tool_call> would lose subsequent ones. Let the stream finish naturally
+    // via WEB_LLM_DONE; the bridge already sets stopReason='toolUse' when
+    // hasToolCalls is true.
+    shouldAbort: () => false,
   };
 };
 
