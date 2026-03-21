@@ -5,6 +5,7 @@
  */
 
 import { createClaudeStreamAdapter } from './claude-stream-adapter';
+import { createGeminiStreamAdapter } from './gemini-stream-adapter';
 import { createGlmStreamAdapter } from './glm-stream-adapter';
 import { createKimiStreamAdapter } from './kimi-stream-adapter';
 import { createQwenStreamAdapter } from './qwen-stream-adapter';
@@ -45,6 +46,8 @@ const getSseStreamAdapter = (providerId: WebProviderId): SseStreamAdapter => {
     case 'glm-web':
     case 'glm-intl-web':
       return createGlmStreamAdapter();
+    case 'gemini-web':
+      return createGeminiStreamAdapter();
     default:
       return createDefaultAdapter();
   }

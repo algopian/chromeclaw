@@ -135,6 +135,7 @@ const WEB_PROVIDER_OPTIONS = [
   { value: 'qwen-cn-web', label: 'Qwen CN (qianwen.com)', loginUrl: 'https://qianwen.com', cookieDomain: '.qianwen.com', sessionIndicators: ['tongyi_sso_ticket'], defaultModelId: 'qwen-max', defaultModelName: 'Qwen Max (CN)' },
   { value: 'glm-web', label: 'GLM (chatglm.cn)', loginUrl: 'https://chatglm.cn', cookieDomain: '.chatglm.cn', sessionIndicators: ['chatglm_refresh_token', 'chatglm_token'], defaultModelId: 'glm-4', defaultModelName: 'GLM-4', refreshUrl: 'https://chatglm.cn/chatglm/user-api/user/refresh' },
   { value: 'glm-intl-web', label: 'GLM Intl (chat.z.ai)', loginUrl: 'https://chat.z.ai', cookieDomain: '.z.ai', sessionIndicators: ['chatglm_refresh_token', 'chatglm_token', 'refresh_token', 'auth_token', 'access_token', 'token'], defaultModelId: 'glm-4', defaultModelName: 'GLM-4 International', refreshUrl: 'https://chat.z.ai/chatglm/user-api/user/refresh' },
+  { value: 'gemini-web', label: 'Gemini (gemini.google.com)', loginUrl: 'https://gemini.google.com', cookieDomain: '.google.com', sessionIndicators: ['__Secure-1PSID', 'SID'], defaultModelId: 'gemini-3-flash', defaultModelName: 'Gemini 3 Flash' },
 ] as const;
 
 /** Tool definition (metadata only — no execute function) */

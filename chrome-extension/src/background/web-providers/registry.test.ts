@@ -5,9 +5,9 @@ import { describe, it, expect } from 'vitest';
 import { getWebProvider, getAllWebProviders } from './registry';
 
 describe('web provider registry', () => {
-  it('returns all 6 providers', () => {
+  it('returns all 7 providers', () => {
     const all = getAllWebProviders();
-    expect(all).toHaveLength(6);
+    expect(all).toHaveLength(7);
   });
 
   it('looks up claude-web provider by ID', () => {

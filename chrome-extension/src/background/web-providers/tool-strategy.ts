@@ -217,6 +217,21 @@ const glmToolStrategy: WebProviderToolStrategy = {
   serializeAssistantContent,
 };
 
+// ── Gemini Strategy ────────────────────────────
+// Gemini's web API is stateless from our perspective (no server-side conversation ID reuse).
+// Always aggregates full history into a single user message (like Kimi/Claude).
+
+const geminiToolStrategy: WebProviderToolStrategy = {
+  buildToolPrompt: buildMarkdownToolPrompt,
+
+  buildPrompt: ({ systemPrompt, toolPrompt, messages }) => ({
+    systemPrompt: '',
+    messages: aggregateHistory(systemPrompt, toolPrompt, messages),
+  }),
+
+  serializeAssistantContent,
+};
+
 // ── Claude Strategy ─────────────────────────────
 // Claude's web API has a single `prompt` field (no system message).
 // The strategy aggregates system prompt, tool prompt, and all messages into one
@@ -251,6 +266,8 @@ const getToolStrategy = (providerId: WebProviderId): WebProviderToolStrategy => 
       return qwenToolStrategy;
     case 'kimi-web':
       return kimiToolStrategy;
+    case 'gemini-web':
+      return geminiToolStrategy;
     case 'glm-web':
     case 'glm-intl-web':
       return glmToolStrategy;
@@ -268,5 +285,6 @@ export {
   qwenToolStrategy,
   kimiToolStrategy,
   glmToolStrategy,
+  geminiToolStrategy,
 };
 export type { WebProviderToolStrategy, SimpleMessage, ContentPart };
