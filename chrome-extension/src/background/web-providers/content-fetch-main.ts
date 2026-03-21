@@ -137,21 +137,51 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       const gemReqId = Math.floor(Math.random() * 9_000_000) + 1_000_000;
       const clientUuid = crypto.randomUUID();
 
+      // Gemini's internal request format is a positional JSON array.
+      // Indices documented from network capture reverse-engineering.
+      //
+      // Response quirks:
+      //   - Cumulative text (full text each chunk, not deltas)
+      //   - 11-12 chunks per response, paragraph-level structured text
+      //   - Completion marker: status [1]→[2], adds [null,null,7], geo flips false→true
+      //   - _reqid increments by exactly 100,000 per API call
+      //
+      // Known RPC types: StreamGenerate, ESY5D, PCck7e, aPya6c, qpEbW (quota), L5adhe (state sync)
       const innerJson = JSON.stringify([
-        [geminiPrompt, 0, null, null, null, null, 0],
-        ['en'],
-        [null, null, null, null, null, null, null, null, null, null],
-        at,
-        null,
-        null, [0], 1, null, null, 1, 0,
-        null, null, null, null, null, [[1]], 0,
-        null, null, null, null, null, null, null, null,
-        1, null, null, [4],
-        null, null, null, null, null, null, null, null, null, null,
-        [1], null, null, null, null, null, null, null, null, null, null, null,
-        0, null, null, null, null, null,
-        clientUuid,
-        null, [], null, null, null, null, null, null, 1,
+        [geminiPrompt, 0, null, null, null, null, 0],  // [0] message + config
+        ['en'],                                         // [1] language
+        [null, null, null, null, null, null, null, null, null, null], // [2] conversation state (convId, respId, candidateId, stateToken)
+        at,                                             // [3] CSRF token
+        null,                                           // [4] fingerprint
+        null,                                           // [5]
+        [0],                                            // [6]
+        1,                                              // [7]
+        null,                                           // [8]
+        null,                                           // [9]
+        1,                                              // [10]
+        0,                                              // [11]
+        null,                                           // [12]
+        null,                                           // [13]
+        [[1]],                                          // [14] thinking toggle: [[0]]=ON, [[1]]=OFF (fast mode)
+        0,                                              // [15]
+        null,                                           // [16]
+        null,                                           // [17]
+        null,                                           // [18]
+        null,                                           // [19]
+        null,                                           // [20]
+        null,                                           // [21]
+        null,                                           // [22]
+        null,                                           // [23]
+        1,                                              // [24]
+        null,                                           // [25]
+        null,                                           // [26]
+        [4],                                            // [27] model selector: [4]=Gemini 3 Flash
+        null, null, null, null, null, null, null, null, null, null,  // [28]-[37]
+        [1],                                            // [38]
+        null, null, null, null, null, null, null, null, null, null, null, null,  // [39]-[50]
+        0, null, null, null, null, null,                // [51]-[56]
+        clientUuid,                                     // [57] client request UUID
+        null, [], null, null, null, null, null, null, 1, // [58]-[66]
       ]);
       const gemBody = `f.req=${encodeURIComponent(`[null,${JSON.stringify(innerJson)}]`)}&at=${encodeURIComponent(at)}`;
 
@@ -201,7 +231,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
           const prefixEnd = textBuffer.indexOf('\n');
           if (prefixEnd === -1) continue; // need more data
           const prefix = textBuffer.slice(0, prefixEnd).trim();
-          if (prefix === ")]}'" || prefix === ")]}'") {
+          if (prefix === ")]}'") {
             textBuffer = textBuffer.slice(prefixEnd + 1);
           }
           prefixStripped = true;
@@ -210,16 +240,16 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
         // Parse length-prefixed chunks using line-based approach.
         // Gemini format: <byte_length>\n<json_data>\n
         // Instead of tracking byte offsets (which differ from JS char offsets for
-        // multi-byte content), we split on newlines and identify JSON lines by
-        // checking if they start with '[' (all Gemini response chunks are arrays).
+        // multi-byte content), we split on newlines and identify JSON lines.
         // Numeric-only lines are length prefixes — skip them.
+        const numericLineRe = /^\d+$/;
         while (textBuffer.includes('\n')) {
           const lineEnd = textBuffer.indexOf('\n');
           const line = textBuffer.slice(0, lineEnd).trim();
           textBuffer = textBuffer.slice(lineEnd + 1);
 
           // Skip empty lines and numeric length-prefix lines
-          if (line.length === 0 || /^\d+$/.test(line)) continue;
+          if (line.length === 0 || numericLineRe.test(line)) continue;
 
           // Post JSON data lines as SSE events
           const sseChunk = `data: ${line}\n\n`;
@@ -227,9 +257,13 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
         }
       }
 
-      // Flush any remaining text
+      // Flush any remaining bytes from the decoder and process the final buffer
       const finalText = decoder.decode();
       if (finalText) textBuffer += finalText;
+      if (textBuffer.trim().length > 0 && !/^\d+$/.test(textBuffer.trim())) {
+        const sseChunk = `data: ${textBuffer.trim()}\n\n`;
+        window.postMessage({ type: 'WEB_LLM_CHUNK', requestId, chunk: sseChunk }, origin);
+      }
 
       window.postMessage({ type: 'WEB_LLM_DONE', requestId }, origin);
       return;
