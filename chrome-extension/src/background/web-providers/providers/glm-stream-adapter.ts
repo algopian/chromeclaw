@@ -12,7 +12,7 @@
  *    wrap them in `<think>...</think>` tags for the XML parser.
  */
 
-import type { SseStreamAdapter } from './sse-stream-adapter';
+import type { SseStreamAdapter } from '../sse-stream-adapter';
 
 /**
  * GLM uses non-standard closing tags for tool_call. Known variants:

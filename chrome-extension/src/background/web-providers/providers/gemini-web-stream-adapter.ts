@@ -16,9 +16,15 @@
  *           [geo_data], ...]
  *   Text:  inner[4][0][1] = ["Hello, Kyle. How can I help you today?"]
  *   Meta:  inner[1] = ["c_62b578147ba7dae2", "r_1ae5a46c89a9f484"]
+ *
+ * Streaming behaviour:
+ *   - Cumulative replacement: ~11-12 chunks per response, each containing full text so far.
+ *   - Bold formatting annotations appear as [[0,5,[[null,null,null,null,2]]]].
+ *   - Completion marker: final chunk changes status [1]→[2], adds [null,null,7],
+ *     and flips geo flag false→true.
  */
 
-import type { SseStreamAdapter } from './sse-stream-adapter';
+import type { SseStreamAdapter } from '../sse-stream-adapter';
 
 /**
  * Parse the inner JSON from a Gemini response chunk.
@@ -71,25 +77,6 @@ const extractGeminiText = (parsed: unknown): string | null => {
   }
 };
 
-/**
- * Extract conversation metadata from a Gemini response chunk.
- * Location: inner[1] = [conversationId, responseId]
- */
-const extractGeminiConversationMeta = (
-  parsed: unknown,
-): { conversationId?: string; responseId?: string } | null => {
-  const inner = parseGeminiInner(parsed);
-  if (!inner) return null;
-
-  const meta = inner[1];
-  if (!Array.isArray(meta)) return null;
-
-  return {
-    conversationId: typeof meta[0] === 'string' ? meta[0] : undefined,
-    responseId: typeof meta[1] === 'string' ? meta[1] : undefined,
-  };
-};
-
 const createGeminiStreamAdapter = (): SseStreamAdapter => {
   let prevText = '';
   /** Length of bare "think\n..." prefix to skip (Gemini native CoT leak). */
@@ -112,14 +99,20 @@ const createGeminiStreamAdapter = (): SseStreamAdapter => {
       // Suppress the bare prefix so only the XML-tagged thinking reaches the parser.
       if (!prefixResolved) {
         if (fullText.startsWith('think\n')) {
-          const tagIdx = fullText.indexOf('<think>');
-          if (tagIdx < 0) {
+          const thinkIdx = fullText.indexOf('<think>');
+          const toolIdx = fullText.indexOf('<tool_call');
+          // Pick the first XML tag that appears — either <think> or <tool_call
+          const resolveIdx = thinkIdx >= 0 && toolIdx >= 0
+            ? Math.min(thinkIdx, toolIdx)
+            : thinkIdx >= 0 ? thinkIdx : toolIdx;
+
+          if (resolveIdx < 0) {
             // Still in bare thinking prefix — suppress output
             prevText = fullText;
             return null;
           }
-          // Found <think> tag — skip everything before it
-          thinkPrefixLen = tagIdx;
+          // Found an XML tag — skip the bare think prefix before it
+          thinkPrefixLen = resolveIdx;
         }
         prefixResolved = true;
       }
@@ -152,4 +145,4 @@ const createGeminiStreamAdapter = (): SseStreamAdapter => {
   };
 };
 
-export { createGeminiStreamAdapter, extractGeminiText, extractGeminiConversationMeta };
+export { createGeminiStreamAdapter, extractGeminiText };

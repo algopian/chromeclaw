@@ -5,8 +5,7 @@ import { describe, it, expect } from 'vitest';
 import {
   createGeminiStreamAdapter,
   extractGeminiText,
-  extractGeminiConversationMeta,
-} from './gemini-stream-adapter';
+} from './gemini-web-stream-adapter';
 
 /**
  * Helper to build a Gemini response chunk matching the actual response structure.
@@ -76,29 +75,6 @@ describe('extractGeminiText', () => {
   });
 });
 
-describe('extractGeminiConversationMeta', () => {
-  it('extracts conversation metadata', () => {
-    const meta = extractGeminiConversationMeta(textChunk('test'));
-    expect(meta).toEqual({
-      conversationId: 'c_abc123',
-      responseId: 'r_def456',
-    });
-  });
-
-  it('extracts from metadata-only chunks', () => {
-    const meta = extractGeminiConversationMeta(metaChunk('c_conv', 'r_resp'));
-    expect(meta).toEqual({
-      conversationId: 'c_conv',
-      responseId: 'r_resp',
-    });
-  });
-
-  it('returns null for invalid structure', () => {
-    expect(extractGeminiConversationMeta(null)).toBeNull();
-    expect(extractGeminiConversationMeta([])).toBeNull();
-  });
-});
-
 describe('createGeminiStreamAdapter', () => {
   describe('cumulative text deduplication', () => {
     it('computes delta from cumulative text', () => {
@@ -142,6 +118,38 @@ describe('createGeminiStreamAdapter', () => {
       })).toEqual({
         feedText: '<think>\nGreeting user.\n</think>Hello!',
       });
+    });
+
+    it('resolves prefix when bare think leads directly to <tool_call> (no <think> tag)', () => {
+      const adapter = createGeminiStreamAdapter();
+      // Bare think prefix with reasoning — suppressed
+      expect(adapter.processEvent({
+        parsed: textChunk('think\nThe user is asking for weather.\nI should use web_search.'),
+        delta: null,
+      })).toBeNull();
+      // More bare thinking + tool_call starts appearing (still no <think> tag)
+      const fullText = 'think\nThe user is asking for weather.\nI should use web_search.\n<tool_call id="a1b2" name="web_search">{"query":"weather"}';
+      const result = adapter.processEvent({
+        parsed: textChunk(fullText),
+        delta: null,
+      });
+      expect(result).toEqual({
+        feedText: '<tool_call id="a1b2" name="web_search">{"query":"weather"}',
+      });
+    });
+
+    it('resolves prefix when bare think leads directly to </tool_call> completion', () => {
+      const adapter = createGeminiStreamAdapter();
+      // Full bare think + complete tool call in one chunk
+      const fullText = 'think\nReasoning here.\n<tool_call id="t1" name="search">{"q":"test"}</tool_call>';
+      const result = adapter.processEvent({
+        parsed: textChunk(fullText),
+        delta: null,
+      });
+      expect(result).toEqual({
+        feedText: '<tool_call id="t1" name="search">{"q":"test"}</tool_call>',
+      });
+      expect(adapter.shouldAbort()).toBe(true);
     });
 
     it('does not suppress text that does not start with "think\\n"', () => {

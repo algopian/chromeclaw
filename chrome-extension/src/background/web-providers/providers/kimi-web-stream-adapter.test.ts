@@ -2,7 +2,7 @@
  * Tests for kimi-stream-adapter.ts — Kimi-specific SSE stream processing.
  */
 import { describe, it, expect } from 'vitest';
-import { createKimiStreamAdapter } from './kimi-stream-adapter';
+import { createKimiStreamAdapter } from './kimi-web-stream-adapter';
 
 describe('createKimiStreamAdapter', () => {
   describe('processEvent', () => {

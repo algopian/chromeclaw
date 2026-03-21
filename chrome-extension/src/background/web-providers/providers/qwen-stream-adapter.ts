@@ -5,7 +5,8 @@
  * Extracted from web-llm-bridge.ts so the logic is independently testable.
  */
 
-import type { SseStreamAdapter } from './sse-stream-adapter';
+import { escapeXml } from '../tool-prompt';
+import type { SseStreamAdapter } from '../sse-stream-adapter';
 
 interface ChoiceDelta {
   phase?: string;
@@ -42,9 +43,6 @@ interface PendingCall {
   name: string;
   arguments: string;
 }
-
-/** Escape characters that would break XML attribute values. */
-const escapeXmlAttr = (s: string): string => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
 const createQwenStreamAdapter = (): SseStreamAdapter => {
   let currentPhase: string | undefined;
@@ -149,7 +147,7 @@ const createQwenStreamAdapter = (): SseStreamAdapter => {
             currentPhase = 'answer';
           }
           const toolId = crypto.randomUUID().slice(0, 8);
-          const safeName = escapeXmlAttr(pending.name);
+          const safeName = escapeXml(pending.name);
           const xmlToolCall = `<tool_call id="${toolId}" name="${safeName}">${pending.arguments}</tool_call>`;
           return { feedText: prefix + xmlToolCall };
         }

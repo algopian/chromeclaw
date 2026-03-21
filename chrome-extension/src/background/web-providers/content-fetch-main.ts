@@ -134,24 +134,41 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       } catch { /* use empty */ }
 
       // Build the real Gemini request
+      // _reqid increments by exactly 100,000 per API call in the real client.
+      // We randomize it since we don't persist session-level state.
       const gemReqId = Math.floor(Math.random() * 9_000_000) + 1_000_000;
       const clientUuid = crypto.randomUUID();
 
       const innerJson = JSON.stringify([
-        [geminiPrompt, 0, null, null, null, null, 0],
-        ['en'],
-        [null, null, null, null, null, null, null, null, null, null],
-        at,
-        null,
-        null, [0], 1, null, null, 1, 0,
-        null, null, null, null, null, [[1]], 0,
-        null, null, null, null, null, null, null, null,
-        1, null, null, [4],
-        null, null, null, null, null, null, null, null, null, null,
-        [1], null, null, null, null, null, null, null, null, null, null, null,
-        0, null, null, null, null, null,
-        clientUuid,
-        null, [], null, null, null, null, null, null, 1,
+        /* [0]  prompt tuple */              [geminiPrompt, 0, null, null, null, null, 0],
+        /* [1]  locale */                    ['en'],
+        /* [2]  unknown (10× null) */        [null, null, null, null, null, null, null, null, null, null],
+        /* [3]  CSRF token (SNlM0e) */       at,
+        /* [4]  */                           null,
+        /* [5]  */                           null,
+        /* [6]  unknown flag */              [0],
+        /* [7]  unknown (1) */               1,
+        /* [8]  */                           null,
+        /* [9]  */                           null,
+        /* [10] unknown (1) */               1,
+        /* [11] unknown (0) */               0,
+        /* [12–16] */                        null, null, null, null, null,
+        /* [17] thinking: [[0]]=ON, [[1]]=OFF (fast) */ [[1]],
+        /* [18] unknown (0) */               0,
+        /* [19–26] */                        null, null, null, null, null, null, null, null,
+        /* [27] unknown (1) */               1,
+        /* [28–29] */                        null, null,
+        /* [30] unknown */                   [4],
+        /* [31–40] */                        null, null, null, null, null, null, null, null, null, null,
+        /* [41] unknown */                   [1],
+        /* [42–52] */                        null, null, null, null, null, null, null, null, null, null, null,
+        /* [53] unknown (0) */               0,
+        /* [54–58] */                        null, null, null, null, null,
+        /* [59] client UUID */               clientUuid,
+        /* [60] */                           null,
+        /* [61] empty array */               [],
+        /* [62–67] */                        null, null, null, null, null, null,
+        /* [68] unknown (1) */               1,
       ]);
       const gemBody = `f.req=${encodeURIComponent(`[null,${JSON.stringify(innerJson)}]`)}&at=${encodeURIComponent(at)}`;
 
