@@ -1,8 +1,8 @@
 /**
- * Tests for claude-stream-adapter.ts — Claude-specific SSE stream processing.
+ * Tests for claude-web-stream-adapter.ts — Claude-specific SSE stream processing.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { createClaudeStreamAdapter } from './claude-stream-adapter';
+import { createClaudeStreamAdapter } from './claude-web-stream-adapter';
 
 // Mock crypto.randomUUID for deterministic fallback tool IDs
 vi.stubGlobal('crypto', { randomUUID: () => 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' });

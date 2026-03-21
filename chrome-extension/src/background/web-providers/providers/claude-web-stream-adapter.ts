@@ -18,8 +18,8 @@
  * 6. Error frames contain an `error` object with a `message` field.
  */
 
-import type { SseStreamAdapter } from './sse-stream-adapter';
-import { escapeXml } from './tool-prompt';
+import type { SseStreamAdapter } from '../sse-stream-adapter';
+import { escapeXml } from '../tool-prompt';
 
 const createClaudeStreamAdapter = (): SseStreamAdapter => {
   let inThinking = false;

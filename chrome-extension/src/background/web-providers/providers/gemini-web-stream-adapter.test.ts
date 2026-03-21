@@ -1,12 +1,12 @@
 /**
- * Tests for gemini-stream-adapter.ts — Gemini-specific stream processing.
+ * Tests for gemini-web-stream-adapter.ts — Gemini-specific stream processing.
  */
 import { describe, it, expect } from 'vitest';
 import {
   createGeminiStreamAdapter,
   extractGeminiText,
   extractGeminiConversationMeta,
-} from './gemini-stream-adapter';
+} from './gemini-web-stream-adapter';
 
 /**
  * Helper to build a Gemini response chunk matching the actual response structure.
@@ -103,13 +103,13 @@ describe('createGeminiStreamAdapter', () => {
   describe('cumulative text deduplication', () => {
     it('computes delta from cumulative text', () => {
       const adapter = createGeminiStreamAdapter();
-      expect(adapter.processEvent({ parsed: textChunk('Hello'), delta: 'Hello' })).toEqual({
+      expect(adapter.processEvent({ parsed: textChunk('Hello'), delta: null })).toEqual({
         feedText: 'Hello',
       });
-      expect(adapter.processEvent({ parsed: textChunk('Hello world'), delta: 'Hello world' })).toEqual({
+      expect(adapter.processEvent({ parsed: textChunk('Hello world'), delta: null })).toEqual({
         feedText: ' world',
       });
-      expect(adapter.processEvent({ parsed: textChunk('Hello world!'), delta: 'Hello world!' })).toEqual({
+      expect(adapter.processEvent({ parsed: textChunk('Hello world!'), delta: null })).toEqual({
         feedText: '!',
       });
     });
@@ -118,7 +118,7 @@ describe('createGeminiStreamAdapter', () => {
       const adapter = createGeminiStreamAdapter();
       adapter.processEvent({ parsed: textChunk('Hello'), delta: 'Hello' });
       // Same text again — no new delta
-      expect(adapter.processEvent({ parsed: textChunk('Hello'), delta: 'Hello' })).toBeNull();
+      expect(adapter.processEvent({ parsed: textChunk('Hello'), delta: null })).toBeNull();
     });
 
     it('returns null for metadata chunks with no text', () => {
@@ -133,12 +133,12 @@ describe('createGeminiStreamAdapter', () => {
       // First chunk: bare "think\n" reasoning (no XML tags)
       expect(adapter.processEvent({
         parsed: textChunk('think\nThe user said hi.\nI should greet them.'),
-        delta: 'think\nThe user said hi.\nI should greet them.',
+        delta: null,
       })).toBeNull();
       // Second chunk: cumulative text now includes <think> tag
       expect(adapter.processEvent({
         parsed: textChunk('think\nThe user said hi.\nI should greet them.\n<think>\nGreeting user.\n</think>Hello!'),
-        delta: 'think\nThe user said hi.\nI should greet them.\n<think>\nGreeting user.\n</think>Hello!',
+        delta: null,
       })).toEqual({
         feedText: '<think>\nGreeting user.\n</think>Hello!',
       });
@@ -148,7 +148,7 @@ describe('createGeminiStreamAdapter', () => {
       const adapter = createGeminiStreamAdapter();
       expect(adapter.processEvent({
         parsed: textChunk('Hello world'),
-        delta: 'Hello world',
+        delta: null,
       })).toEqual({ feedText: 'Hello world' });
     });
 
@@ -157,17 +157,17 @@ describe('createGeminiStreamAdapter', () => {
       // Bare think prefix — suppressed
       adapter.processEvent({
         parsed: textChunk('think\nreasoning here'),
-        delta: 'think\nreasoning here',
+        delta: null,
       });
       // <think> tag appears
       adapter.processEvent({
         parsed: textChunk('think\nreasoning here\n<think>\nSummary\n</think>Hi'),
-        delta: 'think\nreasoning here\n<think>\nSummary\n</think>Hi',
+        delta: null,
       });
       // More cumulative text
       expect(adapter.processEvent({
         parsed: textChunk('think\nreasoning here\n<think>\nSummary\n</think>Hi there!'),
-        delta: 'think\nreasoning here\n<think>\nSummary\n</think>Hi there!',
+        delta: null,
       })).toEqual({ feedText: ' there!' });
     });
   });
@@ -191,7 +191,7 @@ describe('createGeminiStreamAdapter', () => {
       const adapter = createGeminiStreamAdapter();
       adapter.processEvent({
         parsed: textChunk('<tool_call id="a1" name="web_search">{"query":"test"}</tool_call>'),
-        delta: '<tool_call id="a1" name="web_search">{"query":"test"}</tool_call>',
+        delta: null,
       });
       expect(adapter.shouldAbort()).toBe(true);
     });
@@ -206,13 +206,13 @@ describe('createGeminiStreamAdapter', () => {
       // Init metadata chunk
       expect(adapter.processEvent({ parsed: metaChunk(undefined, 'r_1'), delta: null })).toBeNull();
       // First text chunk
-      expect(adapter.processEvent({ parsed: textChunk('Hello'), delta: 'Hello' })).toEqual({
+      expect(adapter.processEvent({ parsed: textChunk('Hello'), delta: null })).toEqual({
         feedText: 'Hello',
       });
       // Another metadata chunk
       expect(adapter.processEvent({ parsed: metaChunk('c_1', 'r_1'), delta: null })).toBeNull();
       // Second text chunk (cumulative)
-      expect(adapter.processEvent({ parsed: textChunk('Hello, Kyle.'), delta: 'Hello, Kyle.' })).toEqual({
+      expect(adapter.processEvent({ parsed: textChunk('Hello, Kyle.'), delta: null })).toEqual({
         feedText: ', Kyle.',
       });
     });

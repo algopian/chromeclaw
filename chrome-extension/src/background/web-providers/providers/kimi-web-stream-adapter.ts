@@ -3,7 +3,7 @@
  * with done detection and error frame handling.
  */
 
-import type { SseStreamAdapter } from './sse-stream-adapter';
+import type { SseStreamAdapter } from '../sse-stream-adapter';
 
 const createKimiStreamAdapter = (): SseStreamAdapter => {
   return {

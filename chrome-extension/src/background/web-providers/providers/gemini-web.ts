@@ -1,3 +1,4 @@
+import { extractGeminiText } from './gemini-web-stream-adapter';
 import type { WebProviderDefinition } from '../types';
 
 /**
@@ -32,7 +33,7 @@ const geminiWeb: WebProviderDefinition = {
 
     return {
       url: 'https://gemini.google.com/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate',
-      binaryProtocol: 'gemini-chunks' as 'connect-json',
+      binaryProtocol: 'gemini-chunks',
       init: {
         method: 'POST',
         headers: {
@@ -43,30 +44,9 @@ const geminiWeb: WebProviderDefinition = {
       },
     };
   },
-  parseSseDelta: data => {
-    // The stream adapter handles cumulative text deduplication — this just extracts
-    // the raw cumulative text from the deeply nested response structure.
-    // Outer: [["wrb.fr", null, "<inner_json>"]]
-    // Inner[4][0][1] = text segments array
-    try {
-      const arr = data as unknown[];
-      if (!Array.isArray(arr) || !arr[0] || !Array.isArray(arr[0])) return null;
-      const inner = arr[0][2];
-      if (typeof inner !== 'string') return null;
-      const parsed = JSON.parse(inner);
-      const candidates = parsed?.[4];
-      if (!Array.isArray(candidates) || candidates.length === 0) return null;
-      const firstCandidate = candidates[0];
-      if (!Array.isArray(firstCandidate)) return null;
-      const textArr = firstCandidate[1];
-      if (Array.isArray(textArr) && textArr.length > 0) {
-        return textArr.join('');
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  },
+  // Delegates to the shared extraction logic in gemini-stream-adapter.ts.
+  // The stream adapter handles cumulative text deduplication on top of this.
+  parseSseDelta: data => extractGeminiText(data),
 };
 
 export { geminiWeb };

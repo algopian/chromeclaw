@@ -4,11 +4,11 @@
  * encapsulated independently of the bridge.
  */
 
-import { createClaudeStreamAdapter } from './claude-stream-adapter';
-import { createGeminiStreamAdapter } from './gemini-stream-adapter';
-import { createGlmStreamAdapter } from './glm-stream-adapter';
-import { createKimiStreamAdapter } from './kimi-stream-adapter';
-import { createQwenStreamAdapter } from './qwen-stream-adapter';
+import { createClaudeStreamAdapter } from './providers/claude-web-stream-adapter';
+import { createGeminiStreamAdapter } from './providers/gemini-web-stream-adapter';
+import { createGlmStreamAdapter } from './providers/glm-stream-adapter';
+import { createKimiStreamAdapter } from './providers/kimi-web-stream-adapter';
+import { createQwenStreamAdapter } from './providers/qwen-stream-adapter';
 import type { WebProviderId } from './types';
 
 interface SseStreamAdapter {

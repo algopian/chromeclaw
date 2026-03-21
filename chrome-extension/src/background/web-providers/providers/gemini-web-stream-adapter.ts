@@ -18,7 +18,7 @@
  *   Meta:  inner[1] = ["c_62b578147ba7dae2", "r_1ae5a46c89a9f484"]
  */
 
-import type { SseStreamAdapter } from './sse-stream-adapter';
+import type { SseStreamAdapter } from '../sse-stream-adapter';
 
 /**
  * Parse the inner JSON from a Gemini response chunk.
@@ -110,16 +110,18 @@ const createGeminiStreamAdapter = (): SseStreamAdapter => {
       // Gemini sometimes prefixes cumulative text with bare "think\n" (its native
       // chain-of-thought without XML tags), followed later by proper <think>...</think>.
       // Suppress the bare prefix so only the XML-tagged thinking reaches the parser.
+      // Safety valve: if we've accumulated >5000 chars without seeing <think>,
+      // resolve and emit everything to avoid infinite suppression.
       if (!prefixResolved) {
         if (fullText.startsWith('think\n')) {
           const tagIdx = fullText.indexOf('<think>');
-          if (tagIdx < 0) {
+          if (tagIdx < 0 && fullText.length < 5000) {
             // Still in bare thinking prefix — suppress output
             prevText = fullText;
             return null;
           }
-          // Found <think> tag — skip everything before it
-          thinkPrefixLen = tagIdx;
+          // Found <think> tag (or hit safety valve) — skip bare prefix
+          thinkPrefixLen = tagIdx >= 0 ? tagIdx : 0;
         }
         prefixResolved = true;
       }

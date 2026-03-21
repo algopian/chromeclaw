@@ -5,7 +5,7 @@
  * Extracted from web-llm-bridge.ts so the logic is independently testable.
  */
 
-import type { SseStreamAdapter } from './sse-stream-adapter';
+import type { SseStreamAdapter } from '../sse-stream-adapter';
 
 interface ChoiceDelta {
   phase?: string;
