@@ -803,6 +803,9 @@
   "provider_webgpu": {
     "message": "WebGPU（オンデバイス）"
   },
+  "provider_web": {
+    "message": "ブラウザセッション Token不要"
+  },
   "time_mAgo": {
     "message": "$MINUTES$分前",
     "placeholders": {

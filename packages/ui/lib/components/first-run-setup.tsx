@@ -13,6 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui';
+import { useT } from '@extension/i18n';
+import { toolRegistryMeta, parseSkillFrontmatter, WEB_PROVIDER_OPTIONS } from '@extension/shared';
 import {
   customModelsStorage,
   toolConfigStorage,
@@ -25,9 +27,6 @@ import {
   listSkillFiles,
   updateWorkspaceFile,
 } from '@extension/storage';
-import { toolRegistryMeta } from '@extension/shared';
-import { useT } from '@extension/i18n';
-import type { TFunction } from '@extension/i18n';
 import {
   CheckIcon,
   ChevronLeftIcon,
@@ -54,10 +53,10 @@ import {
   CalendarIcon,
   ZapIcon,
 } from 'lucide-react';
-import { parseSkillFrontmatter } from '@extension/shared';
 import { IS_FIREFOX } from '@extension/env';
 import { nanoid } from 'nanoid';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { TFunction } from '@extension/i18n';
 import type { ReactNode } from 'react';
 
 type FirstRunSetupProps = {
@@ -65,6 +64,7 @@ type FirstRunSetupProps = {
 };
 
 const providers = [
+  { value: 'web', label: 'Web (Browser Session Zero Token)', defaultModel: '', defaultBase: '' },
   { value: 'openai', label: 'OpenAI', defaultModel: 'gpt-4o', defaultBase: '' },
   {
     value: 'anthropic',
@@ -165,21 +165,16 @@ const StepIndicator = ({ current, t }: { current: number; t: TFunction }) => (
 
 /* ---------- Step 1: Model Setup ---------- */
 
-const Step1ModelSetup = ({
-  onNext,
-  t,
-}: {
-  onNext: () => void;
-  t: TFunction;
-}) => {
-  const [provider, setProvider] = useState('openai');
+const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) => {
+  const [provider, setProvider] = useState('web');
   const [apiKey, setApiKey] = useState('');
-  const [modelId, setModelId] = useState('gpt-4o');
+  const [modelId, setModelId] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [supportsTools, setSupportsTools] = useState(true);
   const [supportsReasoning, setSupportsReasoning] = useState(true);
+  const [webProviderId, setWebProviderId] = useState('gemini-web');
 
   const handleProviderChange = useCallback((value: string) => {
     setProvider(value);
@@ -188,15 +183,26 @@ const Step1ModelSetup = ({
       setModelId(p.defaultModel);
       setBaseUrl(p.defaultBase);
     }
+    // Auto-set default web provider when switching to web
+    if (value === 'web' && !webProviderId) {
+      setWebProviderId('gemini-web');
+      const wp = WEB_PROVIDER_OPTIONS.find(w => w.value === 'gemini-web');
+      if (wp) setModelId(wp.defaultModelId);
+    }
     setError('');
-  }, []);
+  }, [webProviderId]);
 
   const handleNext = useCallback(async () => {
-    if (!apiKey.trim() && !baseUrl.trim()) {
+    const isWeb = provider === 'web';
+    if (!isWeb && !apiKey.trim() && !baseUrl.trim()) {
       setError(t('firstRun_apiKeyRequired'));
       return;
     }
-    if (!modelId.trim()) {
+    if (isWeb && !webProviderId) {
+      setError('Please select a web provider');
+      return;
+    }
+    if (!isWeb && !modelId.trim()) {
       setError(t('firstRun_modelIdRequired'));
       return;
     }
@@ -206,17 +212,24 @@ const Step1ModelSetup = ({
 
     try {
       const p = providers.find(p => p.value === provider);
+      const wpMatch = WEB_PROVIDER_OPTIONS.find(w => w.value === webProviderId);
+      const resolvedModelId = modelId || (isWeb ? wpMatch?.defaultModelId : undefined) || '';
+      const defaultName = isWeb ? wpMatch?.defaultModelName : undefined;
+      const resolvedName = p?.label
+        ? `${p.label} ${resolvedModelId || defaultName || ''}`.trim()
+        : resolvedModelId || defaultName || '';
       await customModelsStorage.set([
         {
           id: nanoid(),
-          modelId,
-          name: p?.label ? `${p.label} ${modelId}` : modelId,
+          modelId: resolvedModelId,
+          name: resolvedName,
           provider,
           routingMode: 'direct',
           apiKey: apiKey || undefined,
           baseUrl: baseUrl || undefined,
           supportsTools,
           supportsReasoning,
+          ...(isWeb ? { webProviderId } : {}),
         },
       ]);
       onNext();
@@ -225,7 +238,17 @@ const Step1ModelSetup = ({
     } finally {
       setSaving(false);
     }
-  }, [apiKey, modelId, provider, baseUrl, supportsTools, supportsReasoning, onNext, t]);
+  }, [
+    apiKey,
+    modelId,
+    provider,
+    baseUrl,
+    supportsTools,
+    supportsReasoning,
+    webProviderId,
+    onNext,
+    t,
+  ]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -261,35 +284,91 @@ const Step1ModelSetup = ({
             <SelectContent>
               {providers.map(p => (
                 <SelectItem key={p.value} value={p.value}>
-                  {p.label}
+                  {p.value === 'web'
+                    ? t('provider_web')
+                    : p.value === 'custom'
+                      ? t('provider_openaiCompatible')
+                      : p.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        <div className="grid gap-2">
-          <Label htmlFor="setup-apikey">{baseUrl ? t('firstRun_apiKeyOptional') : t('firstRun_apiKey')}</Label>
-          <div className="relative">
-            <KeyIcon className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
-            <Input
-              className="pl-9"
-              data-testid="setup-api-key"
-              id="setup-apikey"
-              onChange={e => {
-                setApiKey(e.target.value);
+        {provider === 'web' ? (
+          <div className="grid gap-2">
+            <Label htmlFor="setup-web-provider">Web Provider</Label>
+            <Select
+              onValueChange={v => {
+                setWebProviderId(v);
+                const wp = WEB_PROVIDER_OPTIONS.find(w => w.value === v);
+                if (wp) setModelId(wp.defaultModelId);
                 setError('');
               }}
-              onKeyDown={handleKeyDown}
-              placeholder="sk-..."
-              type="password"
-              value={apiKey}
-            />
+              value={webProviderId}>
+              <SelectTrigger id="setup-web-provider">
+                <SelectValue placeholder="Select a web provider" />
+              </SelectTrigger>
+              <SelectContent>
+                {WEB_PROVIDER_OPTIONS.map(wp => (
+                  <SelectItem key={wp.value} value={wp.value}>
+                    {wp.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground text-xs">
+              Uses your browser session — no API key needed. Log in to the provider website first.
+            </p>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="grid gap-2">
+              <Label htmlFor="setup-apikey">
+                {baseUrl ? t('firstRun_apiKeyOptional') : t('firstRun_apiKey')}
+              </Label>
+              <div className="relative">
+                <KeyIcon className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+                <Input
+                  className="pl-9"
+                  data-testid="setup-api-key"
+                  id="setup-apikey"
+                  onChange={e => {
+                    setApiKey(e.target.value);
+                    setError('');
+                  }}
+                  onKeyDown={handleKeyDown}
+                  placeholder="sk-..."
+                  type="password"
+                  value={apiKey}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="setup-baseurl">{t('firstRun_baseUrl')}</Label>
+              <Input
+                data-testid="setup-base-url"
+                id="setup-baseurl"
+                onChange={e => {
+                  setBaseUrl(e.target.value);
+                  setError('');
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder="https://api.example.com/v1"
+                type="url"
+                value={baseUrl}
+              />
+              <p className="text-muted-foreground text-xs">{t('firstRun_baseUrlHint')}</p>
+            </div>
+          </>
+        )}
 
         <div className="grid gap-2">
-          <Label htmlFor="setup-model">{t('firstRun_modelId')}</Label>
+          <Label htmlFor="setup-model">
+            {t('firstRun_modelId')}
+            {provider === 'web' && <span className="text-muted-foreground ml-1 font-normal">(optional)</span>}
+          </Label>
           <Input
             data-testid="setup-model-id"
             id="setup-model"
@@ -298,26 +377,18 @@ const Step1ModelSetup = ({
               setError('');
             }}
             onKeyDown={handleKeyDown}
-            placeholder="gpt-4o"
+            placeholder={
+              provider === 'web'
+                ? WEB_PROVIDER_OPTIONS.find(w => w.value === webProviderId)?.defaultModelId ?? 'Auto-detected'
+                : 'gpt-4o'
+            }
             value={modelId}
           />
-        </div>
-
-        <div className="grid gap-2">
-          <Label htmlFor="setup-baseurl">{t('firstRun_baseUrl')}</Label>
-          <Input
-            data-testid="setup-base-url"
-            id="setup-baseurl"
-            onChange={e => {
-              setBaseUrl(e.target.value);
-              setError('');
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder="https://api.example.com/v1"
-            type="url"
-            value={baseUrl}
-          />
-          <p className="text-muted-foreground text-xs">{t('firstRun_baseUrlHint')}</p>
+          {provider === 'web' && (
+            <p className="text-muted-foreground text-xs">
+              Auto-detected from web provider. Override only if needed.
+            </p>
+          )}
         </div>
 
         <div className="flex gap-4">
@@ -599,17 +670,11 @@ const Step2ChannelSetup = ({
         <p className="text-muted-foreground text-xs">{t('firstRun_whatsappNote')}</p>
 
         <div className="mt-auto flex items-center justify-between">
-          <Button
-            data-testid="setup-back-button"
-            onClick={onBack}
-            variant="link">
+          <Button data-testid="setup-back-button" onClick={onBack} variant="link">
             <ChevronLeftIcon className="mr-1 size-4" />
             {t('firstRun_back')}
           </Button>
-          <Button
-            data-testid="setup-next-button"
-            disabled={saving}
-            onClick={handleNext}>
+          <Button data-testid="setup-next-button" disabled={saving} onClick={handleNext}>
             {saving && <Loader2Icon className="mr-2 size-4 animate-spin" />}
             {t('firstRun_next')}
           </Button>
@@ -703,17 +768,11 @@ const Step3AgentSetup = ({
         </div>
 
         <div className="mt-auto flex items-center justify-between">
-          <Button
-            data-testid="setup-back-button"
-            onClick={onBack}
-            variant="link">
+          <Button data-testid="setup-back-button" onClick={onBack} variant="link">
             <ChevronLeftIcon className="mr-1 size-4" />
             {t('firstRun_back')}
           </Button>
-          <Button
-            data-testid="setup-next-button"
-            disabled={saving}
-            onClick={handleNext}>
+          <Button data-testid="setup-next-button" disabled={saving} onClick={handleNext}>
             {saving && <Loader2Icon className="mr-2 size-4 animate-spin" />}
             {t('firstRun_next')}
           </Button>
@@ -806,7 +865,9 @@ const Step4ToolsSetup = ({
                 <span className="text-muted-foreground">{iconMap[group.iconName]}</span>
                 <span className="text-sm font-medium">{group.label}</span>
                 {group.tools.length > 1 && (
-                  <span className="text-muted-foreground text-xs">({group.tools.length} tools)</span>
+                  <span className="text-muted-foreground text-xs">
+                    ({group.tools.length} tools)
+                  </span>
                 )}
               </label>
             );
@@ -814,17 +875,11 @@ const Step4ToolsSetup = ({
         </div>
 
         <div className="mt-auto flex items-center justify-between">
-          <Button
-            data-testid="setup-back-button"
-            onClick={onBack}
-            variant="link">
+          <Button data-testid="setup-back-button" onClick={onBack} variant="link">
             <ChevronLeftIcon className="mr-1 size-4" />
             {t('firstRun_back')}
           </Button>
-          <Button
-            data-testid="setup-next-button"
-            disabled={saving}
-            onClick={handleNext}>
+          <Button data-testid="setup-next-button" disabled={saving} onClick={handleNext}>
             {saving && <Loader2Icon className="mr-2 size-4 animate-spin" />}
             {t('firstRun_next')}
           </Button>
@@ -893,9 +948,7 @@ const Step5SkillsSetup = ({
     setSaving(true);
     setError('');
     try {
-      await Promise.all(
-        skills.map(s => updateWorkspaceFile(s.id, { enabled: s.enabled })),
-      );
+      await Promise.all(skills.map(s => updateWorkspaceFile(s.id, { enabled: s.enabled })));
       onComplete();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('firstRun_saveFailed'));
@@ -922,9 +975,7 @@ const Step5SkillsSetup = ({
             <Loader2Icon className="text-muted-foreground size-5 animate-spin" />
           </div>
         ) : skills.length === 0 ? (
-          <p className="text-muted-foreground py-4 text-center text-sm">
-            {t('firstRun_noSkills')}
-          </p>
+          <p className="text-muted-foreground py-4 text-center text-sm">{t('firstRun_noSkills')}</p>
         ) : (
           <div className="space-y-1">
             {skills.map(skill => (
@@ -950,10 +1001,7 @@ const Step5SkillsSetup = ({
         )}
 
         <div className="mt-auto flex items-center justify-between">
-          <Button
-            data-testid="setup-back-button"
-            onClick={onBack}
-            variant="link">
+          <Button data-testid="setup-back-button" onClick={onBack} variant="link">
             <ChevronLeftIcon className="mr-1 size-4" />
             {t('firstRun_back')}
           </Button>

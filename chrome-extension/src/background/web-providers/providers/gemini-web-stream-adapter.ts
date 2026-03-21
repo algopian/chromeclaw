@@ -1,0 +1,144 @@
+/**
+ * Gemini SSE stream adapter — handles cumulative text deduplication
+ * and thinking content extraction.
+ *
+ * Gemini quirks:
+ * 1. Response uses length-prefixed JSON chunks (not SSE), but content-fetch-main.ts
+ *    converts these to SSE format before they reach the adapter.
+ * 2. Each chunk contains the FULL accumulated text, not a delta.
+ *    We track the previous text and compute the actual delta (like GLM).
+ * 3. Text is deeply nested: outer[0][2] → parse inner JSON → inner[4][0][1]
+ *
+ * Actual response structure (from network capture):
+ *   Outer: [["wrb.fr", null, "<inner_json_string>"]]
+ *   Inner: [null, [conv_id, resp_id], null, null,
+ *           [[candidate_id, [text_segments], null, ...metadata]],
+ *           [geo_data], ...]
+ *   Text:  inner[4][0][1] = ["Hello, Kyle. How can I help you today?"]
+ *   Meta:  inner[1] = ["c_62b578147ba7dae2", "r_1ae5a46c89a9f484"]
+ *
+ * Streaming behaviour:
+ *   - Cumulative replacement: ~11-12 chunks per response, each containing full text so far.
+ *   - Bold formatting annotations appear as [[0,5,[[null,null,null,null,2]]]].
+ *   - Completion marker: final chunk changes status [1]→[2], adds [null,null,7],
+ *     and flips geo flag false→true.
+ */
+
+import type { SseStreamAdapter } from '../sse-stream-adapter';
+
+/**
+ * Parse the inner JSON from a Gemini response chunk.
+ * Outer structure: [["wrb.fr", null, "<inner_json_string>"]]
+ * Returns the parsed inner array, or null if the chunk doesn't contain response data.
+ */
+const parseGeminiInner = (parsed: unknown): unknown[] | null => {
+  try {
+    const arr = parsed as unknown[];
+    if (!Array.isArray(arr) || !arr[0] || !Array.isArray(arr[0])) return null;
+
+    const inner = arr[0][2];
+    if (typeof inner !== 'string') return null;
+
+    const innerParsed = JSON.parse(inner);
+    if (!Array.isArray(innerParsed)) return null;
+    return innerParsed;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Extract text from a Gemini response chunk.
+ * Text location: inner[4][0][1] — array of text segments to join.
+ *
+ * inner[4] = candidates array
+ * inner[4][0] = first candidate: [candidate_id, [text_segments], ...metadata]
+ * inner[4][0][0] = candidate ID string (e.g. "rc_d2402728d8be91a2")
+ * inner[4][0][1] = text segments array (e.g. ["Hello, Kyle."])
+ */
+const extractGeminiText = (parsed: unknown): string | null => {
+  const inner = parseGeminiInner(parsed);
+  if (!inner) return null;
+
+  try {
+    const candidates = inner[4];
+    if (!Array.isArray(candidates) || candidates.length === 0) return null;
+
+    const firstCandidate = candidates[0];
+    if (!Array.isArray(firstCandidate)) return null;
+
+    const textArr = firstCandidate[1];
+    if (Array.isArray(textArr) && textArr.length > 0) {
+      return textArr.join('');
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+const createGeminiStreamAdapter = (): SseStreamAdapter => {
+  let prevText = '';
+  /** Length of bare "think\n..." prefix to skip (Gemini native CoT leak). */
+  let thinkPrefixLen = 0;
+  /** Whether we've finished detecting the think prefix. */
+  let prefixResolved = false;
+
+  return {
+    processEvent({ parsed }) {
+      // Handle text content (cumulative — each chunk has full text so far)
+      const fullText = extractGeminiText(parsed);
+      if (fullText === null) return null;
+
+      if (fullText.length <= prevText.length) return null;
+
+      // Gemini sometimes prefixes cumulative text with bare "think\n" (its native
+      // chain-of-thought without XML tags), followed later by proper <think>...</think>.
+      // Suppress the bare prefix so only the XML-tagged thinking reaches the parser.
+      if (!prefixResolved) {
+        if (fullText.startsWith('think\n')) {
+          const thinkIdx = fullText.indexOf('<think>');
+          const toolIdx = fullText.indexOf('<tool_call');
+          // Pick the first XML tag that appears — either <think> or <tool_call
+          const resolveIdx = thinkIdx >= 0 && toolIdx >= 0
+            ? Math.min(thinkIdx, toolIdx)
+            : thinkIdx >= 0 ? thinkIdx : toolIdx;
+
+          if (resolveIdx < 0) {
+            // Still in bare thinking prefix — suppress output
+            prevText = fullText;
+            return null;
+          }
+          // Found an XML tag — skip the bare think prefix before it
+          thinkPrefixLen = resolveIdx;
+        }
+        prefixResolved = true;
+      }
+
+      // Compute delta from the effective text (after skipping bare think prefix)
+      const effectiveFull = fullText.slice(thinkPrefixLen);
+      const effectivePrev = prevText.length > thinkPrefixLen
+        ? prevText.slice(thinkPrefixLen)
+        : '';
+
+      prevText = fullText;
+
+      if (effectiveFull.length <= effectivePrev.length) return null;
+
+      const textDelta = effectiveFull.slice(effectivePrev.length);
+
+      return { feedText: textDelta };
+    },
+
+    flush: () => null,
+
+    // Never abort early — Gemini may emit multiple tool calls in a single
+    // response (e.g. parallel web_search + browser). Aborting after the first
+    // </tool_call> would lose subsequent ones. Let the stream finish naturally
+    // via WEB_LLM_DONE; the bridge already sets stopReason='toolUse' when
+    // hasToolCalls is true.
+    shouldAbort: () => false,
+  };
+};
+
+export { createGeminiStreamAdapter, extractGeminiText };

@@ -206,7 +206,11 @@ const agentMessagesToChatMessages = (messages: AgentMessage[], chatId: string): 
         if (c.type === 'text') {
           parts.push({ type: 'text', text: c.text });
         } else if (c.type === 'thinking') {
-          parts.push({ type: 'reasoning', text: c.thinking });
+          parts.push({
+            type: 'reasoning',
+            text: c.thinking,
+            ...(c.thinkingSignature ? { signature: c.thinkingSignature } : {}),
+          });
         } else if (c.type === 'toolCall') {
           parts.push({
             type: 'tool-call',

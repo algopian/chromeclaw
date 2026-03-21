@@ -803,6 +803,9 @@
   "provider_webgpu": {
     "message": "WebGPU (на устройстве)"
   },
+  "provider_web": {
+    "message": "Web (Сеанс Браузера Без Токенов)"
+  },
   "time_mAgo": {
     "message": "$MINUTES$ мин назад",
     "placeholders": {

@@ -8,7 +8,7 @@ type ToolPartState = 'input-streaming' | 'input-available' | 'output-available' 
 /** A single part of a chat message */
 type ChatMessagePart =
   | { type: 'text'; text: string }
-  | { type: 'reasoning'; text: string }
+  | { type: 'reasoning'; text: string; signature?: string }
   | {
       type: 'tool-call';
       toolCallId: string;
@@ -97,13 +97,13 @@ interface SessionUsage {
 }
 
 /** Provider identifiers */
-type ModelProvider = 'openai' | 'anthropic' | 'google' | 'openrouter' | 'custom' | 'local';
+type ModelProvider = 'openai' | 'anthropic' | 'google' | 'openrouter' | 'custom' | 'azure' | 'openai-codex' | 'local' | 'web';
 
 /** Routing mode for model requests */
 type RoutingMode = 'direct';
 
 /** API protocol for OpenAI-compatible providers */
-type ModelApi = 'openai-completions' | 'openai-responses' | 'openai-codex-responses';
+type ModelApi = 'openai-completions' | 'openai-responses' | 'openai-codex-responses' | 'azure-openai-responses';
 
 /** Model configuration */
 interface ChatModel {
@@ -121,7 +121,22 @@ interface ChatModel {
   toolTimeoutSeconds?: number;
   /** Context window size in tokens. Overrides the built-in lookup when set. */
   contextWindow?: number;
+  /** Azure OpenAI API version (e.g. '2025-04-01-preview'). Only used with azure provider. */
+  azureApiVersion?: string;
+  /** Web provider identifier (e.g. 'claude-web'). Only used with web provider. */
+  webProviderId?: string;
 }
+
+/** Web provider options for UI dropdowns and auth — single source of truth. */
+const WEB_PROVIDER_OPTIONS = [
+  { value: 'claude-web', label: 'Claude (claude.ai)', loginUrl: 'https://claude.ai', cookieDomain: '.claude.ai', sessionIndicators: ['sessionKey'], defaultModelId: 'claude-sonnet-4.6', defaultModelName: 'Claude Sonnet 4.6' },
+  { value: 'kimi-web', label: 'Kimi (kimi.com)', loginUrl: 'https://www.kimi.com', cookieDomain: '.kimi.com', sessionIndicators: ['access_token'], checkLocalStorage: true, defaultModelId: 'kimi', defaultModelName: 'Kimi' },
+  { value: 'qwen-web', label: 'Qwen (chat.qwen.ai)', loginUrl: 'https://chat.qwen.ai', cookieDomain: '.qwen.ai', sessionIndicators: ['token', 'ctoken', 'login_aliyunid_ticket'], defaultModelId: 'qwen3.5-plus', defaultModelName: 'Qwen 3.5 Plus' },
+  { value: 'qwen-cn-web', label: 'Qwen CN (qianwen.com)', loginUrl: 'https://qianwen.com', cookieDomain: '.qianwen.com', sessionIndicators: ['tongyi_sso_ticket'], defaultModelId: 'qwen-max', defaultModelName: 'Qwen Max (CN)' },
+  { value: 'glm-web', label: 'GLM (chatglm.cn)', loginUrl: 'https://chatglm.cn', cookieDomain: '.chatglm.cn', sessionIndicators: ['chatglm_refresh_token', 'chatglm_token'], defaultModelId: 'glm-4', defaultModelName: 'GLM-4', refreshUrl: 'https://chatglm.cn/chatglm/user-api/user/refresh' },
+  { value: 'glm-intl-web', label: 'GLM Intl (chat.z.ai)', loginUrl: 'https://chat.z.ai', cookieDomain: '.z.ai', sessionIndicators: ['chatglm_refresh_token', 'chatglm_token', 'refresh_token', 'auth_token', 'access_token', 'token'], defaultModelId: 'glm-4', defaultModelName: 'GLM-4 International', refreshUrl: 'https://chat.z.ai/chatglm/user-api/user/refresh' },
+  { value: 'gemini-web', label: 'Gemini (gemini.google.com)', loginUrl: 'https://gemini.google.com', cookieDomain: '.google.com', sessionIndicators: ['__Secure-1PSID', 'SID'], defaultModelId: 'gemini-3-flash', defaultModelName: 'Gemini 3 Flash' },
+] as const;
 
 /** Tool definition (metadata only — no execute function) */
 interface ToolDefinition {
@@ -346,6 +361,7 @@ export type {
 };
 
 export {
+  WEB_PROVIDER_OPTIONS,
   isTextPart,
   isReasoningPart,
   isToolCallPart,

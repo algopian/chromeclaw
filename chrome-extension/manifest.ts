@@ -44,6 +44,7 @@ const manifest = {
     'debugger',
     'offscreen',
     'identity',
+    'cookies',
     'declarativeNetRequest',
   ],
   // oauth2 is only included when a Google Cloud client ID is configured.
@@ -72,6 +73,11 @@ const manifest = {
         id: 'whatsapp_origin',
         enabled: true,
         path: 'rules/whatsapp-origin.json',
+      },
+      {
+        id: 'strip_extension_origin',
+        enabled: true,
+        path: 'rules/strip-extension-origin.json',
       },
     ],
   },

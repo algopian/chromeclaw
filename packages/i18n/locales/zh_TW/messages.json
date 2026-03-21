@@ -803,6 +803,9 @@
   "provider_webgpu": {
     "message": "WebGPU（本機裝置）"
   },
+  "provider_web": {
+    "message": "Web（瀏覽器工作階段無需Token）"
+  },
   "time_mAgo": {
     "message": "$MINUTES$分鐘前",
     "placeholders": {

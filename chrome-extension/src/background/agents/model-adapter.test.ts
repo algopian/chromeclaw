@@ -230,12 +230,36 @@ describe('chatModelToPiModel', () => {
 
   // ── Auto-detect from model ID ──────────────────────────
 
-  it('auto-detects openai-codex-responses for codex models', () => {
+  it('routes gpt-5.3-codex to openai-responses (standard API, not ChatGPT backend)', () => {
     const result = chatModelToPiModel(
       makeModel({ provider: 'openai', id: 'gpt-5.3-codex', name: 'GPT-5.3 Codex' }),
     );
 
-    expect(result.model.api).toBe('openai-codex-responses');
+    expect(result.model.api).toBe('openai-responses');
+  });
+
+  it('routes gpt-5.1-codex to openai-responses', () => {
+    const result = chatModelToPiModel(
+      makeModel({ provider: 'openai', id: 'gpt-5.1-codex', name: 'GPT-5.1 Codex' }),
+    );
+
+    expect(result.model.api).toBe('openai-responses');
+  });
+
+  it('routes gpt-5.2-codex to openai-responses', () => {
+    const result = chatModelToPiModel(
+      makeModel({ provider: 'openai', id: 'gpt-5.2-codex', name: 'GPT-5.2 Codex' }),
+    );
+
+    expect(result.model.api).toBe('openai-responses');
+  });
+
+  it('does not auto-detect for non-openai providers with codex in id', () => {
+    const result = chatModelToPiModel(
+      makeModel({ provider: 'openrouter', id: 'openai/gpt-5.3-codex', name: 'GPT-5.3 Codex' }),
+    );
+
+    expect(result.model.api).toBe('openai-completions');
   });
 
   it('auto-detects openai-codex-responses for codex-mini-latest', () => {
@@ -291,6 +315,90 @@ describe('chatModelToPiModel', () => {
     expect(result.model.api).toBe('openai-responses');
   });
 
+  // ── Azure OpenAI routing ────────────────────────────────
+
+  it('sets azureApiVersion for Azure endpoints (custom provider)', () => {
+    const result = chatModelToPiModel(
+      makeModel({
+        provider: 'custom',
+        id: 'gpt-5.1-codex-mini',
+        baseUrl: 'https://myresource.openai.azure.com/openai',
+        api: 'openai-responses',
+      }),
+    );
+
+    expect(result.model.api).toBe('openai-responses');
+    expect(result.azureApiVersion).toBe('2025-04-01-preview');
+  });
+
+  it('sets azureApiVersion for azure provider', () => {
+    const result = chatModelToPiModel(
+      makeModel({
+        provider: 'azure',
+        id: 'gpt-5.1-codex-mini',
+        baseUrl: 'https://myresource.openai.azure.com/openai',
+      }),
+    );
+
+    expect(result.model.api).toBe('openai-responses');
+    expect(result.azureApiVersion).toBe('2025-04-01-preview');
+  });
+
+  it('uses custom azureApiVersion when provided', () => {
+    const result = chatModelToPiModel(
+      makeModel({
+        provider: 'azure',
+        id: 'gpt-4o',
+        baseUrl: 'https://myresource.openai.azure.com/openai',
+        azureApiVersion: '2024-12-01-preview',
+      }),
+    );
+
+    expect(result.azureApiVersion).toBe('2024-12-01-preview');
+  });
+
+  it('does not set azureApiVersion for non-Azure endpoints', () => {
+    const result = chatModelToPiModel(
+      makeModel({
+        provider: 'custom',
+        id: 'gpt-5.1-codex-mini',
+        baseUrl: 'https://my-proxy.example.com/v1',
+        api: 'openai-responses',
+      }),
+    );
+
+    expect(result.azureApiVersion).toBeUndefined();
+  });
+
+  // ── OpenAI Codex provider ───────────────────────────────
+
+  it('routes openai-codex provider to openai-codex-responses with chatgpt.com base URL', () => {
+    const result = chatModelToPiModel(
+      makeModel({
+        provider: 'openai-codex',
+        id: 'gpt-5.3-codex',
+        name: 'GPT-5.3 Codex',
+      }),
+    );
+
+    expect(result.model.api).toBe('openai-codex-responses');
+    expect(result.model.baseUrl).toBe('https://chatgpt.com/backend-api');
+    expect(result.model.provider).toBe('openai-codex');
+  });
+
+  it('allows custom base URL for openai-codex provider', () => {
+    const result = chatModelToPiModel(
+      makeModel({
+        provider: 'openai-codex',
+        id: 'gpt-5.2-codex',
+        baseUrl: 'https://custom-codex-proxy.example.com',
+      }),
+    );
+
+    expect(result.model.api).toBe('openai-codex-responses');
+    expect(result.model.baseUrl).toBe('https://custom-codex-proxy.example.com');
+  });
+
   // ── contextWindow override ──────────────────────────────
 
   it('uses contextWindow from ChatModel when set', () => {
@@ -313,6 +421,18 @@ describe('chatModelToPiModel', () => {
 
     expect(result.model.contextWindow).toBe(8192);
     expect(result.model.maxTokens).toBe(Math.floor(8192 * 0.25));
+  });
+
+  // ── Web provider ───────────────────────────────
+
+  it('routes web provider with empty baseUrl and provider=web', () => {
+    const result = chatModelToPiModel(
+      makeModel({ provider: 'web', id: 'claude-web', name: 'Claude Web' }),
+    );
+
+    expect(result.model.api).toBe('openai-completions');
+    expect(result.model.baseUrl).toBe('');
+    expect(result.model.provider).toBe('web');
   });
 
   it('does not override anthropic api even if api field is set', () => {

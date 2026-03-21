@@ -861,6 +861,184 @@ describe('createTransformContext', () => {
   });
 });
 
+// ── thinkingSignature preservation ──
+
+describe('createTransformContext — thinkingSignature preservation', () => {
+  const mockCompact = vi.mocked(compactMessagesWithSummary);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCompact.mockResolvedValue({
+      messages: [],
+      wasCompacted: false,
+      compactionMethod: 'none',
+      summary: undefined,
+    });
+  });
+
+  it('preserves thinkingSignature when converting thinking to reasoning part', async () => {
+    const messages = [
+      {
+        role: 'assistant' as const,
+        content: [
+          {
+            type: 'thinking' as const,
+            thinking: 'Let me think...',
+            thinkingSignature: '{"id":"rs_123","type":"reasoning"}',
+          },
+        ],
+        api: 'openai-completions' as const,
+        provider: 'openai' as const,
+        model: 'gpt-5.3-codex',
+        usage: {
+          input: 10,
+          output: 5,
+          cacheRead: 0,
+          cacheWrite: 0,
+          totalTokens: 15,
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+        },
+        stopReason: 'stop' as const,
+        timestamp: Date.now(),
+      },
+    ];
+
+    mockCompact.mockResolvedValueOnce({
+      messages: [
+        {
+          id: 'msg-1',
+          chatId: 'chat-1',
+          role: 'assistant',
+          parts: [{ type: 'reasoning', text: 'Let me think...', signature: '{"id":"rs_123","type":"reasoning"}' }],
+          createdAt: Date.now(),
+        },
+      ],
+      wasCompacted: false,
+      compactionMethod: 'none',
+      summary: undefined,
+    });
+
+    const { transformContext } = createTransformContext(defaultOpts);
+    await transformContext(messages);
+
+    const chatMessages = mockCompact.mock.calls[0][0];
+    expect(chatMessages[0].parts[0]).toEqual({
+      type: 'reasoning',
+      text: 'Let me think...',
+      signature: '{"id":"rs_123","type":"reasoning"}',
+    });
+  });
+
+  it('omits signature field when thinking has no thinkingSignature', async () => {
+    const messages = [
+      {
+        role: 'assistant' as const,
+        content: [{ type: 'thinking' as const, thinking: 'Let me think...' }],
+        api: 'openai-completions' as const,
+        provider: 'openai' as const,
+        model: 'gpt-4o',
+        usage: {
+          input: 10,
+          output: 5,
+          cacheRead: 0,
+          cacheWrite: 0,
+          totalTokens: 15,
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+        },
+        stopReason: 'stop' as const,
+        timestamp: Date.now(),
+      },
+    ];
+
+    mockCompact.mockResolvedValueOnce({
+      messages: [
+        {
+          id: 'msg-1',
+          chatId: 'chat-1',
+          role: 'assistant',
+          parts: [{ type: 'reasoning', text: 'Let me think...' }],
+          createdAt: Date.now(),
+        },
+      ],
+      wasCompacted: false,
+      compactionMethod: 'none',
+      summary: undefined,
+    });
+
+    const { transformContext } = createTransformContext(defaultOpts);
+    await transformContext(messages);
+
+    const chatMessages = mockCompact.mock.calls[0][0];
+    const part = chatMessages[0].parts[0] as { type: string; text: string; signature?: string };
+    expect(part.type).toBe('reasoning');
+    expect(part.text).toBe('Let me think...');
+    expect(part.signature).toBeUndefined();
+  });
+
+  it('preserves signature through full round-trip: thinking → reasoning → thinking', async () => {
+    // This test verifies the complete pipeline:
+    // 1. Agent message with thinking + thinkingSignature
+    // 2. Convert to ChatMessage (transform.ts) → reasoning + signature
+    // 3. Convert back to pi-mono (message-adapter.ts via chatMessagesToPiMessages mock)
+
+    const sig = '{"id":"rs_456","type":"reasoning"}';
+    const messages = [
+      {
+        role: 'assistant' as const,
+        content: [
+          { type: 'thinking' as const, thinking: 'Deep thought', thinkingSignature: sig },
+          { type: 'text' as const, text: 'The answer is 42' },
+        ],
+        api: 'openai-completions' as const,
+        provider: 'openai' as const,
+        model: 'gpt-5.3-codex',
+        usage: {
+          input: 10,
+          output: 5,
+          cacheRead: 0,
+          cacheWrite: 0,
+          totalTokens: 15,
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+        },
+        stopReason: 'stop' as const,
+        timestamp: Date.now(),
+      },
+    ];
+
+    mockCompact.mockResolvedValueOnce({
+      messages: [
+        {
+          id: 'msg-1',
+          chatId: 'chat-1',
+          role: 'assistant',
+          parts: [
+            { type: 'reasoning', text: 'Deep thought', signature: sig },
+            { type: 'text', text: 'The answer is 42' },
+          ],
+          createdAt: Date.now(),
+        },
+      ],
+      wasCompacted: false,
+      compactionMethod: 'none',
+      summary: undefined,
+    });
+
+    const { transformContext } = createTransformContext(defaultOpts);
+    await transformContext(messages);
+
+    // Step 2: Verify transform.ts produced reasoning with signature
+    const chatMessages = mockCompact.mock.calls[0][0];
+    const reasoningPart = chatMessages[0].parts[0] as { type: string; text: string; signature?: string };
+    expect(reasoningPart.signature).toBe(sig);
+
+    // Step 3: The chatMessagesToPiMessages mock is called with the compacted messages.
+    // In real code, message-adapter.ts would convert signature → thinkingSignature.
+    // We verify the intermediate ChatMessage format is correct.
+    expect(reasoningPart.type).toBe('reasoning');
+    expect(reasoningPart.text).toBe('Deep thought');
+  });
+});
+
 // ── Workspace rules: criticalRules passed to compaction ──
 
 describe('createTransformContext — workspace rules', () => {

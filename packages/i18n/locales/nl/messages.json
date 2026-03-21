@@ -803,6 +803,9 @@
   "provider_webgpu": {
     "message": "WebGPU (op apparaat)"
   },
+  "provider_web": {
+    "message": "Web (Browsersessie Nul Token)"
+  },
   "time_mAgo": {
     "message": "$MINUTES$m geleden",
     "placeholders": {

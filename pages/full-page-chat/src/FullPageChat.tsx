@@ -220,6 +220,8 @@ const FullPageChat = () => {
           toolTimeoutSeconds: m.toolTimeoutSeconds,
           contextWindow: m.contextWindow,
           api: m.api,
+          azureApiVersion: m.azureApiVersion,
+          webProviderId: m.webProviderId,
         })) as ChatModel[];
 
         setModels(mapped);

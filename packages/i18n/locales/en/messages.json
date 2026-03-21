@@ -803,6 +803,9 @@
   "provider_webgpu": {
     "message": "WebGPU (On-Device)"
   },
+  "provider_web": {
+    "message": "Web (Browser Session Zero Token)"
+  },
   "time_mAgo": {
     "message": "$MINUTES$m ago",
     "placeholders": {

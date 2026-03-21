@@ -284,6 +284,10 @@ const messageHandlers: Record<string, MessageHandler> = {
     const modelConfig = request.modelConfig as import('@extension/shared').ChatModel;
     if (!modelConfig?.provider) return { error: 'modelConfig is required' };
     try {
+      if (modelConfig.provider === 'web') {
+        const { testWebConnection } = await import('./web-providers/auth');
+        return testWebConnection(modelConfig.webProviderId);
+      }
       const { completeText } = await import('./agents/stream-bridge');
       await completeText(modelConfig, '', 'hi', { maxTokens: 1 });
       return { success: true };

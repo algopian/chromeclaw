@@ -1,5 +1,5 @@
 import { buildHeadlessSystemPrompt, runAgent } from './agent-setup';
-import { chatMessagesToPiMessages, convertToLlm } from './message-adapter';
+import { chatMessagesToPiMessages, makeConvertToLlm } from './message-adapter';
 import { sanitizeHistory } from '../context/history-sanitization';
 import { createTransformContext } from '../context/transform';
 import { createLogger } from '../logging/logger-buffer';
@@ -190,7 +190,7 @@ const handleLLMStream = async (
       systemPrompt: freshSystemPrompt,
       prompt,
       messages: history,
-      convertToLlm,
+      convertToLlm: makeConvertToLlm(modelConfig),
       transformContext: notifyingTransformContext,
       chatId,
       onProviderLimitDetected: setProviderLimit,
@@ -293,6 +293,21 @@ const handleLLMStream = async (
         const msg = info.message;
         if (msg.role === 'assistant') {
           const assistantMsg = msg as AssistantMessage;
+          // Attach thinkingSignature to accumulated reasoning parts
+          let reasoningIdx = 0;
+          for (const c of assistantMsg.content) {
+            if (c.type === 'thinking' && c.thinkingSignature) {
+              while (reasoningIdx < assistantParts.length) {
+                const part = assistantParts[reasoningIdx];
+                if (part.type === 'reasoning') {
+                  (part as { signature?: string }).signature = c.thinkingSignature;
+                  reasoningIdx++;
+                  break;
+                }
+                reasoningIdx++;
+              }
+            }
+          }
           if (assistantMsg.usage) {
             lastInputTokens = assistantMsg.usage.input;
             lastOutputTokens = assistantMsg.usage.output;

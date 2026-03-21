@@ -42,6 +42,7 @@ vi.mock('./message-adapter', () => ({
     })),
   ),
   convertToLlm: vi.fn((msgs: unknown[]) => msgs),
+  makeConvertToLlm: vi.fn(() => (msgs: unknown[]) => msgs),
 }));
 
 vi.mock('./model-adapter', () => ({

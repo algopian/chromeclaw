@@ -2,7 +2,8 @@
  * Converts extension ChatMessage[] to/from pi-mono Message[].
  */
 
-import type { ChatMessage, ChatMessagePart } from '@extension/shared';
+import { sanitizeTranscript } from '../context/transcript-sanitization';
+import type { ChatMessage, ChatMessagePart, ChatModel } from '@extension/shared';
 import type { AgentMessage } from '@mariozechner/pi-agent-core';
 import type { Message } from '@mariozechner/pi-ai';
 
@@ -77,7 +78,11 @@ export const chatMessagesToPiMessages = (messages: ChatMessage[]): Message[] => 
         if (part.type === 'text') {
           assistantContent.push({ type: 'text', text: part.text });
         } else if (part.type === 'reasoning') {
-          assistantContent.push({ type: 'thinking', thinking: part.text });
+          assistantContent.push({
+            type: 'thinking',
+            thinking: part.text,
+            ...(part.signature ? { thinkingSignature: part.signature } : {}),
+          });
         } else if (part.type === 'tool-call') {
           assistantContent.push({
             type: 'toolCall',
@@ -161,3 +166,15 @@ export const convertToLlm = (messages: AgentMessage[]): Message[] =>
   messages.filter(
     (m): m is Message => m.role === 'user' || m.role === 'assistant' || m.role === 'toolResult',
   );
+
+/**
+ * Factory that wraps convertToLlm with provider-specific transcript sanitization.
+ * Sanitization runs at the AgentMessage level (after conversion from ChatMessage)
+ * so it can operate on pi-mono fields like `thinkingSignature` and `|fc_*` tool call IDs.
+ */
+export const makeConvertToLlm =
+  (model: ChatModel) =>
+  (messages: AgentMessage[]): Message[] => {
+    const filtered = convertToLlm(messages);
+    return sanitizeTranscript(filtered as AgentMessage[], model) as Message[];
+  };

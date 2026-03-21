@@ -27,3 +27,4 @@ export {
   type EmbeddingConfig,
   type EmbeddingProviderType,
 } from './embedding-config-storage.js';
+export { webCredentialsStorage, type WebProviderCredential } from './web-credentials-storage.js';

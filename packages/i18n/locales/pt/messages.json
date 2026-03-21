@@ -240,6 +240,9 @@
   "provider_openrouter": { "message": "OpenRouter" },
   "provider_openaiCompatible": { "message": "Compatível com OpenAI" },
   "provider_webgpu": { "message": "WebGPU (No Dispositivo)" },
+  "provider_web": {
+    "message": "Web (Sessão do Navegador Zero Token)"
+  },
   "time_mAgo": { "message": "$MINUTES$m atrás", "placeholders": { "minutes": { "content": "$1" } } },
   "time_hAgo": { "message": "$HOURS$h atrás", "placeholders": { "hours": { "content": "$1" } } },
   "time_dAgo": { "message": "$DAYS$d atrás", "placeholders": { "days": { "content": "$1" } } },

@@ -11,7 +11,18 @@ import { normalizeModelCompat } from './model-compat';
 interface ResolvedModel {
   model: Model<Api>;
   apiKey?: string;
+  /** Azure API version — only set when routing to azure-openai-responses. */
+  azureApiVersion?: string;
 }
+
+/** Detect Azure OpenAI endpoints (https://{resource}.openai.azure.com/...) */
+const isAzureOpenAIEndpoint = (baseUrl: string): boolean => {
+  try {
+    return new URL(baseUrl).hostname.endsWith('.openai.azure.com');
+  } catch {
+    return false;
+  }
+};
 
 const DEFAULT_BASE_URLS: Record<string, string> = {
   openai: 'https://api.openai.com/v1',
@@ -52,10 +63,25 @@ export const chatModelToPiModel = (config: ChatModel): ResolvedModel => {
       baseUrl = config.baseUrl || DEFAULT_BASE_URLS.openai;
       provider = 'openai';
       break;
+    case 'azure':
+      api = 'openai-responses';
+      baseUrl = config.baseUrl || '';
+      provider = 'openai';
+      break;
+    case 'openai-codex':
+      api = 'openai-codex-responses' as Api;
+      baseUrl = config.baseUrl || 'https://chatgpt.com/backend-api';
+      provider = 'openai-codex';
+      break;
     case 'local':
       api = 'openai-completions'; // placeholder — not actually used for local
       baseUrl = '';
       provider = 'local';
+      break;
+    case 'web':
+      api = 'openai-completions'; // placeholder — not used for web
+      baseUrl = '';
+      provider = 'web';
       break;
     default:
       api = 'openai-completions';
@@ -68,16 +94,26 @@ export const chatModelToPiModel = (config: ChatModel): ResolvedModel => {
     api = config.api;
   } else if (api === 'openai-completions' && config.provider === 'openai') {
     const id = config.id.toLowerCase();
-    if (id.includes('codex')) {
-      api = 'openai-codex-responses';
-    } else if (/^(gpt-5|o[3-9]($|[^1-9])|o\d{2,})/.test(id)) {
+    if (/^(gpt-5|o[3-9]($|[^1-9])|o\d{2,})/.test(id)) {
       api = 'openai-responses';
+    } else if (id.includes('codex')) {
+      api = 'openai-codex-responses';
     }
   }
 
+  // Azure OpenAI: detect Azure endpoints and pass api-version for the fetch
+  // interceptor in stream-bridge. Uses standard OpenAI client (not AzureOpenAI)
+  // because Azure endpoints accept Bearer auth, which AzureOpenAI replaces with
+  // api-key header.
+  let azureApiVersion: string | undefined;
+  const isAzure = config.provider === 'azure' || isAzureOpenAIEndpoint(baseUrl);
+  if (isAzure) {
+    azureApiVersion = config.azureApiVersion || '2025-04-01-preview';
+  }
+
   // Priority: explicit override > local default > table lookup
-  const contextWindow = config.contextWindow
-    ?? (config.provider === 'local' ? 4096 : getModelContextLimit(config.id));
+  const contextWindow =
+    config.contextWindow ?? (config.provider === 'local' ? 4096 : getModelContextLimit(config.id));
 
   return {
     model: normalizeModelCompat({
@@ -93,6 +129,7 @@ export const chatModelToPiModel = (config: ChatModel): ResolvedModel => {
       maxTokens: Math.floor(contextWindow * 0.25),
     }),
     apiKey,
+    azureApiVersion,
   };
 };
 

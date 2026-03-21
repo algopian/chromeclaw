@@ -1,6 +1,6 @@
 {
   "name": "@extension/ui",
-  "version": "1.8.2",
+  "version": "1.9.0",
   "description": "chrome extension - chat UI components",
   "type": "module",
   "private": true,
@@ -49,6 +49,6 @@
     "@extension/tsconfig": "workspace:*",
     "deepmerge": "^4.3.1",
     "react-spinners": "^0.17.0",
-    "tsc-alias": "^1.8.26"
+    "tsc-alias": "^1.8.16"
   }
 }

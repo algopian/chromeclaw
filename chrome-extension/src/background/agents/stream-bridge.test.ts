@@ -36,6 +36,11 @@ vi.mock('../local-llm-bridge', () => ({
   requestLocalGeneration: vi.fn(),
 }));
 
+// Mock web-llm-bridge — avoids chrome.scripting imports in test environment
+vi.mock('../web-providers/web-llm-bridge', () => ({
+  requestWebGeneration: vi.fn(),
+}));
+
 // Mock chatModelToPiModel — returns a ResolvedModel
 vi.mock('./model-adapter', () => ({
   chatModelToPiModel: vi.fn((_config: any) => ({
@@ -256,11 +261,25 @@ describe('completeText', () => {
       'completeText is not supported for local models',
     );
   });
+
+  it('throws for web models', async () => {
+    const webModel: ChatModel = {
+      id: 'claude-web',
+      name: 'Claude Web',
+      provider: 'web',
+      webProviderId: 'claude-web',
+    };
+
+    await expect(completeText(webModel, 'System', 'User')).rejects.toThrow(
+      'completeText is not supported for web models',
+    );
+  });
 });
 
 // ── Local model tests ───────────────────────────────────
 
 import { requestLocalGeneration } from '../local-llm-bridge';
+import { requestWebGeneration } from '../web-providers/web-llm-bridge';
 
 const LOCAL_CHAT_MODEL: ChatModel = {
   id: 'Qwen/Qwen3-0.6B',
@@ -354,7 +373,7 @@ describe('createStreamFn — local provider', () => {
     );
   });
 
-  it('maps toolResult role to user', () => {
+  it('maps toolResult role to user with XML-wrapped content', () => {
     const mockStream = createAssistantMessageEventStream();
     mockRequestLocalGeneration.mockReturnValue(mockStream);
 
@@ -363,20 +382,23 @@ describe('createStreamFn — local provider', () => {
       systemPrompt: 'Test',
       messages: [
         {
-          role: 'toolResult' as any,
+          role: 'toolResult',
+          toolCallId: 'call_123',
+          toolName: 'web_search',
           content: [{ type: 'text', text: 'tool output' }],
           timestamp: Date.now(),
-        },
+        } as any,
       ],
     };
 
     streamFn({} as Model<any>, context);
 
-    expect(mockRequestLocalGeneration).toHaveBeenCalledWith(
-      expect.objectContaining({
-        messages: [{ role: 'user', content: 'tool output' }],
-      }),
-    );
+    const calledMessages = mockRequestLocalGeneration.mock.calls[0][0].messages;
+    expect(calledMessages[0].role).toBe('user');
+    expect(calledMessages[0].content).toContain('<tool_response id="call_123" name="web_search">');
+    expect(calledMessages[0].content).toContain('tool output');
+    expect(calledMessages[0].content).toContain('</tool_response>');
+    expect(calledMessages[0].content).toContain('[SYSTEM HINT]');
   });
 
   it('handles undefined content by producing empty string', () => {
@@ -574,5 +596,71 @@ describe('createStreamFn — local provider error handling', () => {
       '[stream-bridge] Local LLM streamFn error:',
       expect.any(Error),
     );
+  });
+});
+
+// ── Web model tests ───────────────────────────────────
+
+const WEB_CHAT_MODEL: ChatModel = {
+  id: 'qwen-max',
+  name: 'Qwen Max',
+  provider: 'web',
+  webProviderId: 'qwen-web',
+};
+
+describe('createStreamFn — web provider', () => {
+  const mockRequestWebGeneration = vi.mocked(requestWebGeneration);
+
+  beforeEach(() => {
+    mockRequestWebGeneration.mockReset();
+  });
+
+  it('delegates to requestWebGeneration for web models', () => {
+    const mockStream = createAssistantMessageEventStream();
+    mockRequestWebGeneration.mockReturnValue(mockStream);
+
+    const streamFn = createStreamFn(WEB_CHAT_MODEL);
+    const context: Context = {
+      systemPrompt: 'Be helpful',
+      messages: [{ role: 'user', content: 'Hello', timestamp: Date.now() }],
+    };
+
+    const result = streamFn({} as Model<any>, context);
+    expect(result).toBe(mockStream);
+
+    expect(mockRequestWebGeneration).toHaveBeenCalledOnce();
+    expect(mockRequestWebGeneration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modelConfig: WEB_CHAT_MODEL,
+        messages: [{ role: 'user', content: 'Hello' }],
+        systemPrompt: 'Be helpful',
+      }),
+    );
+  });
+
+  it('returns an error stream when requestWebGeneration throws', async () => {
+    mockRequestWebGeneration.mockImplementation(() => {
+      throw new Error('Tab closed');
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const streamFn = createStreamFn(WEB_CHAT_MODEL);
+    const context: Context = {
+      systemPrompt: 'Test',
+      messages: [{ role: 'user', content: 'Hi', timestamp: Date.now() }],
+    };
+
+    const result = streamFn({} as Model<any>, context);
+    const stream = result instanceof Promise ? await result : result;
+    const events = await collectEvents(stream);
+
+    expect(events).toHaveLength(1);
+    const errorEvent = events[0];
+    expect(errorEvent.type).toBe('error');
+    if (errorEvent.type === 'error') {
+      expect(errorEvent.error.errorMessage).toBe('Web LLM error: Tab closed');
+      expect(errorEvent.error.api).toBe('web-session');
+      expect(errorEvent.error.provider).toBe('web');
+    }
   });
 });

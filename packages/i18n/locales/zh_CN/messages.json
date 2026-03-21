@@ -803,6 +803,9 @@
   "provider_webgpu": {
     "message": "WebGPU（本地设备）"
   },
+  "provider_web": {
+    "message": "Web（浏览器会话无需 Token）"
+  },
   "time_mAgo": {
     "message": "$MINUTES$分钟前",
     "placeholders": {

@@ -803,6 +803,9 @@
   "provider_webgpu": {
     "message": "WebGPU (lokal)"
   },
+  "provider_web": {
+    "message": "Web (Browser-Sitzung Null Token)"
+  },
   "time_mAgo": {
     "message": "vor $MINUTES$ Min.",
     "placeholders": {

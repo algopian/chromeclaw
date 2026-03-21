@@ -36,7 +36,9 @@ type LogCategory =
   | 'memory-sync'
   | 'wa-adapter'
   | 'channel-sw'
-  | 'slash-cmd';
+  | 'slash-cmd'
+  | 'web-auth'
+  | 'web-llm';
 
 // ── Log Entry ───────────────────────────────────
 

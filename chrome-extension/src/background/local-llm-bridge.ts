@@ -9,10 +9,12 @@
  * Follows the kokoro-bridge.ts pattern (requestId-based listener, settle guard, timeout).
  */
 
-import { ensureOffscreenDocument } from './channels/offscreen-manager';
 import { createAssistantMessageEventStream } from './agents';
+import { ensureOffscreenDocument } from './channels/offscreen-manager';
 import { createLogger } from './logging/logger-buffer';
+import { createXmlTagParser } from './web-providers/xml-tag-parser';
 import type { AssistantMessage, AssistantMessageEventStream, TextContent } from './agents';
+import type { ParsedEvent } from './web-providers/xml-tag-parser';
 
 const bridgeLog = createLogger('local-llm');
 
@@ -57,10 +59,8 @@ export const requestLocalGeneration = (opts: {
 
   let fullText = '';
 
-  // State for parsing structured output from raw tokens
-  let parseState: 'text' | 'thinking' | 'tool_call' = 'text';
-  let tokenBuffer = '';
-  let toolCallBuffer = '';
+  // Shared XML tag parser for <think> and <tool_call> blocks
+  const parser = createXmlTagParser();
   let hasToolCalls = false;
 
   // Settle guard — prevents double-cleanup and event processing after stream is terminated
@@ -88,128 +88,75 @@ export const requestLocalGeneration = (opts: {
     emitError(`Local generation timed out after ${LOCAL_LLM_TIMEOUT_MS / 1000}s`);
   }, LOCAL_LLM_TIMEOUT_MS);
 
-  /** Process buffered tokens, parsing <think> and <tool_call> tags. */
-  const processTokenBuffer = () => {
-    while (tokenBuffer.length > 0) {
-      if (parseState === 'text') {
-        const thinkIdx = tokenBuffer.indexOf('<think>');
-        const toolIdx = tokenBuffer.indexOf('<tool_call>');
-
-        if (thinkIdx === 0) {
-          parseState = 'thinking';
-          tokenBuffer = tokenBuffer.slice(7); // len('<think>')
+  /** Translate parsed events from the shared XML parser into stream events. */
+  const emitParsedEvents = (events: ParsedEvent[]) => {
+    for (const event of events) {
+      switch (event.type) {
+        case 'text':
+          fullText += event.text;
+          textContent.text = fullText;
+          stream.push({ type: 'text_delta', contentIndex: 0, delta: event.text, partial });
+          break;
+        case 'thinking_start':
           stream.push({
             type: 'thinking_start',
             contentIndex: partial.content.length,
             partial,
           });
           partial.content.push({ type: 'thinking', thinking: '' });
-          continue;
+          break;
+        case 'thinking_delta': {
+          const tc = partial.content.find(c => c.type === 'thinking');
+          if (tc && tc.type === 'thinking') tc.thinking += event.text;
+          stream.push({
+            type: 'thinking_delta',
+            contentIndex: partial.content.length - 1,
+            delta: event.text,
+            partial,
+          });
+          break;
         }
-        if (toolIdx === 0) {
-          parseState = 'tool_call';
-          tokenBuffer = tokenBuffer.slice(11); // len('<tool_call>')
-          toolCallBuffer = '';
-          continue;
-        }
-
-        // Partial tag at buffer start — wait for more tokens
-        if (tokenBuffer.startsWith('<') && tokenBuffer.length < 12) break;
-
-        // Emit text up to next tag (or all remaining)
-        const nextTag = Math.min(
-          thinkIdx >= 0 ? thinkIdx : Infinity,
-          toolIdx >= 0 ? toolIdx : Infinity,
-        );
-        const chunk = nextTag === Infinity ? tokenBuffer : tokenBuffer.slice(0, nextTag);
-        // Strip special tokens like <|im_end|>, <|im_start|>, etc.
-        const cleaned = chunk.replace(/<\|[^|]+\|>/g, '');
-        if (cleaned) {
-          fullText += cleaned;
-          textContent.text = fullText;
-          stream.push({ type: 'text_delta', contentIndex: 0, delta: cleaned, partial });
-        }
-        tokenBuffer = nextTag === Infinity ? '' : tokenBuffer.slice(nextTag);
-      } else if (parseState === 'thinking') {
-        const end = tokenBuffer.indexOf('</think>');
-        if (end >= 0) {
-          const chunk = tokenBuffer.slice(0, end);
-          if (chunk) {
-            const tc = partial.content.find(c => c.type === 'thinking');
-            if (tc && tc.type === 'thinking') tc.thinking += chunk;
-            stream.push({
-              type: 'thinking_delta',
-              contentIndex: partial.content.length - 1,
-              delta: chunk,
-              partial,
-            });
-          }
+        case 'thinking_end':
           stream.push({
             type: 'thinking_end',
             contentIndex: partial.content.length - 1,
             content: '',
             partial,
           });
-          tokenBuffer = tokenBuffer.slice(end + 8); // len('</think>')
-          parseState = 'text';
-        } else {
-          // Stream thinking incrementally — emit what we have
-          const tc = partial.content.find(c => c.type === 'thinking');
-          if (tc && tc.type === 'thinking') tc.thinking += tokenBuffer;
+          break;
+        case 'tool_call': {
+          const toolCall = {
+            type: 'toolCall' as const,
+            id: event.id,
+            name: event.name,
+            arguments: event.arguments,
+          };
+          partial.content.push(toolCall);
+          hasToolCalls = true;
           stream.push({
-            type: 'thinking_delta',
+            type: 'toolcall_start',
             contentIndex: partial.content.length - 1,
-            delta: tokenBuffer,
             partial,
           });
-          tokenBuffer = '';
+          stream.push({
+            type: 'toolcall_end',
+            contentIndex: partial.content.length - 1,
+            toolCall,
+            partial,
+          });
+          break;
         }
-      } else if (parseState === 'tool_call') {
-        const end = tokenBuffer.indexOf('</tool_call>');
-        if (end >= 0) {
-          toolCallBuffer += tokenBuffer.slice(0, end);
-          try {
-            const parsed = JSON.parse(toolCallBuffer.trim());
-            const toolCall = {
-              type: 'toolCall' as const,
-              id: crypto.randomUUID(),
-              name: parsed.name,
-              arguments:
-                typeof parsed.arguments === 'string'
-                  ? JSON.parse(parsed.arguments)
-                  : parsed.arguments,
-            };
-            partial.content.push(toolCall);
-            hasToolCalls = true;
-            stream.push({
-              type: 'toolcall_start',
-              contentIndex: partial.content.length - 1,
-              partial,
-            });
-            stream.push({
-              type: 'toolcall_end',
-              contentIndex: partial.content.length - 1,
-              toolCall,
-              partial,
-            });
-          } catch {
-            // Malformed tool call JSON — emit as text
-            fullText += toolCallBuffer;
-            textContent.text = fullText;
-            stream.push({
-              type: 'text_delta',
-              contentIndex: 0,
-              delta: toolCallBuffer,
-              partial,
-            });
-          }
-          toolCallBuffer = '';
-          tokenBuffer = tokenBuffer.slice(end + 12); // len('</tool_call>')
-          parseState = 'text';
-        } else {
-          toolCallBuffer += tokenBuffer;
-          tokenBuffer = '';
-        }
+        case 'tool_call_malformed':
+          // Malformed tool call JSON — emit as text
+          fullText += event.rawText;
+          textContent.text = fullText;
+          stream.push({
+            type: 'text_delta',
+            contentIndex: 0,
+            delta: event.rawText,
+            partial,
+          });
+          break;
       }
     }
   };
@@ -221,8 +168,7 @@ export const requestLocalGeneration = (opts: {
       case 'LOCAL_LLM_TOKEN': {
         const token = message.token;
         if (typeof token !== 'string') return;
-        tokenBuffer += token;
-        processTokenBuffer();
+        emitParsedEvents(parser.feed(token));
         break;
       }
 
@@ -239,48 +185,8 @@ export const requestLocalGeneration = (opts: {
           };
         }
 
-        // Flush any remaining state based on parseState
-        if (parseState === 'thinking') {
-          // Close unclosed <think> block
-          if (tokenBuffer.length > 0) {
-            const tc = partial.content.find(c => c.type === 'thinking');
-            if (tc && tc.type === 'thinking') tc.thinking += tokenBuffer;
-            stream.push({
-              type: 'thinking_delta',
-              contentIndex: partial.content.length - 1,
-              delta: tokenBuffer,
-              partial,
-            });
-            tokenBuffer = '';
-          }
-          stream.push({
-            type: 'thinking_end',
-            contentIndex: partial.content.length - 1,
-            content: '',
-            partial,
-          });
-          parseState = 'text';
-        } else if (parseState === 'tool_call') {
-          // Flush incomplete tool_call buffer as text fallback
-          toolCallBuffer += tokenBuffer;
-          tokenBuffer = '';
-          if (toolCallBuffer.length > 0) {
-            fullText += toolCallBuffer;
-            textContent.text = fullText;
-            stream.push({ type: 'text_delta', contentIndex: 0, delta: toolCallBuffer, partial });
-            toolCallBuffer = '';
-          }
-          parseState = 'text';
-        } else if (tokenBuffer.length > 0) {
-          // Force-flush: treat remaining buffer as text
-          const cleaned = tokenBuffer.replace(/<\|[^|]+\|>/g, '');
-          if (cleaned) {
-            fullText += cleaned;
-            textContent.text = fullText;
-            stream.push({ type: 'text_delta', contentIndex: 0, delta: cleaned, partial });
-          }
-          tokenBuffer = '';
-        }
+        // Flush any remaining buffered state from the parser
+        emitParsedEvents(parser.flush());
 
         textContent.text = fullText;
 

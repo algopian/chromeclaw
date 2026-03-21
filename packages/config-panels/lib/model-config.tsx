@@ -1,5 +1,7 @@
+import { WEBGPU_MODELS_ENABLED } from '@extension/env';
 import { t, useT } from '@extension/i18n';
-import { customModelsStorage } from '@extension/storage';
+import { WEB_PROVIDER_OPTIONS } from '@extension/shared';
+import { customModelsStorage, webCredentialsStorage } from '@extension/storage';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +38,8 @@ import {
   CheckCircleIcon,
   DownloadIcon,
   Loader2Icon,
+  LogInIcon,
+  LogOutIcon,
   KeyRoundIcon,
   PencilIcon,
   PlusIcon,
@@ -43,7 +47,6 @@ import {
   WrenchIcon,
   XCircleIcon,
 } from 'lucide-react';
-import { WEBGPU_MODELS_ENABLED } from '@extension/env';
 import { nanoid } from 'nanoid';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DbChatModel } from '@extension/storage';
@@ -56,13 +59,16 @@ const defaultModelIds: Record<string, string> = {
   google: 'gemini-2.0-flash',
   openrouter: 'openai/gpt-4o',
   custom: '',
+  azure: '',
+  'openai-codex': 'gpt-5.3-codex',
+  web: '',
   local: 'onnx-community/Qwen3-0.6B-ONNX',
 };
 
 const emptyForm: ModelFormData = {
   name: '',
-  modelId: 'gpt-4o',
-  provider: 'openai',
+  modelId: '',
+  provider: 'web',
   description: '',
   apiKey: '',
   baseUrl: '',
@@ -71,6 +77,7 @@ const emptyForm: ModelFormData = {
   api: undefined,
   toolTimeoutSeconds: undefined,
   contextWindow: undefined,
+  azureApiVersion: undefined,
 };
 
 const apiOptions = [
@@ -85,7 +92,10 @@ const providers = [
   { value: 'anthropic', label: 'Anthropic' },
   { value: 'google', label: 'Google' },
   { value: 'openrouter', label: 'OpenRouter' },
+  { value: 'azure', label: 'Azure OpenAI' },
+  { value: 'openai-codex', label: 'OpenAI Codex (ChatGPT)' },
   { value: 'custom', label: 'OpenAI Compatible' },
+  { value: 'web', label: 'Web (Browser Session Zero Token)' },
   ...(WEBGPU_MODELS_ENABLED ? [{ value: 'local', label: 'WebGPU (On-Device)' }] : []),
 ];
 
@@ -93,13 +103,24 @@ const TRANSFORMERS_CACHE_NAME = 'transformers-cache';
 
 const validateModelForm = (form: ModelFormData): string | null => {
   if (!form.name.trim()) return t('model_nameRequired');
-  if (!form.modelId.trim()) return t('firstRun_modelIdRequired');
   if (!form.provider) return t('model_providerRequired');
   if (form.provider === 'local') return null; // No API key or base URL needed
-  if (!form.apiKey?.trim() && !form.baseUrl?.trim())
-    return t('firstRun_apiKeyRequired');
-  if (form.baseUrl && !/^https?:\/\/.+/.test(form.baseUrl))
-    return t('model_baseUrlInvalid');
+  if (form.provider === 'web') {
+    if (!form.webProviderId?.trim()) return 'Web provider is required';
+    return null; // modelId is optional for web — auto-filled from provider defaults
+  }
+  if (!form.modelId.trim()) return t('firstRun_modelIdRequired');
+  if (form.provider === 'openai-codex') {
+    if (!form.apiKey?.trim()) return 'ChatGPT OAuth token is required';
+    return null;
+  }
+  if (form.provider === 'azure') {
+    if (!form.baseUrl?.trim()) return 'Azure endpoint URL is required';
+    if (!form.apiKey?.trim()) return t('firstRun_apiKeyRequired');
+    return form.baseUrl && !/^https?:\/\/.+/.test(form.baseUrl) ? t('model_baseUrlInvalid') : null;
+  }
+  if (!form.apiKey?.trim() && !form.baseUrl?.trim()) return t('firstRun_apiKeyRequired');
+  if (form.baseUrl && !/^https?:\/\/.+/.test(form.baseUrl)) return t('model_baseUrlInvalid');
   return null;
 };
 
@@ -228,14 +249,54 @@ const ModelConfig = () => {
           next.modelId = defaultModelIds[value] ?? '';
         }
         // Clear api when switching to non-OpenAI-compatible providers
-        if (!['openai', 'custom', 'openrouter'].includes(value)) {
+        if (!['openai', 'custom', 'openrouter', 'azure'].includes(value)) {
           next.api = undefined;
+        }
+        // Azure provider: set Responses API as default
+        if (value === 'azure') {
+          next.api = 'openai-responses';
+        }
+        // Codex provider: defaults
+        if (value === 'openai-codex') {
+          next.api = undefined; // Always openai-codex-responses, no user choice
+          next.baseUrl = 'https://chatgpt.com/backend-api';
+          next.supportsReasoning = true;
+          next.supportsTools = true;
+        }
+        // Web provider: no API key, no base URL needed; auto-set default webProviderId
+        if (value === 'web') {
+          next.apiKey = '';
+          next.baseUrl = '';
+          next.supportsTools = true;
+          next.supportsReasoning = true;
+          if (!next.webProviderId) {
+            next.webProviderId = 'gemini-web';
+          }
+          // Auto-fill modelId and name from web provider defaults
+          const wp = WEB_PROVIDER_OPTIONS.find(w => w.value === next.webProviderId);
+          if (wp) {
+            next.modelId = wp.defaultModelId;
+            if (!next.name) next.name = wp.defaultModelName;
+          }
         }
         // Force local provider defaults
         if (value === 'local') {
           next.supportsTools = true;
           next.apiKey = '';
           next.baseUrl = '';
+        }
+      }
+      // Auto-fill modelId and name when webProviderId changes
+      if (key === 'webProviderId' && typeof value === 'string') {
+        const wp = WEB_PROVIDER_OPTIONS.find(w => w.value === value);
+        if (wp) {
+          const prevWp = WEB_PROVIDER_OPTIONS.find(w => w.value === prev.webProviderId);
+          if (!prev.modelId || prev.modelId === (prevWp?.defaultModelId ?? '')) {
+            next.modelId = wp.defaultModelId;
+          }
+          if (!prev.name || prev.name === (prevWp?.defaultModelName ?? '')) {
+            next.name = wp.defaultModelName;
+          }
         }
       }
       return next;
@@ -250,10 +311,14 @@ const ModelConfig = () => {
       return;
     }
 
+    const webProviderDefaults =
+      editForm.provider === 'web' && editForm.webProviderId
+        ? WEB_PROVIDER_OPTIONS.find(w => w.value === editForm.webProviderId)
+        : undefined;
     const model: DbChatModel = {
       id: editForm.id ?? nanoid(),
-      modelId: editForm.modelId,
-      name: editForm.name,
+      modelId: editForm.modelId || webProviderDefaults?.defaultModelId || '',
+      name: editForm.name || webProviderDefaults?.defaultModelName || '',
       provider: editForm.provider,
       routingMode: 'direct',
       description: editForm.description,
@@ -268,6 +333,12 @@ const ModelConfig = () => {
       contextWindow: editForm.contextWindow
         ? Math.max(Number(editForm.contextWindow), 1024)
         : undefined,
+      azureApiVersion:
+        editForm.provider === 'azure' && editForm.azureApiVersion
+          ? editForm.azureApiVersion.trim()
+          : undefined,
+      webProviderId:
+        editForm.provider === 'web' && editForm.webProviderId ? editForm.webProviderId : undefined,
     };
 
     const updated = editForm.id
@@ -302,6 +373,7 @@ const ModelConfig = () => {
           apiKey: editForm.apiKey,
           baseUrl: editForm.baseUrl,
           api: editForm.api,
+          webProviderId: editForm.webProviderId,
         },
       });
       if (response?.error) {
@@ -320,14 +392,15 @@ const ModelConfig = () => {
   const downloadListenerRef = useRef<((msg: Record<string, unknown>) => void) | null>(null);
 
   // Cleanup download listener on unmount
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       if (downloadListenerRef.current) {
         chrome.runtime.onMessage.removeListener(downloadListenerRef.current);
         downloadListenerRef.current = null;
       }
-    };
-  }, []);
+    },
+    [],
+  );
 
   const handleDownloadLocalModel = useCallback(
     async (modelId: string) => {
@@ -384,7 +457,195 @@ const ModelConfig = () => {
     [refreshCachedLocalModels],
   );
 
+  // ── Web provider auth state ────────────────────
+  const [webAuthStatus, setWebAuthStatus] = useState<
+    'unknown' | 'checking' | 'logged-in' | 'not-logged-in'
+  >('unknown');
+  const [webLoginLoading, setWebLoginLoading] = useState(false);
+
+  // Check web auth status when provider or webProviderId changes
+  useEffect(() => {
+    if (editForm.provider !== 'web' || !editForm.webProviderId) {
+      setWebAuthStatus('unknown');
+      return;
+    }
+    const wp = WEB_PROVIDER_OPTIONS.find(p => p.value === editForm.webProviderId);
+    if (!wp) {
+      setWebAuthStatus('unknown');
+      return;
+    }
+
+    setWebAuthStatus('checking');
+    (async () => {
+      try {
+        // Check stored credentials first
+        const creds = await webCredentialsStorage.get();
+        if (creds[editForm.webProviderId!]) {
+          setWebAuthStatus('logged-in');
+          return;
+        }
+        // Check cookies directly
+        const cookies = await chrome.cookies.getAll({ domain: wp.cookieDomain });
+        const cookieMap = Object.fromEntries(
+          cookies.map((c: chrome.cookies.Cookie) => [c.name, c.value]),
+        );
+        const hasSession = wp.sessionIndicators.some((name: string) => !!cookieMap[name]);
+        setWebAuthStatus(hasSession ? 'logged-in' : 'not-logged-in');
+      } catch {
+        setWebAuthStatus('not-logged-in');
+      }
+    })();
+  }, [editForm.provider, editForm.webProviderId, dialogOpen]);
+
+  const handleWebLogin = useCallback(async () => {
+    const wp = WEB_PROVIDER_OPTIONS.find(p => p.value === editForm.webProviderId);
+    if (!wp) return;
+
+    setWebLoginLoading(true);
+    try {
+      const tab = await chrome.tabs.create({ url: wp.loginUrl, active: false });
+      const tabId = tab.id!;
+
+      // Poll for session cookies
+      const startTime = Date.now();
+      const TIMEOUT = 5 * 60 * 1000;
+      const INTERVAL = 2000;
+
+      const poll = async (): Promise<boolean> => {
+        if (Date.now() - startTime > TIMEOUT) return false;
+        try {
+          await chrome.tabs.get(tabId);
+        } catch {
+          return false;
+        }
+
+        const cookies = await chrome.cookies.getAll({ domain: wp.cookieDomain });
+        const cookieMap = Object.fromEntries(
+          cookies.map((c: chrome.cookies.Cookie) => [c.name, c.value]),
+        );
+        let hasSession = wp.sessionIndicators.some((name: string) => !!cookieMap[name]);
+
+        // Some providers (e.g., Kimi) store tokens in localStorage instead of cookies
+        if (!hasSession && 'checkLocalStorage' in wp && wp.checkLocalStorage) {
+          try {
+            const results = await chrome.scripting.executeScript({
+              target: { tabId },
+              func: (indicators: string[]) =>
+                indicators.reduce(
+                  (acc, name) => {
+                    const val = localStorage.getItem(name);
+                    if (val) acc[name] = val;
+                    return acc;
+                  },
+                  {} as Record<string, string>,
+                ),
+              args: [wp.sessionIndicators as unknown as string[]],
+            });
+            const lsTokens = results?.[0]?.result as Record<string, string> | undefined;
+            if (lsTokens && Object.keys(lsTokens).length > 0) {
+              hasSession = true;
+              Object.assign(cookieMap, lsTokens);
+            }
+          } catch {
+            /* scripting may fail if tab isn't ready */
+          }
+        }
+
+        if (hasSession) {
+          // Store only session cookies + localStorage tokens
+          const sessionCookies: Record<string, string> = {};
+          for (const name of wp.sessionIndicators) {
+            if (cookieMap[name]) sessionCookies[name] = cookieMap[name];
+          }
+          for (const name of ['lastActiveOrg', 'XSRF-TOKEN', 'csrf_token']) {
+            if (cookieMap[name]) sessionCookies[name] = cookieMap[name];
+          }
+
+          // Provider-specific token refresh (e.g., GLM access token exchange)
+          if ('refreshUrl' in wp && wp.refreshUrl) {
+            const refreshToken =
+              sessionCookies['chatglm_refresh_token'] || sessionCookies['refresh_token'];
+            if (refreshToken && !sessionCookies['chatglm_token']) {
+              try {
+                const results = await chrome.scripting.executeScript({
+                  target: { tabId },
+                  func: async (refreshUrl: string, token: string) => {
+                    try {
+                      const res = await fetch(refreshUrl, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          Authorization: `Bearer ${token}`,
+                          'App-Name': 'chatglm',
+                          'X-App-Platform': 'pc',
+                          'X-App-Version': '0.0.1',
+                        },
+                        body: JSON.stringify({}),
+                        credentials: 'include',
+                      });
+                      if (!res.ok) return null;
+                      const data = await res.json();
+                      return (
+                        data?.result?.access_token ??
+                        data?.result?.accessToken ??
+                        data?.accessToken ??
+                        null
+                      );
+                    } catch {
+                      return null;
+                    }
+                  },
+                  args: [wp.refreshUrl, refreshToken],
+                });
+                const accessToken = results?.[0]?.result as string | null;
+                if (accessToken) {
+                  sessionCookies['chatglm_token'] = accessToken;
+                }
+              } catch {
+                /* token refresh failed — will retry at request time */
+              }
+            }
+          }
+
+          const creds = await webCredentialsStorage.get();
+          creds[wp.value] = {
+            providerId: wp.value,
+            cookies: sessionCookies,
+            capturedAt: Date.now(),
+          };
+          await webCredentialsStorage.set(creds);
+          try {
+            await chrome.tabs.remove(tabId);
+          } catch {
+            /* ok */
+          }
+          return true;
+        }
+        return new Promise(resolve => setTimeout(() => resolve(poll()), INTERVAL));
+      };
+
+      const success = await poll();
+      setWebAuthStatus(success ? 'logged-in' : 'not-logged-in');
+      if (!success) setFormError('Login timed out or tab was closed');
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Login failed');
+      setWebAuthStatus('not-logged-in');
+    } finally {
+      setWebLoginLoading(false);
+    }
+  }, [editForm.webProviderId]);
+
+  const handleWebLogout = useCallback(async () => {
+    if (!editForm.webProviderId) return;
+    const creds = await webCredentialsStorage.get();
+    delete creds[editForm.webProviderId];
+    await webCredentialsStorage.set(creds);
+    setWebAuthStatus('not-logged-in');
+  }, [editForm.webProviderId]);
+
   const isLocal = editForm.provider === 'local';
+  const isCodex = editForm.provider === 'openai-codex';
+  const isWeb = editForm.provider === 'web';
 
   return (
     <Card>
@@ -406,9 +667,7 @@ const ModelConfig = () => {
           </div>
 
           {models.length === 0 && (
-            <p className="text-muted-foreground py-4 text-center text-sm">
-              {t('model_noModels')}
-            </p>
+            <p className="text-muted-foreground py-4 text-center text-sm">{t('model_noModels')}</p>
           )}
 
           <div className="divide-y rounded-md border">
@@ -466,7 +725,10 @@ const ModelConfig = () => {
                     {model.provider === 'local' && cached && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button size="icon-sm" title={t('model_deleteCachedModel')} variant="ghost">
+                          <Button
+                            size="icon-sm"
+                            title={t('model_deleteCachedModel')}
+                            variant="ghost">
                             <Trash2Icon className="text-muted-foreground size-4" />
                           </Button>
                         </AlertDialogTrigger>
@@ -520,14 +782,15 @@ const ModelConfig = () => {
           </div>
         </div>
 
-        <Dialog onOpenChange={setDialogOpen} open={dialogOpen}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <Dialog onOpenChange={open => { if (!webLoginLoading) setDialogOpen(open); }} open={dialogOpen}>
+          <DialogContent
+              onInteractOutside={e => { if (webLoginLoading) e.preventDefault(); }}
+              onFocusOutside={e => { if (webLoginLoading) e.preventDefault(); }}
+              className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>{editForm.id ? t('model_editModel') : t('model_addModel')}</DialogTitle>
               <DialogDescription>
-                {isLocal
-                  ? t('model_localDescription')
-                  : t('model_remoteDescription')}
+                {isLocal ? t('model_localDescription') : t('model_remoteDescription')}
               </DialogDescription>
             </DialogHeader>
 
@@ -559,7 +822,11 @@ const ModelConfig = () => {
                   <SelectContent>
                     {providers.map(p => (
                       <SelectItem key={p.value} value={p.value}>
-                        {p.label}
+                        {p.value === 'web'
+                          ? t('provider_web')
+                          : p.value === 'custom'
+                            ? t('provider_openaiCompatible')
+                            : p.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -567,47 +834,153 @@ const ModelConfig = () => {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="model-id">{isLocal ? t('model_huggingFaceModelId') : t('firstRun_modelId')}</Label>
+                <Label htmlFor="model-id">
+                  {isLocal ? t('model_huggingFaceModelId') : t('firstRun_modelId')}
+                  {isWeb && <span className="text-muted-foreground ml-1 font-normal">(optional)</span>}
+                </Label>
                 <Input
                   id="model-id"
                   onChange={e => handleFormChange('modelId', e.target.value)}
-                  placeholder={isLocal ? 'HuggingFaceTB/SmolLM2-360M-Instruct' : 'gpt-4o'}
+                  placeholder={
+                    isLocal
+                      ? 'HuggingFaceTB/SmolLM2-360M-Instruct'
+                      : isWeb
+                        ? WEB_PROVIDER_OPTIONS.find(w => w.value === editForm.webProviderId)?.defaultModelId ?? 'Auto-detected'
+                        : 'gpt-4o'
+                  }
                   value={editForm.modelId}
                 />
                 <p className="text-muted-foreground text-xs">
                   {isLocal
                     ? 'The HuggingFace model ID (e.g. HuggingFaceTB/SmolLM2-360M-Instruct)'
-                    : 'The model identifier sent to the provider (e.g. gpt-4o, claude-sonnet-4-5-20250929)'}
+                    : isWeb
+                      ? 'Auto-detected from web provider. Override only if needed.'
+                      : 'The model identifier sent to the provider (e.g. gpt-4o, claude-sonnet-4-5-20250929)'}
                 </p>
               </div>
 
-              {!isLocal && (
+              {isWeb && (
+                <div className="grid gap-2">
+                  <Label htmlFor="web-provider-id">Web Provider</Label>
+                  <Select
+                    onValueChange={v => handleFormChange('webProviderId', v)}
+                    value={editForm.webProviderId ?? ''}>
+                    <SelectTrigger id="web-provider-id">
+                      <SelectValue placeholder="Select a web provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WEB_PROVIDER_OPTIONS.map(wp => (
+                        <SelectItem key={wp.value} value={wp.value}>
+                          {wp.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center gap-2 pt-1">
+                    {webAuthStatus === 'checking' && (
+                      <Badge variant="outline" className="gap-1">
+                        <Loader2Icon className="size-3 animate-spin" />
+                        Checking...
+                      </Badge>
+                    )}
+                    {webAuthStatus === 'logged-in' && (
+                      <Badge variant="outline" className="gap-1 border-green-500 text-green-600">
+                        <CheckCircleIcon className="size-3" />
+                        Logged in
+                      </Badge>
+                    )}
+                    {webAuthStatus === 'not-logged-in' && (
+                      <Badge variant="outline" className="gap-1 border-orange-500 text-orange-600">
+                        <XCircleIcon className="size-3" />
+                        Not logged in
+                      </Badge>
+                    )}
+                    {webAuthStatus === 'logged-in' ? (
+                      <Button onClick={handleWebLogout} size="sm" variant="outline">
+                        <LogOutIcon className="mr-1 size-3" />
+                        Logout
+                      </Button>
+                    ) : (
+                      <Button
+                        disabled={webLoginLoading || !editForm.webProviderId}
+                        onClick={handleWebLogin}
+                        size="sm"
+                        variant="outline">
+                        {webLoginLoading ? (
+                          <Loader2Icon className="mr-1 size-3 animate-spin" />
+                        ) : (
+                          <LogInIcon className="mr-1 size-3" />
+                        )}
+                        {webLoginLoading ? 'Waiting for login...' : 'Login'}
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    Uses your browser session — no API key needed.
+                  </p>
+                </div>
+              )}
+
+              {!isLocal && !isWeb && (
                 <>
                   <div className="grid gap-2">
                     <Label htmlFor="model-apikey">
-                      {editForm.baseUrl ? t('firstRun_apiKeyOptional') : t('firstRun_apiKey')}
+                      {isCodex
+                        ? 'OAuth Token'
+                        : editForm.baseUrl
+                          ? t('firstRun_apiKeyOptional')
+                          : t('firstRun_apiKey')}
                     </Label>
                     <Input
                       id="model-apikey"
                       onChange={e => handleFormChange('apiKey', e.target.value)}
-                      placeholder="sk-..."
+                      placeholder={isCodex ? 'ChatGPT OAuth access token' : 'sk-...'}
                       type="password"
                       value={editForm.apiKey ?? ''}
                     />
+                    {isCodex && (
+                      <p className="text-muted-foreground text-xs">
+                        Requires a ChatGPT OAuth token (JWT). This is the access_token from a
+                        ChatGPT session, not a standard OpenAI API key.
+                      </p>
+                    )}
                   </div>
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="model-baseurl">{t('firstRun_baseUrl')}</Label>
-                    <Input
-                      id="model-baseurl"
-                      onChange={e => handleFormChange('baseUrl', e.target.value)}
-                      placeholder="https://api.openai.com/v1"
-                      type="url"
-                      value={editForm.baseUrl ?? ''}
-                    />
-                  </div>
+                  {!isCodex && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="model-baseurl">
+                        {editForm.provider === 'azure' ? 'Azure Endpoint' : t('firstRun_baseUrl')}
+                      </Label>
+                      <Input
+                        id="model-baseurl"
+                        onChange={e => handleFormChange('baseUrl', e.target.value)}
+                        placeholder={
+                          editForm.provider === 'azure'
+                            ? 'https://{resource}.openai.azure.com/openai'
+                            : 'https://api.openai.com/v1'
+                        }
+                        type="url"
+                        value={editForm.baseUrl ?? ''}
+                      />
+                    </div>
+                  )}
 
-                  {['openai', 'custom', 'openrouter'].includes(editForm.provider) && (
+                  {editForm.provider === 'azure' && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="model-azure-api-version">API Version</Label>
+                      <Input
+                        id="model-azure-api-version"
+                        onChange={e => handleFormChange('azureApiVersion', e.target.value)}
+                        placeholder="2025-04-01-preview"
+                        value={editForm.azureApiVersion ?? ''}
+                      />
+                      <p className="text-muted-foreground text-xs">
+                        Azure OpenAI API version. Defaults to 2025-04-01-preview if empty.
+                      </p>
+                    </div>
+                  )}
+
+                  {['openai', 'custom', 'openrouter', 'azure'].includes(editForm.provider) && (
                     <div className="grid gap-2">
                       <Label htmlFor="model-api">{t('model_apiFormat')}</Label>
                       <Select
@@ -681,9 +1054,7 @@ const ModelConfig = () => {
                     type="number"
                     value={editForm.toolTimeoutSeconds ?? ''}
                   />
-                  <p className="text-muted-foreground text-xs">
-                    {t('model_toolTimeoutHint')}
-                  </p>
+                  <p className="text-muted-foreground text-xs">{t('model_toolTimeoutHint')}</p>
                 </div>
               )}
 
@@ -697,9 +1068,7 @@ const ModelConfig = () => {
                   type="number"
                   value={editForm.contextWindow ?? ''}
                 />
-                <p className="text-muted-foreground text-xs">
-                  {t('model_contextWindowHint')}
-                </p>
+                <p className="text-muted-foreground text-xs">{t('model_contextWindowHint')}</p>
               </div>
 
               {isLocal && downloadProgress && (

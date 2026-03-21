@@ -14,7 +14,7 @@ import {
 } from './telegram/bot-api';
 import { sendAudioViaOffscreen } from './whatsapp/adapter';
 import { dbModelToChatModel, runAgent } from '../agents/agent-setup';
-import { chatMessagesToPiMessages, convertToLlm } from '../agents/message-adapter';
+import { chatMessagesToPiMessages, convertToLlm, makeConvertToLlm } from '../agents/message-adapter';
 import { sanitizeHistory } from '../context/history-sanitization';
 import { createTransformContext } from '../context/transform';
 import { createLogger } from '../logging/logger-buffer';
@@ -382,7 +382,7 @@ const handleChannelMessageInner = async (
           systemPrompt,
           prompt: promptMessage,
           messages: historyMessages,
-          convertToLlm,
+          convertToLlm: makeConvertToLlm(model),
           transformContext,
           chatId: chat.id,
           onTextDelta: delta => {

@@ -3,8 +3,8 @@
  * Verifies conversion between extension ChatMessage[] and pi-mono Message[].
  */
 import { describe, it, expect } from 'vitest';
-import { chatMessagesToPiMessages, convertToLlm } from './message-adapter';
-import type { ChatMessage } from '@extension/shared';
+import { chatMessagesToPiMessages, convertToLlm, makeConvertToLlm } from './message-adapter';
+import type { ChatMessage, ChatModel } from '@extension/shared';
 import type { AgentMessage } from '@mariozechner/pi-agent-core';
 import type { Message } from '@mariozechner/pi-ai';
 
@@ -493,6 +493,102 @@ describe('convertToLlm', () => {
   });
 });
 
+// ── Reasoning signature round-trip tests ─────────────────
+
+describe('chatMessagesToPiMessages — reasoning signature', () => {
+  it('passes thinkingSignature when reasoning part has signature', () => {
+    const messages = [
+      makeMessage({
+        role: 'assistant',
+        parts: [
+          { type: 'reasoning', text: 'thinking...', signature: '{"id":"rs_abc","type":"reasoning"}' },
+        ],
+      }),
+    ];
+    const result = chatMessagesToPiMessages(messages);
+
+    expect(result).toHaveLength(1);
+    const msg = result[0] as {
+      content: Array<{ type: string; thinking?: string; thinkingSignature?: string }>;
+    };
+    expect(msg.content[0]!.type).toBe('thinking');
+    expect(msg.content[0]!.thinking).toBe('thinking...');
+    expect(msg.content[0]!.thinkingSignature).toBe('{"id":"rs_abc","type":"reasoning"}');
+  });
+
+  it('omits thinkingSignature when reasoning part has no signature', () => {
+    const messages = [
+      makeMessage({
+        role: 'assistant',
+        parts: [{ type: 'reasoning', text: 'thinking...' }],
+      }),
+    ];
+    const result = chatMessagesToPiMessages(messages);
+
+    const msg = result[0] as {
+      content: Array<{ type: string; thinking?: string; thinkingSignature?: string }>;
+    };
+    expect(msg.content[0]!.type).toBe('thinking');
+    expect(msg.content[0]!.thinking).toBe('thinking...');
+    expect(msg.content[0]!.thinkingSignature).toBeUndefined();
+  });
+
+  it('round-trips reasoning + tool-call with signature (simulates multi-turn replay)', () => {
+    const messages = [
+      makeMessage({
+        role: 'assistant',
+        parts: [
+          { type: 'reasoning', text: 'Let me search...', signature: '{"id":"rs_123"}' },
+          {
+            type: 'tool-call',
+            toolCallId: 'tc-1',
+            toolName: 'web_search',
+            args: { query: 'test' },
+          },
+          {
+            type: 'tool-result',
+            toolCallId: 'tc-1',
+            toolName: 'web_search',
+            result: 'search results',
+          },
+        ],
+      }),
+    ];
+    const result = chatMessagesToPiMessages(messages);
+
+    // Assistant message with thinking + toolCall, then toolResult message
+    expect(result).toHaveLength(2);
+    const assistant = result[0] as {
+      content: Array<{ type: string; thinking?: string; thinkingSignature?: string; id?: string }>;
+    };
+    expect(assistant.content[0]!.type).toBe('thinking');
+    expect(assistant.content[0]!.thinkingSignature).toBe('{"id":"rs_123"}');
+    expect(assistant.content[1]!.type).toBe('toolCall');
+    expect(assistant.content[1]!.id).toBe('tc-1');
+  });
+
+  it('handles mixed reasoning parts — some with signature, some without', () => {
+    const messages = [
+      makeMessage({
+        role: 'assistant',
+        parts: [
+          { type: 'reasoning', text: 'first thought', signature: '{"id":"rs_1"}' },
+          { type: 'text', text: 'some text' },
+          { type: 'reasoning', text: 'second thought' },
+        ],
+      }),
+    ];
+    const result = chatMessagesToPiMessages(messages);
+
+    const msg = result[0] as {
+      content: Array<{ type: string; thinking?: string; thinkingSignature?: string }>;
+    };
+    expect(msg.content[0]!.thinkingSignature).toBe('{"id":"rs_1"}');
+    expect(msg.content[2]!.type).toBe('thinking');
+    expect(msg.content[2]!.thinkingSignature).toBeUndefined();
+  });
+});
+
 // ── Image block round-trip tests ─────────────────────────
 
 describe('chatMessagesToPiMessages — image blocks in tool results', () => {
@@ -643,5 +739,111 @@ describe('chatMessagesToPiMessages — image blocks in tool results', () => {
     };
     // Should only have text (file part has no data)
     expect(toolResult.content).toHaveLength(1);
+  });
+});
+
+// ── makeConvertToLlm ─────────────────────────────────────
+
+describe('makeConvertToLlm', () => {
+  const makeModel = (overrides: Partial<ChatModel> = {}): ChatModel => ({
+    id: 'test-model',
+    name: 'Test Model',
+    provider: 'openai',
+    ...overrides,
+  });
+
+  const assistantUsage = {
+    input: 0,
+    output: 0,
+    cacheRead: 0,
+    cacheWrite: 0,
+    totalTokens: 0,
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+  };
+
+  it('filters non-LLM roles AND applies transcript sanitization', () => {
+    const messages = [
+      { role: 'user', content: 'Hi', timestamp: now },
+      { role: 'event', data: 'noise' },
+      {
+        role: 'assistant',
+        content: [
+          { type: 'thinking', thinking: 'hmm' },
+          { type: 'text', text: 'Hello' },
+        ],
+        api: 'openai-completions',
+        provider: 'openai',
+        model: 'gpt-4o',
+        usage: assistantUsage,
+        stopReason: 'stop',
+        timestamp: now,
+      },
+    ] as unknown as AgentMessage[];
+
+    const convert = makeConvertToLlm(makeModel({ provider: 'google' }));
+    const result = convert(messages);
+
+    // event message filtered, thinking blocks dropped
+    expect(result).toHaveLength(2);
+    expect(result[0]!.role).toBe('user');
+    expect(result[1]!.role).toBe('assistant');
+    const content = (result[1] as { content: Array<{ type: string }> }).content;
+    expect(content).toHaveLength(1);
+    expect(content[0]!.type).toBe('text');
+  });
+
+  it('sanitizes OpenAI reasoning blocks for Responses API model', () => {
+    const messages = [
+      { role: 'user', content: 'Hi', timestamp: now },
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'thinking',
+            thinking: 'reasoning',
+            thinkingSignature: '{"id":"rs_1","type":"reasoning"}',
+          },
+        ],
+        api: 'openai-completions',
+        provider: 'openai',
+        model: 'gpt-4o',
+        usage: assistantUsage,
+        stopReason: 'stop',
+        timestamp: now,
+      },
+    ] as unknown as AgentMessage[];
+
+    const convert = makeConvertToLlm(makeModel({ api: 'openai-responses' }));
+    const result = convert(messages);
+
+    // Standalone reasoning dropped → entire assistant message dropped
+    expect(result).toHaveLength(1);
+    expect(result[0]!.role).toBe('user');
+  });
+
+  it('preserves thinking blocks for Anthropic model', () => {
+    const messages = [
+      {
+        role: 'assistant',
+        content: [
+          { type: 'thinking', thinking: 'deep thought' },
+          { type: 'text', text: 'answer' },
+        ],
+        api: 'openai-completions',
+        provider: 'anthropic',
+        model: 'claude-3',
+        usage: assistantUsage,
+        stopReason: 'stop',
+        timestamp: now,
+      },
+    ] as unknown as AgentMessage[];
+
+    const convert = makeConvertToLlm(makeModel({ provider: 'anthropic' }));
+    const result = convert(messages);
+
+    expect(result).toHaveLength(1);
+    const content = (result[0] as { content: Array<{ type: string }> }).content;
+    expect(content).toHaveLength(2);
+    expect(content[0]!.type).toBe('thinking');
   });
 });

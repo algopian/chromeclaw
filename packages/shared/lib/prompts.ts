@@ -196,6 +196,68 @@ const buildWorkspaceMinimalSection = (config: SystemPromptConfig): string | null
 };
 
 // ──────────────────────────────────────────────
+// Provider-Specific Builders
+// ──────────────────────────────────────────────
+
+/**
+ * Build system prompt for web providers (e.g. Qwen via WebLLM).
+ *
+ * Same as full-mode buildSystemPrompt but omits `## Tooling` and tool style sections.
+ * Web providers inject their own XML tool instructions via buildToolPrompt() in
+ * web-llm-bridge.ts, so including a separate `## Tooling` section causes the model
+ * to ignore the XML format and output raw JSON instead.
+ */
+const buildWebSystemPrompt = (config: SystemPromptConfig): SystemPromptResult => {
+  const parts: string[] = [];
+  const identity = buildIdentitySection(config);
+  if (identity) parts.push(identity);
+  parts.push(buildSafetySection());
+  parts.push(buildSandboxSection());
+
+  // NO buildToolsSection — XML tool prompt is injected by web-llm-bridge
+  // NO buildToolStyleSection — tool narration style not needed for XML tool calling
+
+  const budgetedFiles = budgetWorkspaceFiles(config.workspaceFiles ?? []);
+  const budgetedConfig = { ...config, workspaceFiles: budgetedFiles };
+
+  if (budgetedConfig.toolPromptHints) {
+    parts.push(...budgetedConfig.toolPromptHints);
+  }
+  const skills = buildSkillsSection(budgetedConfig);
+  if (skills) parts.push(skills);
+  const ttsHint = buildTtsHintSection(budgetedConfig);
+  if (ttsHint) parts.push(ttsHint);
+  const workspaceUser = buildWorkspaceUserFilesSection(budgetedConfig);
+  if (workspaceUser) parts.push(workspaceUser);
+  const runtimeMeta = buildRuntimeMetaSection(budgetedConfig);
+  if (runtimeMeta) parts.push(runtimeMeta);
+  if (config.extraContext) parts.push(config.extraContext);
+
+  const text = parts.join('\n\n');
+  return { text, estimatedTokens: Math.ceil(text.length / 4) };
+};
+
+/**
+ * Build system prompt for local providers (e.g. Ollama, llama.cpp).
+ *
+ * Minimal prompt: identity + safety + minimal workspace.
+ * Omits `## Tooling` because local-llm-bridge injects its own XML tool instructions.
+ */
+const buildLocalSystemPrompt = (config: SystemPromptConfig): SystemPromptResult => {
+  const parts: string[] = [];
+  const identity = buildIdentitySection(config);
+  if (identity) parts.push(identity);
+  parts.push(buildSafetySection());
+
+  // NO buildToolsSection — XML tool prompt is injected by local-llm-bridge
+  const workspace = buildWorkspaceMinimalSection(config);
+  if (workspace) parts.push(workspace);
+
+  const text = parts.join('\n\n');
+  return { text, estimatedTokens: Math.ceil(text.length / 4) };
+};
+
+// ──────────────────────────────────────────────
 // Main Builder
 // ──────────────────────────────────────────────
 
@@ -286,6 +348,8 @@ export {
   toolStylePrompt,
   sandboxPrompt,
   buildSystemPrompt,
+  buildWebSystemPrompt,
+  buildLocalSystemPrompt,
   isMemoryFile,
   BOOTSTRAP_FILENAMES,
   MAX_PER_FILE_CHARS,

@@ -287,6 +287,31 @@ describe('sanitizeHistory — OpenAI', () => {
   });
 });
 
+describe('sanitizeHistory — Web provider', () => {
+  it('uses OpenAI sanitizer for web provider', () => {
+    const messages = [
+      makeMessage({ id: 'm1', role: 'user' }),
+      makeMessage({
+        id: 'm2',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-call',
+            toolCallId: 'tc-1',
+            toolName: 'web_search',
+            args: { query: 'test' },
+          },
+        ],
+      }),
+    ];
+    const result = sanitizeHistory(messages, 'web');
+    const assistantMsg = result.find(m => m.role === 'assistant');
+    const toolResult = assistantMsg!.parts.find(p => p.type === 'tool-result');
+    expect(toolResult).toBeDefined();
+    expect((toolResult as { toolCallId: string }).toolCallId).toBe('tc-1');
+  });
+});
+
 describe('sanitizeHistory — tool-call with inline result (UI merge format)', () => {
   it('extracts inline result from tool-call part instead of injecting synthetic error', () => {
     const fetchResult = { text: 'Blog content about Stripe Minions...', status: 200 };

@@ -119,6 +119,7 @@ vi.mock('./message-adapter', () => ({
     { role: 'user', content: 'Hello', timestamp: Date.now() },
   ]),
   convertToLlm: vi.fn((msgs: any[]) => msgs),
+  makeConvertToLlm: vi.fn(() => (msgs: any[]) => msgs),
 }));
 
 vi.mock('../logging/logger-buffer', () => ({

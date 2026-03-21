@@ -803,6 +803,9 @@
   "provider_webgpu": {
     "message": "WebGPU (sur l'appareil)"
   },
+  "provider_web": {
+    "message": "Web (Session Navigateur Zéro Token)"
+  },
   "time_mAgo": {
     "message": "il y a $MINUTES$ min",
     "placeholders": {

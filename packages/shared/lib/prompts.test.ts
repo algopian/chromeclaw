@@ -2,7 +2,10 @@ import {
   regularPrompt,
   safetyPrompt,
   toolStylePrompt,
+  sandboxPrompt,
   buildSystemPrompt,
+  buildWebSystemPrompt,
+  buildLocalSystemPrompt,
   isMemoryFile,
   BOOTSTRAP_FILENAMES,
   MAX_PER_FILE_CHARS,
@@ -795,6 +798,151 @@ describe('isMemoryFile', () => {
   it('is case-sensitive for MEMORY.md', () => {
     expect(isMemoryFile('memory.md')).toBe(false);
     expect(isMemoryFile('Memory.md')).toBe(false);
+  });
+});
+
+// ── buildWebSystemPrompt() tests ──
+
+describe('buildWebSystemPrompt', () => {
+  it('omits ## Tooling section', () => {
+    const result = buildWebSystemPrompt({
+      mode: 'full',
+      tools: [{ name: 'web_search', description: 'Search the web' }],
+    });
+    expect(result.text).not.toContain('## Tooling');
+    expect(result.text).not.toContain('Tool names are case-sensitive');
+  });
+
+  it('omits tool style prompt', () => {
+    const result = buildWebSystemPrompt({ mode: 'full' });
+    expect(result.text).not.toContain(toolStylePrompt);
+  });
+
+  it('includes identity, safety, and sandbox sections', () => {
+    const result = buildWebSystemPrompt({ mode: 'full' });
+    expect(result.text).toContain(regularPrompt);
+    expect(result.text).toContain(safetyPrompt);
+    expect(result.text).toContain(sandboxPrompt.trim());
+  });
+
+  it('includes custom identity when provided', () => {
+    const result = buildWebSystemPrompt({
+      mode: 'full',
+      identity: 'You are a web assistant.',
+    });
+    expect(result.text).toContain('You are a web assistant.');
+    expect(result.text).not.toContain(regularPrompt);
+  });
+
+  it('includes tool prompt hints', () => {
+    const hints = resolveToolPromptHints({ web_search: true });
+    const result = buildWebSystemPrompt({
+      mode: 'full',
+      toolPromptHints: hints,
+    });
+    expect(result.text).toContain(promptHintFor('webSearch'));
+  });
+
+  it('includes skills section', () => {
+    const result = buildWebSystemPrompt({
+      mode: 'full',
+      skills: [{ name: 'Research', description: 'Web research', path: 'skills/research/SKILL.md' }],
+    });
+    expect(result.text).toContain('## Skills (mandatory)');
+    expect(result.text).toContain('<name>Research</name>');
+  });
+
+  it('includes workspace user files', () => {
+    const result = buildWebSystemPrompt({
+      mode: 'full',
+      workspaceFiles: [{ name: 'USER.md', content: 'Name: Alice', owner: 'user' }],
+    });
+    expect(result.text).toContain('# Project Context');
+    expect(result.text).toContain('Name: Alice');
+  });
+
+  it('includes runtime metadata', () => {
+    const result = buildWebSystemPrompt({
+      mode: 'full',
+      runtimeMeta: { modelName: 'qwen-2.5', currentDate: '2026-03-19' },
+    });
+    expect(result.text).toContain('Current date: 2026-03-19');
+    expect(result.text).toContain('Model: qwen-2.5');
+  });
+
+  it('includes extraContext', () => {
+    const result = buildWebSystemPrompt({
+      mode: 'full',
+      extraContext: '## Extra',
+    });
+    expect(result.text).toContain('## Extra');
+  });
+
+  it('includes TTS hint when hasTts=true', () => {
+    const result = buildWebSystemPrompt({ mode: 'full', hasTts: true });
+    expect(result.text).toContain('text-to-speech');
+  });
+
+  it('returns correct estimatedTokens', () => {
+    const result = buildWebSystemPrompt({ mode: 'full' });
+    expect(result.estimatedTokens).toBe(Math.ceil(result.text.length / 4));
+  });
+});
+
+// ── buildLocalSystemPrompt() tests ──
+
+describe('buildLocalSystemPrompt', () => {
+  it('omits ## Tooling section', () => {
+    const result = buildLocalSystemPrompt({
+      mode: 'minimal',
+      tools: [{ name: 'web_search', description: 'Search the web' }],
+    });
+    expect(result.text).not.toContain('## Tooling');
+    expect(result.text).not.toContain('Tool names are case-sensitive');
+  });
+
+  it('includes identity and safety', () => {
+    const result = buildLocalSystemPrompt({ mode: 'minimal' });
+    expect(result.text).toContain(regularPrompt);
+    expect(result.text).toContain(safetyPrompt);
+  });
+
+  it('includes minimal workspace (AGENTS.md, TOOLS.md only)', () => {
+    const result = buildLocalSystemPrompt({
+      mode: 'minimal',
+      workspaceFiles: [
+        { name: 'AGENTS.md', content: 'Agent config', owner: 'user' },
+        { name: 'TOOLS.md', content: 'Tool docs', owner: 'user' },
+        { name: 'USER.md', content: 'Should not appear', owner: 'user' },
+        { name: 'SOUL.md', content: 'Should not appear', owner: 'user' },
+      ],
+    });
+    expect(result.text).toContain('## Workspace');
+    expect(result.text).toContain('Agent config');
+    expect(result.text).toContain('Tool docs');
+    expect(result.text).not.toContain('Should not appear');
+  });
+
+  it('omits sandbox, tool style, skills, runtime meta, and extraContext', () => {
+    const result = buildLocalSystemPrompt({
+      mode: 'minimal',
+      tools: [{ name: 'web_search', description: 'Search' }],
+      toolPromptHints: ['Custom hint'],
+      skills: [{ name: 'Research', description: 'Web research', path: 'skills/research/SKILL.md' }],
+      runtimeMeta: { modelName: 'llama', currentDate: '2026-03-19' },
+      extraContext: '## Extra',
+    });
+    expect(result.text).not.toContain(sandboxPrompt.trim());
+    expect(result.text).not.toContain(toolStylePrompt);
+    expect(result.text).not.toContain('## Skills');
+    expect(result.text).not.toContain('Current date:');
+    expect(result.text).not.toContain('## Extra');
+    expect(result.text).not.toContain('Custom hint');
+  });
+
+  it('returns correct estimatedTokens', () => {
+    const result = buildLocalSystemPrompt({ mode: 'minimal' });
+    expect(result.estimatedTokens).toBe(Math.ceil(result.text.length / 4));
   });
 });
 

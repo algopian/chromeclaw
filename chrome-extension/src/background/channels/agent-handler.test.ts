@@ -73,6 +73,7 @@ vi.mock('../agents/message-adapter', () => ({
       msgs.map(m => ({ role: m.role, content: m.parts?.[0]?.text || '', timestamp: Date.now() })),
   ),
   convertToLlm: vi.fn((msgs: unknown[]) => msgs),
+  makeConvertToLlm: vi.fn(() => (msgs: unknown[]) => msgs),
 }));
 vi.mock('../context/transform', () => ({
   createTransformContext: vi.fn(() => ({
