@@ -1,7 +1,7 @@
 import { WEBGPU_MODELS_ENABLED } from '@extension/env';
 import { t, useT } from '@extension/i18n';
-import { WEB_PROVIDER_OPTIONS } from '@extension/shared';
-import { customModelsStorage, webCredentialsStorage } from '@extension/storage';
+import { WEB_PROVIDER_OPTIONS, useWebProviderAuth } from '@extension/shared';
+import { customModelsStorage } from '@extension/storage';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -458,190 +458,22 @@ const ModelConfig = () => {
   );
 
   // ── Web provider auth state ────────────────────
-  const [webAuthStatus, setWebAuthStatus] = useState<
-    'unknown' | 'checking' | 'logged-in' | 'not-logged-in'
-  >('unknown');
-  const [webLoginLoading, setWebLoginLoading] = useState(false);
+  const {
+    status: webAuthStatus,
+    loginLoading: webLoginLoading,
+    error: webAuthError,
+    login: handleWebLogin,
+    logout: handleWebLogout,
+  } = useWebProviderAuth({
+    provider: editForm.provider,
+    webProviderId: editForm.webProviderId,
+    recheckKey: dialogOpen,
+  });
 
-  // Check web auth status when provider or webProviderId changes
+  // Relay web auth errors to the form error state
   useEffect(() => {
-    if (editForm.provider !== 'web' || !editForm.webProviderId) {
-      setWebAuthStatus('unknown');
-      return;
-    }
-    const wp = WEB_PROVIDER_OPTIONS.find(p => p.value === editForm.webProviderId);
-    if (!wp) {
-      setWebAuthStatus('unknown');
-      return;
-    }
-
-    setWebAuthStatus('checking');
-    (async () => {
-      try {
-        // Check stored credentials first
-        const creds = await webCredentialsStorage.get();
-        if (creds[editForm.webProviderId!]) {
-          setWebAuthStatus('logged-in');
-          return;
-        }
-        // Check cookies directly
-        const cookies = await chrome.cookies.getAll({ domain: wp.cookieDomain });
-        const cookieMap = Object.fromEntries(
-          cookies.map((c: chrome.cookies.Cookie) => [c.name, c.value]),
-        );
-        const hasSession = wp.sessionIndicators.some((name: string) => !!cookieMap[name]);
-        setWebAuthStatus(hasSession ? 'logged-in' : 'not-logged-in');
-      } catch {
-        setWebAuthStatus('not-logged-in');
-      }
-    })();
-  }, [editForm.provider, editForm.webProviderId, dialogOpen]);
-
-  const handleWebLogin = useCallback(async () => {
-    const wp = WEB_PROVIDER_OPTIONS.find(p => p.value === editForm.webProviderId);
-    if (!wp) return;
-
-    setWebLoginLoading(true);
-    try {
-      const tab = await chrome.tabs.create({ url: wp.loginUrl, active: false });
-      const tabId = tab.id!;
-
-      // Poll for session cookies
-      const startTime = Date.now();
-      const TIMEOUT = 5 * 60 * 1000;
-      const INTERVAL = 2000;
-
-      const poll = async (): Promise<boolean> => {
-        if (Date.now() - startTime > TIMEOUT) return false;
-        try {
-          await chrome.tabs.get(tabId);
-        } catch {
-          return false;
-        }
-
-        const cookies = await chrome.cookies.getAll({ domain: wp.cookieDomain });
-        const cookieMap = Object.fromEntries(
-          cookies.map((c: chrome.cookies.Cookie) => [c.name, c.value]),
-        );
-        let hasSession = wp.sessionIndicators.some((name: string) => !!cookieMap[name]);
-
-        // Some providers (e.g., Kimi) store tokens in localStorage instead of cookies
-        if (!hasSession && 'checkLocalStorage' in wp && wp.checkLocalStorage) {
-          try {
-            const results = await chrome.scripting.executeScript({
-              target: { tabId },
-              func: (indicators: string[]) =>
-                indicators.reduce(
-                  (acc, name) => {
-                    const val = localStorage.getItem(name);
-                    if (val) acc[name] = val;
-                    return acc;
-                  },
-                  {} as Record<string, string>,
-                ),
-              args: [wp.sessionIndicators as unknown as string[]],
-            });
-            const lsTokens = results?.[0]?.result as Record<string, string> | undefined;
-            if (lsTokens && Object.keys(lsTokens).length > 0) {
-              hasSession = true;
-              Object.assign(cookieMap, lsTokens);
-            }
-          } catch {
-            /* scripting may fail if tab isn't ready */
-          }
-        }
-
-        if (hasSession) {
-          // Store only session cookies + localStorage tokens
-          const sessionCookies: Record<string, string> = {};
-          for (const name of wp.sessionIndicators) {
-            if (cookieMap[name]) sessionCookies[name] = cookieMap[name];
-          }
-          for (const name of ['lastActiveOrg', 'XSRF-TOKEN', 'csrf_token']) {
-            if (cookieMap[name]) sessionCookies[name] = cookieMap[name];
-          }
-
-          // Provider-specific token refresh (e.g., GLM access token exchange)
-          if ('refreshUrl' in wp && wp.refreshUrl) {
-            const refreshToken =
-              sessionCookies['chatglm_refresh_token'] || sessionCookies['refresh_token'];
-            if (refreshToken && !sessionCookies['chatglm_token']) {
-              try {
-                const results = await chrome.scripting.executeScript({
-                  target: { tabId },
-                  func: async (refreshUrl: string, token: string) => {
-                    try {
-                      const res = await fetch(refreshUrl, {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          Authorization: `Bearer ${token}`,
-                          'App-Name': 'chatglm',
-                          'X-App-Platform': 'pc',
-                          'X-App-Version': '0.0.1',
-                        },
-                        body: JSON.stringify({}),
-                        credentials: 'include',
-                      });
-                      if (!res.ok) return null;
-                      const data = await res.json();
-                      return (
-                        data?.result?.access_token ??
-                        data?.result?.accessToken ??
-                        data?.accessToken ??
-                        null
-                      );
-                    } catch {
-                      return null;
-                    }
-                  },
-                  args: [wp.refreshUrl, refreshToken],
-                });
-                const accessToken = results?.[0]?.result as string | null;
-                if (accessToken) {
-                  sessionCookies['chatglm_token'] = accessToken;
-                }
-              } catch {
-                /* token refresh failed — will retry at request time */
-              }
-            }
-          }
-
-          const creds = await webCredentialsStorage.get();
-          creds[wp.value] = {
-            providerId: wp.value,
-            cookies: sessionCookies,
-            capturedAt: Date.now(),
-          };
-          await webCredentialsStorage.set(creds);
-          try {
-            await chrome.tabs.remove(tabId);
-          } catch {
-            /* ok */
-          }
-          return true;
-        }
-        return new Promise(resolve => setTimeout(() => resolve(poll()), INTERVAL));
-      };
-
-      const success = await poll();
-      setWebAuthStatus(success ? 'logged-in' : 'not-logged-in');
-      if (!success) setFormError('Login timed out or tab was closed');
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Login failed');
-      setWebAuthStatus('not-logged-in');
-    } finally {
-      setWebLoginLoading(false);
-    }
-  }, [editForm.webProviderId]);
-
-  const handleWebLogout = useCallback(async () => {
-    if (!editForm.webProviderId) return;
-    const creds = await webCredentialsStorage.get();
-    delete creds[editForm.webProviderId];
-    await webCredentialsStorage.set(creds);
-    setWebAuthStatus('not-logged-in');
-  }, [editForm.webProviderId]);
+    if (webAuthError) setFormError(webAuthError);
+  }, [webAuthError]);
 
   const isLocal = editForm.provider === 'local';
   const isCodex = editForm.provider === 'openai-codex';

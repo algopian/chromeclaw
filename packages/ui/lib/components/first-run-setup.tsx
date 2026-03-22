@@ -1,4 +1,5 @@
 import {
+  Badge,
   Button,
   Card,
   CardContent,
@@ -14,7 +15,7 @@ import {
   SelectValue,
 } from './ui';
 import { useT } from '@extension/i18n';
-import { toolRegistryMeta, parseSkillFrontmatter, WEB_PROVIDER_OPTIONS } from '@extension/shared';
+import { toolRegistryMeta, parseSkillFrontmatter, WEB_PROVIDER_OPTIONS, useWebProviderAuth } from '@extension/shared';
 import {
   customModelsStorage,
   toolConfigStorage,
@@ -28,10 +29,13 @@ import {
   updateWorkspaceFile,
 } from '@extension/storage';
 import {
+  CheckCircleIcon,
   CheckIcon,
   ChevronLeftIcon,
   KeyIcon,
   Loader2Icon,
+  LogInIcon,
+  LogOutIcon,
   RocketIcon,
   SettingsIcon,
   ShieldCheckIcon,
@@ -51,6 +55,7 @@ import {
   HardDriveDownloadIcon,
   MailIcon,
   CalendarIcon,
+  XCircleIcon,
   ZapIcon,
 } from 'lucide-react';
 import { IS_FIREFOX } from '@extension/env';
@@ -175,6 +180,19 @@ const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) =>
   const [supportsTools, setSupportsTools] = useState(true);
   const [supportsReasoning, setSupportsReasoning] = useState(true);
   const [webProviderId, setWebProviderId] = useState('gemini-web');
+
+  const {
+    status: webAuthStatus,
+    loginLoading: webLoginLoading,
+    error: webAuthError,
+    login: handleWebLogin,
+    logout: handleWebLogout,
+  } = useWebProviderAuth({ provider, webProviderId });
+
+  // Relay web auth errors to the existing error state
+  useEffect(() => {
+    if (webAuthError) setError(webAuthError);
+  }, [webAuthError]);
 
   const handleProviderChange = useCallback((value: string) => {
     setProvider(value);
@@ -317,8 +335,47 @@ const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) =>
                 ))}
               </SelectContent>
             </Select>
+            <div className="flex items-center gap-2">
+              {webAuthStatus === 'checking' && (
+                <Badge variant="outline" className="gap-1">
+                  <Loader2Icon className="size-3 animate-spin" />
+                  Checking...
+                </Badge>
+              )}
+              {webAuthStatus === 'logged-in' && (
+                <Badge variant="outline" className="gap-1 border-green-500 text-green-600">
+                  <CheckCircleIcon className="size-3" />
+                  Logged in
+                </Badge>
+              )}
+              {webAuthStatus === 'not-logged-in' && (
+                <Badge variant="outline" className="gap-1 border-orange-500 text-orange-600">
+                  <XCircleIcon className="size-3" />
+                  Not logged in
+                </Badge>
+              )}
+              {webAuthStatus === 'logged-in' ? (
+                <Button onClick={handleWebLogout} size="sm" variant="outline">
+                  <LogOutIcon className="mr-1 size-3" />
+                  Logout
+                </Button>
+              ) : (
+                <Button
+                  disabled={webLoginLoading || !webProviderId}
+                  onClick={handleWebLogin}
+                  size="sm"
+                  variant="outline">
+                  {webLoginLoading ? (
+                    <Loader2Icon className="mr-1 size-3 animate-spin" />
+                  ) : (
+                    <LogInIcon className="mr-1 size-3" />
+                  )}
+                  {webLoginLoading ? 'Waiting for login...' : 'Login'}
+                </Button>
+              )}
+            </div>
             <p className="text-muted-foreground text-xs">
-              Uses your browser session — no API key needed. Log in to the provider website first.
+              Uses your browser session — no API key needed.
             </p>
           </div>
         ) : (
@@ -794,7 +851,10 @@ const Step4ToolsSetup = ({
   t: TFunction;
 }) => {
   const groups = useMemo(
-    () => toolRegistryMeta.filter(g => !EXCLUDED_TOOL_GROUPS.has(g.groupKey)),
+    () =>
+      toolRegistryMeta
+        .filter(g => !EXCLUDED_TOOL_GROUPS.has(g.groupKey))
+        .filter(g => !IS_FIREFOX || !g.tools.every(t => t.chromeOnly)),
     [],
   );
 
