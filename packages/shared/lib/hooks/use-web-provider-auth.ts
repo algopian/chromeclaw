@@ -47,7 +47,13 @@ export function useWebProviderAuth(opts: UseWebProviderAuthOptions): UseWebProvi
           setStatus('logged-in');
           return;
         }
-        // Check cookies directly
+        // Check cookies directly (skip for localStorage-based providers where
+        // session indicators won't be in cookies — stored credentials above are
+        // the canonical check for those).
+        if ('checkLocalStorage' in wp && wp.checkLocalStorage) {
+          setStatus('not-logged-in');
+          return;
+        }
         const cookies = await chrome.cookies.getAll({ domain: wp.cookieDomain });
         const cookieMap = Object.fromEntries(
           cookies.map((c: chrome.cookies.Cookie) => [c.name, c.value]),
@@ -89,29 +95,22 @@ export function useWebProviderAuth(opts: UseWebProviderAuthOptions): UseWebProvi
         );
         let hasSession = wp.sessionIndicators.some((name: string) => !!cookieMap[name]);
 
-        // Some providers (e.g., Kimi) store tokens in localStorage instead of cookies
+        // Some providers (e.g., Kimi, GLM Intl) store tokens in localStorage instead of cookies.
+        // Route through background service worker which can reliably access MAIN world localStorage.
         if (!hasSession && 'checkLocalStorage' in wp && wp.checkLocalStorage) {
           try {
-            const results = await chrome.scripting.executeScript({
-              target: { tabId },
-              func: (indicators: string[]) =>
-                indicators.reduce(
-                  (acc, name) => {
-                    const val = localStorage.getItem(name);
-                    if (val) acc[name] = val;
-                    return acc;
-                  },
-                  {} as Record<string, string>,
-                ),
-              args: [wp.sessionIndicators as unknown as string[]],
+            const response = await chrome.runtime.sendMessage({
+              type: 'CHECK_LOCAL_STORAGE',
+              tabId,
+              keys: wp.sessionIndicators as unknown as string[],
             });
-            const lsTokens = results?.[0]?.result as Record<string, string> | undefined;
-            if (lsTokens && Object.keys(lsTokens).length > 0) {
+            const lsTokens = response?.tokens as Record<string, string> | null;
+            if (lsTokens) {
               hasSession = true;
               Object.assign(cookieMap, lsTokens);
             }
           } catch {
-            /* scripting may fail if tab isn't ready */
+            /* background may not be ready */
           }
         }
 

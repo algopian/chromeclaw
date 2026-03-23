@@ -17,6 +17,8 @@ const LOGIN_TIMEOUT_MS = 5 * 60 * 1_000; // 5 minutes
 
 /**
  * Check whether the user is logged into a web provider by reading cookies.
+ * For localStorage-based providers (e.g. Kimi, GLM Intl) where session
+ * indicators won't appear in cookies, falls back to stored credentials.
  */
 const checkWebAuth = async (provider: WebProviderDefinition): Promise<WebAuthStatus> => {
   try {
@@ -24,7 +26,16 @@ const checkWebAuth = async (provider: WebProviderDefinition): Promise<WebAuthSta
     const cookieMap = Object.fromEntries(cookies.map(c => [c.name, c.value]));
     const hasSession = provider.sessionIndicators.some(name => !!cookieMap[name]);
 
-    if (!hasSession) return 'not-logged-in';
+    if (!hasSession) {
+      // For localStorage-based providers, cookies won't contain session indicators.
+      // Fall back to stored credentials as proof of a prior successful login.
+      const stored = await getWebCredential(provider.id);
+      if (stored) {
+        if (stored.expiresAt && stored.expiresAt < Date.now()) return 'expired';
+        return 'logged-in';
+      }
+      return 'not-logged-in';
+    }
 
     // Check if stored credential is expired
     const stored = await getWebCredential(provider.id);
@@ -191,13 +202,24 @@ const testWebConnection = async (
 
   const status = await checkWebAuth(provider);
   if (status !== 'logged-in') {
-    return { error: `Not logged in to ${provider.name}. Please log in first.` };
+    return {
+      error: `Not logged in to ${provider.name}. Make sure you can use the model at ${provider.loginUrl}, then try again.`,
+    };
   }
   const credential = await getWebCredential(webProviderId);
   if (!credential) {
-    return { error: `No stored credentials for ${provider.name}. Please log in first.` };
+    return {
+      error: `No stored credentials for ${provider.name}. Make sure you can use the model at ${provider.loginUrl}, then connect via Settings → Models.`,
+    };
   }
   return { success: true };
 };
 
-export { checkWebAuth, initiateWebLogin, getWebCredential, storeWebCredential, clearWebCredential, testWebConnection };
+export {
+  checkWebAuth,
+  initiateWebLogin,
+  getWebCredential,
+  storeWebCredential,
+  clearWebCredential,
+  testWebConnection,
+};

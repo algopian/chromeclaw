@@ -113,14 +113,21 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       let prefixStripped = false;
 
       // Extract page state from Gemini's WIZ_global_data
-      const wiz = (window as unknown as Record<string, unknown>).WIZ_global_data as Record<string, unknown> | undefined;
+      const wiz = (window as unknown as Record<string, unknown>).WIZ_global_data as
+        | Record<string, unknown>
+        | undefined;
       const sid = wiz?.FdrFJe as string | undefined;
       const at = wiz?.SNlM0e as string | undefined;
       const bl = wiz?.cfb2h as string | undefined;
 
       if (!at) {
         window.postMessage(
-          { type: 'WEB_LLM_ERROR', requestId, error: 'Could not extract Gemini CSRF token (at) from page. Please refresh gemini.google.com and try again.' },
+          {
+            type: 'WEB_LLM_ERROR',
+            requestId,
+            error:
+              'Could not extract Gemini CSRF token (at) from page. Please refresh gemini.google.com and try again.',
+          },
           origin,
         );
         return;
@@ -129,9 +136,14 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       // Parse the prompt from the init body (passed as JSON from buildRequest)
       let geminiPrompt = '';
       try {
-        const bodyObj = JSON.parse(typeof init.body === 'string' ? init.body : '{}') as Record<string, string>;
+        const bodyObj = JSON.parse(typeof init.body === 'string' ? init.body : '{}') as Record<
+          string,
+          string
+        >;
         geminiPrompt = bodyObj.prompt ?? '';
-      } catch { /* use empty */ }
+      } catch {
+        /* use empty */
+      }
 
       // Build the real Gemini request
       // _reqid increments by exactly 100,000 per API call in the real client.
@@ -139,6 +151,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       const gemReqId = Math.floor(Math.random() * 9_000_000) + 1_000_000;
       const clientUuid = crypto.randomUUID();
 
+      // prettier-ignore
       const innerJson = JSON.stringify([
         /* [0]  prompt tuple */              [geminiPrompt, 0, null, null, null, null, 0],
         /* [1]  locale */                    ['en'],
@@ -193,9 +206,15 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
         try {
           errorBody = await gemResponse.text();
           if (errorBody.length > 500) errorBody = errorBody.slice(0, 500);
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
         window.postMessage(
-          { type: 'WEB_LLM_ERROR', requestId, error: `HTTP ${gemResponse.status}: ${gemResponse.statusText}${errorBody ? ` — ${errorBody}` : ''}` },
+          {
+            type: 'WEB_LLM_ERROR',
+            requestId,
+            error: `HTTP ${gemResponse.status}: ${gemResponse.statusText}${errorBody ? ` — ${errorBody}` : ''}`,
+          },
           origin,
         );
         return;
@@ -203,7 +222,10 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
 
       const gemReader = gemResponse.body?.getReader();
       if (!gemReader) {
-        window.postMessage({ type: 'WEB_LLM_ERROR', requestId, error: 'No response body from Gemini' }, origin);
+        window.postMessage(
+          { type: 'WEB_LLM_ERROR', requestId, error: 'No response body from Gemini' },
+          origin,
+        );
         return;
       }
 
@@ -260,17 +282,27 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       let existingChatId = '';
       let glmModel = 'glm-5';
       try {
-        const bodyObj = JSON.parse(typeof init.body === 'string' ? init.body : '{}') as Record<string, string>;
+        const bodyObj = JSON.parse(typeof init.body === 'string' ? init.body : '{}') as Record<
+          string,
+          string
+        >;
         glmPrompt = bodyObj.prompt ?? '';
         existingChatId = bodyObj.chatId ?? '';
         if (bodyObj.model) glmModel = bodyObj.model;
-      } catch { /* use defaults */ }
+      } catch {
+        /* use defaults */
+      }
 
       // Read JWT from localStorage
       const token = localStorage.getItem('token') ?? '';
       if (!token) {
         window.postMessage(
-          { type: 'WEB_LLM_ERROR', requestId, error: 'No auth token found in localStorage. Please log in to chat.z.ai.' },
+          {
+            type: 'WEB_LLM_ERROR',
+            requestId,
+            error:
+              'No auth token found. Make sure you have an account and can use the model at https://chat.z.ai, then reconnect via Settings → Models.',
+          },
           origin,
         );
         return;
@@ -281,7 +313,9 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         userId = payload.id ?? '';
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
 
       // Create a new chat session if we don't have a chatId
       let chatId = existingChatId;
@@ -294,9 +328,9 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Accept': 'application/json',
+              Accept: 'application/json',
               'Accept-Language': 'en-US',
-              'Authorization': `Bearer ${token}`,
+              Authorization: `Bearer ${token}`,
             },
             credentials: 'include',
             body: JSON.stringify({
@@ -321,9 +355,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
                 },
                 tags: [],
                 flags: [],
-                features: [
-                  { type: 'tool_selector', server: 'tool_selector_h', status: 'hidden' },
-                ],
+                features: [{ type: 'tool_selector', server: 'tool_selector_h', status: 'hidden' }],
                 mcp_servers: [],
                 enable_thinking: true,
                 auto_web_search: false,
@@ -335,7 +367,11 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
           });
           if (!createRes.ok) {
             window.postMessage(
-              { type: 'WEB_LLM_ERROR', requestId, error: `Chat creation failed: HTTP ${createRes.status}` },
+              {
+                type: 'WEB_LLM_ERROR',
+                requestId,
+                error: `Chat creation failed: HTTP ${createRes.status}`,
+              },
               origin,
             );
             return;
@@ -389,7 +425,11 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
         is_touch: String('ontouchstart' in window),
         max_touch_points: String(navigator.maxTouchPoints),
         browser_name: 'Chrome',
-        os_name: navigator.platform.includes('Win') ? 'Windows' : navigator.platform.includes('Mac') ? 'macOS' : 'Linux',
+        os_name: navigator.platform.includes('Win')
+          ? 'Windows'
+          : navigator.platform.includes('Mac')
+            ? 'macOS'
+            : 'Linux',
         signature_timestamp: String(timestamp),
       };
 
@@ -450,10 +490,16 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       const glmHmacHex = async (key: string, message: string): Promise<string> => {
         const enc = new TextEncoder();
         const cryptoKey = await crypto.subtle.importKey(
-          'raw', enc.encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+          'raw',
+          enc.encode(key),
+          { name: 'HMAC', hash: 'SHA-256' },
+          false,
+          ['sign'],
         );
         const sig = await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(message));
-        return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+        return Array.from(new Uint8Array(sig))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
       };
 
       const sortedPayload = `requestId,${queryParams.requestId},timestamp,${queryParams.timestamp},user_id,${userId}`;
@@ -472,7 +518,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
 
       // Build request headers
       const glmHeaders: Record<string, string> = {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
         'Accept-Language': 'en-US',
         'X-FE-Version': 'prod-fe-1.0.272',
@@ -491,9 +537,15 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
         try {
           errorBody = await glmResponse.text();
           if (errorBody.length > 500) errorBody = errorBody.slice(0, 500);
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
         window.postMessage(
-          { type: 'WEB_LLM_ERROR', requestId, error: `HTTP ${glmResponse.status}: ${glmResponse.statusText}${errorBody ? ` — ${errorBody}` : ''}` },
+          {
+            type: 'WEB_LLM_ERROR',
+            requestId,
+            error: `HTTP ${glmResponse.status}: ${glmResponse.statusText}${errorBody ? ` — ${errorBody}` : ''}`,
+          },
           origin,
         );
         return;
@@ -502,7 +554,10 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       // Stream SSE response back — standard "data: " line format
       const glmReader = glmResponse.body?.getReader();
       if (!glmReader) {
-        window.postMessage({ type: 'WEB_LLM_ERROR', requestId, error: 'No response body from GLM Intl' }, origin);
+        window.postMessage(
+          { type: 'WEB_LLM_ERROR', requestId, error: 'No response body from GLM Intl' },
+          origin,
+        );
         return;
       }
 
@@ -580,7 +635,9 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       try {
         errorBody = await response.text();
         if (errorBody.length > 500) errorBody = errorBody.slice(0, 500);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       const errorDetail = errorBody ? ` — ${errorBody}` : '';
       window.postMessage(
         {
@@ -631,14 +688,21 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
           const rawText = new TextDecoder().decode(buffer);
           try {
             const errObj = JSON.parse(rawText) as Record<string, unknown>;
-            const errMsg = (errObj.message ?? errObj.error ?? errObj.code ?? rawText.slice(0, 200)) as string;
+            const errMsg = (errObj.message ??
+              errObj.error ??
+              errObj.code ??
+              rawText.slice(0, 200)) as string;
             window.postMessage(
               { type: 'WEB_LLM_ERROR', requestId, error: `Connect error: ${errMsg}` },
               origin,
             );
           } catch {
             window.postMessage(
-              { type: 'WEB_LLM_ERROR', requestId, error: `Connect error: ${rawText.slice(0, 500)}` },
+              {
+                type: 'WEB_LLM_ERROR',
+                requestId,
+                error: `Connect error: ${rawText.slice(0, 500)}`,
+              },
               origin,
             );
           }
@@ -649,7 +713,11 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
         // Extract complete frames: [flags:1][length:4][payload:length]
         while (buffer.byteLength >= 5) {
           const flags = buffer[0];
-          const payloadLen = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength).getUint32(1, false);
+          const payloadLen = new DataView(
+            buffer.buffer,
+            buffer.byteOffset,
+            buffer.byteLength,
+          ).getUint32(1, false);
           const frameLen = 5 + payloadLen;
           if (buffer.byteLength < frameLen) break; // incomplete frame
 
@@ -661,9 +729,15 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
               const trailerStr = new TextDecoder().decode(trailerPayload);
               const trailer = JSON.parse(trailerStr) as Record<string, unknown>;
               if (trailer.code || trailer.message) {
-                const errMsg = (trailer.message ?? trailer.code ?? 'Unknown Connect error') as string;
+                const errMsg = (trailer.message ??
+                  trailer.code ??
+                  'Unknown Connect error') as string;
                 window.postMessage(
-                  { type: 'WEB_LLM_ERROR', requestId, error: `Connect error: ${errMsg} (code: ${trailer.code ?? 'none'})` },
+                  {
+                    type: 'WEB_LLM_ERROR',
+                    requestId,
+                    error: `Connect error: ${errMsg} (code: ${trailer.code ?? 'none'})`,
+                  },
                   origin,
                 );
                 return;

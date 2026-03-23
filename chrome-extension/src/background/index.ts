@@ -280,6 +280,32 @@ const messageHandlers: Record<string, MessageHandler> = {
     return { runs };
   },
 
+  CHECK_LOCAL_STORAGE: async request => {
+    const tabId = request.tabId as number;
+    const keys = request.keys as string[];
+    if (!tabId || !keys?.length) return { tokens: null };
+    try {
+      const results = await chrome.scripting.executeScript({
+        target: { tabId },
+        world: 'MAIN',
+        func: (indicators: string[]) =>
+          indicators.reduce(
+            (acc, name) => {
+              const val = localStorage.getItem(name);
+              if (val) acc[name] = val;
+              return acc;
+            },
+            {} as Record<string, string>,
+          ),
+        args: [keys],
+      });
+      const tokens = results?.[0]?.result as Record<string, string> | undefined;
+      return { tokens: tokens && Object.keys(tokens).length > 0 ? tokens : null };
+    } catch {
+      return { tokens: null };
+    }
+  },
+
   TEST_CONNECTION: async request => {
     const modelConfig = request.modelConfig as import('@extension/shared').ChatModel;
     if (!modelConfig?.provider) return { error: 'modelConfig is required' };

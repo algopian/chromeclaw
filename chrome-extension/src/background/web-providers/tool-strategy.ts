@@ -74,7 +74,9 @@ const defaultToolStrategy: WebProviderToolStrategy = {
 };
 
 // ── Shared Markdown Tool Prompt ──────────────────
-// Used by Qwen, DeepSeek, Kimi, and GLM strategies — markdown tool listing with XML call format.
+// Used by Qwen, Kimi, GLM, and Gemini strategies — markdown tool listing with XML call format.
+// Includes explicit correct/wrong examples to prevent models from falling back to native
+// function-calling formats (observed with GLM-5, Qwen, and others).
 
 const buildMarkdownToolPrompt = (tools: ToolDef[]): string => {
   if (tools.length === 0) return '';
@@ -84,12 +86,24 @@ const buildMarkdownToolPrompt = (tools: ToolDef[]): string => {
     .join('\n\n');
 
   return `## Tool Use Instructions
-You are equipped with specialized tools to perform actions or retrieve information.
-To use a tool, output a specific XML tag: <tool_call id="unique_id" name="tool_name">{"arg": "value"}</tool_call>.
-Rules for tool use:
+IMPORTANT: You MUST use the EXACT XML tag format shown below for ALL tool calls.
+Do NOT use any other format — no function calls, no JSON objects, no markdown code blocks.
+EVERY tool call MUST start with an opening <tool_call> tag and end with </tool_call>.
+
+Format: <tool_call id="unique_id" name="tool_name">{"arg": "value"}</tool_call>
+
+Example of a CORRECT tool call:
+<tool_call id="abc12345" name="read">{"path": "example.md"}</tool_call>
+
+Example of WRONG formats (do NOT use these):
+- {"path": "example.md"} (missing XML tags)
+- \`\`\`json\n{"name": "read", "arguments": {"path": "example.md"}}\n\`\`\` (wrong format)
+
+Rules:
 1. ALWAYS think before calling a tool. Explain your reasoning inside <think> tags.
-2. The 'id' attribute should be a unique 8-character string for each call.
-3. Wait for the tool result before proceeding with further analysis.
+2. The 'id' attribute must be a unique 8-character string for each call.
+3. Each tool call must have BOTH the opening <tool_call ...> and closing </tool_call> tags.
+4. Wait for the tool result before proceeding.
 
 After a tool executes, the result will be provided as:
 <tool_response id="call_id" name="tool_name">

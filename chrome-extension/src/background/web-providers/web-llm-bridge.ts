@@ -19,7 +19,12 @@ import { installRelay } from './content-fetch-relay';
 import { getWebProvider } from './registry';
 import { getSseStreamAdapter } from './sse-stream-adapter';
 import { createSseParser } from './sse-parser';
-import { getToolStrategy, getConversationId, setConversationId, clearConversationId } from './tool-strategy';
+import {
+  getToolStrategy,
+  getConversationId,
+  setConversationId,
+  clearConversationId,
+} from './tool-strategy';
 import { createXmlTagParser } from './xml-tag-parser';
 import { createAssistantMessageEventStream } from '../agents';
 import { createLogger } from '../logging/logger-buffer';
@@ -227,13 +232,20 @@ export const requestWebGeneration = (opts: {
           }
 
           // Log full SSE response structure (first few events only to avoid spam)
-          bridgeLog.trace('SSE raw event', { requestId, data: JSON.stringify(parsed).slice(0, 1000) });
+          bridgeLog.trace('SSE raw event', {
+            requestId,
+            data: JSON.stringify(parsed).slice(0, 1000),
+          });
 
           // Extract conversation ID if strategy supports it
           if (strategy?.extractConversationId && cacheKey) {
             const convId = strategy.extractConversationId(parsed);
             if (convId) {
-              bridgeLog.debug('Conversation ID captured', { requestId, cacheKey, conversationId: convId });
+              bridgeLog.debug('Conversation ID captured', {
+                requestId,
+                cacheKey,
+                conversationId: convId,
+              });
               setConversationId(cacheKey, convId);
             }
           }
@@ -350,7 +362,11 @@ export const requestWebGeneration = (opts: {
 
       const storedCredential = await getWebCredential(providerId);
       if (!storedCredential) {
-        emitError(`Not logged in to ${provider.name}. Please log in via Settings → Models.`);
+        emitError(
+          `Not logged in to ${provider.name}. ` +
+            `Make sure you have an account and can use the model at ${provider.loginUrl}, ` +
+            `then connect your session via Settings → Models.`,
+        );
         return;
       }
 
@@ -389,12 +405,13 @@ export const requestWebGeneration = (opts: {
         });
 
       // Build the provider-specific request (may include setupRequest for two-step flows)
-      const { url, init, setupRequest, urlTemplate, binaryProtocol, binaryEncodeBody } = provider.buildRequest({
-        messages: finalMessages,
-        systemPrompt: finalSystemPrompt,
-        credential,
-        conversationId,
-      });
+      const { url, init, setupRequest, urlTemplate, binaryProtocol, binaryEncodeBody } =
+        provider.buildRequest({
+          messages: finalMessages,
+          systemPrompt: finalSystemPrompt,
+          credential,
+          conversationId,
+        });
 
       // Find or create a tab at the provider domain
       const providerOrigin = new URL(provider.loginUrl).origin;
@@ -455,7 +472,11 @@ export const requestWebGeneration = (opts: {
       };
 
       if (binaryProtocol) {
-        bridgeLog.debug('Using binary protocol', { requestId, protocol: binaryProtocol, encodeBody: binaryEncodeBody });
+        bridgeLog.debug('Using binary protocol', {
+          requestId,
+          protocol: binaryProtocol,
+          encodeBody: binaryEncodeBody,
+        });
       }
 
       stream.push({ type: 'start', partial });
