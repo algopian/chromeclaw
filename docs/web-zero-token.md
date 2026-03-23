@@ -1,7 +1,34 @@
-# Web Providers — Architecture Overview
+# Web Providers — Design & Architecture
 
-High-level design document for ChromeClaw's web-based LLM provider system.
-Zero API keys, zero cost — uses the user's existing browser sessions.
+Zero API keys, zero cost — uses the user's existing browser sessions to access LLMs.
+
+---
+
+## Problem
+
+ChromeClaw supports cloud LLM providers (via pi-mono SDK) and local models (via offscreen/transformers.js), both requiring API keys or local model downloads. Many users already have active sessions on provider websites (claude.ai, chatglm.cn, etc.). Web providers let them use those sessions directly.
+
+## How It Fits
+
+Web providers integrate as a third stream path alongside cloud and local:
+
+```
+stream-bridge.ts createStreamFn()
+  |
+  ├── provider === cloud  →  streamSimple()            (pi-mono native)
+  ├── provider === local  →  requestLocalGeneration()   (offscreen + transformers.js)
+  └── provider === web    →  requestWebGeneration()     (tab-context fetch + XML parser)
+```
+
+All three return `AssistantMessageEventStream`. The agent loop, stream-handler, and UI need zero changes.
+
+### Chrome Extension Advantage
+
+ChromeClaw IS the browser — no Playwright, no CDP browser launch needed.
+
+- `chrome.cookies` API for session detection
+- `chrome.scripting.executeScript()` for credentialed fetch in tab context
+- `chrome.tabs` for provider tab management
 
 ---
 
@@ -109,7 +136,7 @@ User Message
 | **Qwen CN** | `qwen-cn-web` | JSON POST (single endpoint) | SSE | Delta | Cookie (`tongyi_sso_ticket`) | 32K | Yes | Yes |
 | **Kimi** | `kimi-web` | Connect Protocol (binary frames) | Connect-JSON | Delta | Cookie → Bearer | 128K | Yes | No |
 | **GLM** | `glm-web` | JSON POST + MD5 signing | SSE | Cumulative | Cookie + token refresh | 128K | Yes | No |
-| **GLM Intl** | `glm-intl-web` | JSON POST + MD5 signing | SSE | Cumulative | Cookie + token refresh | 128K | Yes | No |
+| **GLM Intl** | `glm-intl-web` | JSON POST + HMAC-SHA256 signing | SSE | Cumulative | Cookie + token refresh | 128K | Yes | Yes |
 | **Gemini** | `gemini-web` | URL-encoded form (`f.req` + `at`) | Length-prefixed JSON | Cumulative | Cookie (`__Secure-1PSID`) | 1M | Yes | Yes |
 
 ---
@@ -171,7 +198,7 @@ Tool Strategy: Stateless, full history aggregation
   └─ content-fetch-main decodes binary frames → SSE
 ```
 
-### GLM (`glm-web` / `glm-intl-web`)
+### GLM (`glm-web`)
 
 ```
 buildRequest()                          Stream Adapter
@@ -186,6 +213,29 @@ buildRequest()                          Stream Adapter
 │  setupRequest       │                  │  的工具结果 / 〉 / ＞ → >    │
 │                     │                  │                              │
 │ Shared: glm-shared  │                  │ Error frame detection        │
+└────────────────────┘                  └──────────────────────────────┘
+
+Tool Strategy: Stateful (conv ID reuse)
+  └─ extractConversationId from response
+  └─ First turn: full aggregation
+  └─ Continuation: last message + tool hint
+```
+
+### GLM Intl (`glm-intl-web`)
+
+```
+buildRequest()                          Stream Adapter
+┌────────────────────┐                  ┌──────────────────────────────┐
+│ JSON POST + signing │                  │ Cumulative text dedup:       │
+│  HMAC-SHA256        │                  │  prevText tracking, delta    │
+│  X-Signature        │                  │                              │
+│  X-FE-Version       │                  │ Phase-based think/answer:    │
+│                     │                  │  thinking phase → <think>    │
+│ JWT from            │                  │  answer phase → plain text   │
+│  localStorage       │                  │                              │
+│                     │                  │ Closing tag normalization    │
+│ Chat session create │                  │  (shared with GLM domestic)  │
+│  before streaming   │                  │                              │
 └────────────────────┘                  └──────────────────────────────┘
 
 Tool Strategy: Stateful (conv ID reuse)
@@ -303,6 +353,11 @@ with the user's authenticated session, while maintaining security isolation.
 - Neither can directly call the other's privileged APIs
 - `window.postMessage` bridges the gap safely
 
+Why `chrome.scripting.executeScript` in MAIN world over alternatives:
+- **`chrome.cookies.getAll` + fetch from background**: Fails for anti-bot providers (wrong TLS fingerprint)
+- **CDP `Runtime.evaluate`**: Shows "controlled by debugging software" banner
+- **MAIN world injection**: Inherits all cookies/session, zero fingerprint issues, no user-visible warnings
+
 ---
 
 ## Tool Calling Flow
@@ -340,6 +395,12 @@ System Prompt
     └─ Send next turn to provider
 ```
 
+### Skills Support
+
+Skills work through the same tool calling pipeline — no special integration needed. Skills are just a usage pattern of tool calling: the LLM reads a skill file via the `read` tool, then follows the skill's instructions (which may call more tools).
+
+Tool/skill reliability varies by provider based on how well each web LLM follows XML format instructions. The XML parser has a fallback path — malformed `<tool_call>` JSON is emitted as plain text rather than crashing.
+
 ---
 
 ## File Map
@@ -370,6 +431,7 @@ web-providers/
     ├── glm-shared.ts                   # Shared GLM request builder
     ├── glm-signing.ts                  # MD5 signing + token refresh
     ├── glm-stream-adapter.ts           # GLM cumulative text + tag normalization
+    ├── glm-intl-stream-adapter.ts      # GLM Intl phase tracking + tag normalization
     ├── gemini-web.ts                   # Gemini provider definition
     └── gemini-web-stream-adapter.ts    # Gemini chunk parsing + think prefix
 ```
