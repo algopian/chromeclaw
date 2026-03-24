@@ -1236,5 +1236,16 @@
   },
   "agents_title": {
     "message": "エージェント"
-  }
+  },
+  "tab_community": { "message": "コミュニティ" },
+  "community_title": { "message": "コミュニティ" },
+  "community_description": { "message": "コミュニティに参加して、フィードバックの共有、ヘルプの取得、他のユーザーとのアイデア交換をしましょう。" },
+  "community_discordTitle": { "message": "Discord サーバー" },
+  "community_discordDescription": { "message": "コミュニティとチャット、バグ報告、機能リクエスト、他の ChromeClaw ユーザーからのサポートを受けましょう。" },
+  "community_joinDiscord": { "message": "Discord に参加" },
+  "community_rateTitle": { "message": "ChromeClaw を評価" },
+  "community_rateDescription": { "message": "ChromeClaw を気に入りましたか？Chrome ウェブストアでレビューを残して、他の人にも広めましょう。" },
+  "community_leaveReview": { "message": "レビューを書く" },
+  "greeting_hello": { "message": "こんにちは！" },
+  "greeting_help": { "message": "今日はどんなお手伝いができますか？" }
 }

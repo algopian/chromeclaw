@@ -1,7 +1,7 @@
 import { suggestedActionsStorage, getDefaultSuggestedActions, isDefaultActions } from '@extension/storage';
-import { getLocale } from '@extension/i18n';
+import { getLocale, LocaleContext } from '@extension/i18n';
 import { motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import type { SuggestedAction } from '@extension/storage';
 
 type SuggestedActionsProps = {
@@ -10,17 +10,18 @@ type SuggestedActionsProps = {
 
 const SuggestedActions = ({ onSendMessage }: SuggestedActionsProps) => {
   const [actions, setActions] = useState<SuggestedAction[]>([]);
+  // Re-fetch locale-appropriate defaults when locale version changes
+  const localeVersion = useContext(LocaleContext);
 
   useEffect(() => {
     suggestedActionsStorage.get().then(stored => {
-      // If the user hasn't customized actions, show locale-appropriate defaults
       if (isDefaultActions(stored)) {
         setActions(getDefaultSuggestedActions(getLocale()));
       } else {
         setActions(stored);
       }
     });
-  }, []);
+  }, [localeVersion]);
 
   if (actions.length === 0) return null;
 

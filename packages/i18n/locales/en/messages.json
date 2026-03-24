@@ -875,6 +875,39 @@
   "tab_logs": {
     "message": "Logs"
   },
+  "tab_community": {
+    "message": "Community"
+  },
+  "greeting_hello": {
+    "message": "Hello there!"
+  },
+  "greeting_help": {
+    "message": "How can I help you today?"
+  },
+  "community_title": {
+    "message": "Community"
+  },
+  "community_description": {
+    "message": "Join our community to share feedback, get help, and discuss ideas with other users."
+  },
+  "community_discordTitle": {
+    "message": "Discord Server"
+  },
+  "community_discordDescription": {
+    "message": "Chat with the community, report bugs, request features, and get help from other ChromeClaw users."
+  },
+  "community_joinDiscord": {
+    "message": "Join Discord"
+  },
+  "community_rateTitle": {
+    "message": "Rate ChromeClaw"
+  },
+  "community_rateDescription": {
+    "message": "Enjoying ChromeClaw? Leave a review on the Chrome Web Store to help others discover it."
+  },
+  "community_leaveReview": {
+    "message": "Leave a Review"
+  },
   "whatsapp_title": {
     "message": "WhatsApp"
   },

@@ -1236,5 +1236,16 @@
   },
   "agents_title": {
     "message": "智能体"
-  }
+  },
+  "tab_community": { "message": "社区" },
+  "community_title": { "message": "社区" },
+  "community_description": { "message": "加入我们的社区，分享反馈、获取帮助，与其他用户交流想法。" },
+  "community_discordTitle": { "message": "Discord 服务器" },
+  "community_discordDescription": { "message": "与社区交流、报告问题、提出功能需求，获取其他 ChromeClaw 用户的帮助。" },
+  "community_joinDiscord": { "message": "加入 Discord" },
+  "community_rateTitle": { "message": "为 ChromeClaw 评分" },
+  "community_rateDescription": { "message": "喜欢 ChromeClaw？在 Chrome 网上应用店留下评价，帮助更多人发现它。" },
+  "community_leaveReview": { "message": "去评价" },
+  "greeting_hello": { "message": "你好！" },
+  "greeting_help": { "message": "今天我能帮你什么？" }
 }

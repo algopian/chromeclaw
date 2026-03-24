@@ -359,5 +359,16 @@
   "log_copiedCount": { "message": "$COUNT$ entradas copiadas para a área de transferência", "placeholders": { "count": { "content": "$1" } } },
   "log_entriesCount": { "message": "$COUNT$ entradas", "placeholders": { "count": { "content": "$1" } } },
   "log_droppedCount": { "message": "$COUNT$ descartadas", "placeholders": { "count": { "content": "$1" } } },
-  "agents_title": { "message": "Agentes" }
+  "agents_title": { "message": "Agentes" },
+  "tab_community": { "message": "Comunidade" },
+  "community_title": { "message": "Comunidade" },
+  "community_description": { "message": "Junte-se à nossa comunidade para compartilhar feedback, obter ajuda e discutir ideias com outros usuários." },
+  "community_discordTitle": { "message": "Servidor Discord" },
+  "community_discordDescription": { "message": "Converse com a comunidade, reporte bugs, solicite funcionalidades e obtenha ajuda de outros usuários do ChromeClaw." },
+  "community_joinDiscord": { "message": "Entrar no Discord" },
+  "community_rateTitle": { "message": "Avalie o ChromeClaw" },
+  "community_rateDescription": { "message": "Gostou do ChromeClaw? Deixe uma avaliação na Chrome Web Store para ajudar outros a descobri-lo." },
+  "community_leaveReview": { "message": "Deixar uma avaliação" },
+  "greeting_hello": { "message": "Olá!" },
+  "greeting_help": { "message": "Como posso ajudá-lo hoje?" }
 }

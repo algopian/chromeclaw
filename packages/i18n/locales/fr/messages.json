@@ -1236,5 +1236,16 @@
   },
   "agents_title": {
     "message": "Agents"
-  }
+  },
+  "tab_community": { "message": "Communauté" },
+  "community_title": { "message": "Communauté" },
+  "community_description": { "message": "Rejoignez notre communauté pour partager vos retours, obtenir de l'aide et discuter d'idées avec d'autres utilisateurs." },
+  "community_discordTitle": { "message": "Serveur Discord" },
+  "community_discordDescription": { "message": "Discutez avec la communauté, signalez des bugs, demandez des fonctionnalités et obtenez de l'aide d'autres utilisateurs de ChromeClaw." },
+  "community_joinDiscord": { "message": "Rejoindre Discord" },
+  "community_rateTitle": { "message": "Notez ChromeClaw" },
+  "community_rateDescription": { "message": "Vous aimez ChromeClaw ? Laissez un avis sur le Chrome Web Store pour aider d'autres personnes à le découvrir." },
+  "community_leaveReview": { "message": "Laisser un avis" },
+  "greeting_hello": { "message": "Bonjour !" },
+  "greeting_help": { "message": "Comment puis-je vous aider aujourd'hui ?" }
 }

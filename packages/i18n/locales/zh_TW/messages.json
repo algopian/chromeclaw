@@ -1236,5 +1236,16 @@
   },
   "agents_title": {
     "message": "代理"
-  }
+  },
+  "tab_community": { "message": "社群" },
+  "community_title": { "message": "社群" },
+  "community_description": { "message": "加入我們的社群，分享回饋、取得協助，與其他使用者交流想法。" },
+  "community_discordTitle": { "message": "Discord 伺服器" },
+  "community_discordDescription": { "message": "與社群交流、回報問題、提出功能需求，取得其他 ChromeClaw 使用者的協助。" },
+  "community_joinDiscord": { "message": "加入 Discord" },
+  "community_rateTitle": { "message": "為 ChromeClaw 評分" },
+  "community_rateDescription": { "message": "喜歡 ChromeClaw？在 Chrome 線上應用程式商店留下評價，幫助更多人發現它。" },
+  "community_leaveReview": { "message": "去評價" },
+  "greeting_hello": { "message": "你好！" },
+  "greeting_help": { "message": "今天我能幫你什麼？" }
 }

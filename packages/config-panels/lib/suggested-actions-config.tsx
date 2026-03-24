@@ -1,4 +1,4 @@
-import { suggestedActionsStorage, getDefaultSuggestedActions } from '@extension/storage';
+import { suggestedActionsStorage, getDefaultSuggestedActions, isDefaultActions } from '@extension/storage';
 import { getLocale } from '@extension/i18n';
 import {
   Button,
@@ -35,7 +35,13 @@ const SuggestedActionsConfig = () => {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    suggestedActionsStorage.get().then(setActions);
+    suggestedActionsStorage.get().then(stored => {
+      if (isDefaultActions(stored)) {
+        setActions(getDefaultSuggestedActions(getLocale()));
+      } else {
+        setActions(stored);
+      }
+    });
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };

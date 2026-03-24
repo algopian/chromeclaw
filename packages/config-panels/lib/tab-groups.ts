@@ -11,6 +11,7 @@ import {
   ClockIcon,
   BotIcon,
   MessagesSquareIcon,
+  MessageCircleIcon,
 } from 'lucide-react';
 
 type ConfigTabId =
@@ -24,7 +25,8 @@ type ConfigTabId =
   | 'cron'
   | 'sessions'
   | 'usage'
-  | 'logs';
+  | 'logs'
+  | 'community';
 
 type ConfigTabGroup = {
   label: string;
@@ -56,6 +58,7 @@ const getConfigTabGroups = (): ConfigTabGroup[] => [
       { id: 'model', label: t('tab_models'), icon: BrainCircuitIcon },
       { id: 'actions', label: t('tab_actions'), icon: LightbulbIcon },
       { id: 'logs', label: t('tab_logs'), icon: ScrollTextIcon },
+      { id: 'community', label: t('tab_community'), icon: MessageCircleIcon },
     ],
   },
 ];

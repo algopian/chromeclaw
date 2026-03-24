@@ -14,6 +14,7 @@ import { UsageDashboard } from './usage-dashboard';
 import { LogViewer } from './log-viewer';
 import { TelegramConfig } from './telegram-config';
 import { WhatsAppConfig } from './whatsapp-config';
+import { CommunityConfig } from './community-config';
 
 const ConfigPanelContent = ({ activeTab, onOpenSession }: { activeTab: ConfigTabId; onOpenSession?: (chatId: string) => void }) => (
   <>
@@ -40,6 +41,7 @@ const ConfigPanelContent = ({ activeTab, onOpenSession }: { activeTab: ConfigTab
     {activeTab === 'sessions' && <SessionManager onOpenSession={onOpenSession} />}
     {activeTab === 'usage' && <UsageDashboard />}
     {activeTab === 'logs' && <LogViewer />}
+    {activeTab === 'community' && <CommunityConfig />}
   </>
 );
 
