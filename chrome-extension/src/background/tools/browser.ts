@@ -900,14 +900,13 @@ const handleSnapshot = async (args: BrowserArgs): Promise<string> => {
   browserLog.debug('handleSnapshot: attaching', { tabId: args.tabId });
   const attachErr = await ensureAttached(args.tabId);
   if (attachErr) {
-    browserLog.warn('handleSnapshot: attach failed, falling back to content', { tabId: args.tabId, error: attachErr });
-    try {
-      const contentResult = await handleContent({ ...args, action: 'content' });
-      if (contentResult && !contentResult.startsWith('Error:')) {
-        return `[Snapshot unavailable — showing page text instead]\n\n${contentResult}`;
-      }
-    } catch { /* content fallback also failed */ }
-    return `Error: Cannot capture this page — the site blocks programmatic access (common with Google, banking, and enterprise apps). Detail: ${attachErr}. Try using execute_javascript with tabId to run JS in the page context instead, or ask the user to describe what they see.`;
+    browserLog.warn('handleSnapshot: CDP attach failed, falling back to scripting snapshot', { tabId: args.tabId, error: attachErr });
+    const { executeBrowserFirefox } = await import('./browser-firefox');
+    const fallback = await executeBrowserFirefox({ ...args, action: 'snapshot' });
+    if (typeof fallback === 'string' && !fallback.startsWith('Error:')) {
+      return fallback;
+    }
+    return `Error: Cannot capture this page. Detail: ${attachErr}`;
   }
 
   browserLog.debug('handleSnapshot: building snapshot', { tabId: args.tabId });
@@ -915,16 +914,15 @@ const handleSnapshot = async (args: BrowserArgs): Promise<string> => {
   try {
     snapshot = await buildSnapshot(args.tabId);
   } catch (snapshotErr) {
-    // Debugger may have been immediately detached by the page — fall back to content extraction
+    // Debugger may have been immediately detached — fall back to scripting snapshot
     const msg = snapshotErr instanceof Error ? snapshotErr.message : String(snapshotErr);
-    browserLog.warn('handleSnapshot: buildSnapshot failed, falling back to content', { tabId: args.tabId, error: msg });
-    try {
-      const contentResult = await handleContent({ ...args, action: 'content' });
-      if (contentResult && !contentResult.startsWith('Error:')) {
-        return `[Snapshot unavailable — showing page text instead]\n\n${contentResult}`;
-      }
-    } catch { /* content fallback also failed */ }
-    return `Error: Cannot capture this page — the site detaches the debugger immediately after attach. Detail: ${msg}. Try using browser content action or execute_javascript with tabId instead.`;
+    browserLog.warn('handleSnapshot: buildSnapshot failed, falling back to scripting snapshot', { tabId: args.tabId, error: msg });
+    const { executeBrowserFirefox } = await import('./browser-firefox');
+    const fallback = await executeBrowserFirefox({ ...args, action: 'snapshot' });
+    if (typeof fallback === 'string' && !fallback.startsWith('Error:')) {
+      return fallback;
+    }
+    return `Error: Cannot capture this page. Detail: ${msg}`;
   }
 
   // Warn on minimal content — use total snapshot length as a simple heuristic
@@ -1220,6 +1218,29 @@ const executeBrowser = async (args: BrowserArgs): Promise<string | ScreenshotRes
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     browserLog.error('executeBrowser error', { action: args.action, tabId: args.tabId, error: msg });
+
+    // If the error is debugger-related, fall back to the Firefox (scripting-based) implementation
+    // which works on any page without CDP.
+    const isDebuggerError = msg.toLowerCase().includes('not attached') ||
+      msg.toLowerCase().includes('detached') ||
+      msg.toLowerCase().includes('debugger') ||
+      msg.toLowerCase().includes('cannot attach');
+    if (isDebuggerError) {
+      browserLog.info('Falling back to scripting-based implementation', { action: args.action, tabId: args.tabId });
+      try {
+        const { executeBrowserFirefox } = await import('./browser-firefox');
+        const fallback = await executeBrowserFirefox(args);
+        if (typeof fallback === 'string' && fallback.startsWith('Error:')) {
+          return fallback;
+        }
+        return fallback;
+      } catch (fallbackErr) {
+        const fallbackMsg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+        browserLog.error('Scripting fallback also failed', { action: args.action, error: fallbackMsg });
+        return `Error: ${msg}. Scripting fallback also failed: ${fallbackMsg}`;
+      }
+    }
+
     return `Error: ${msg}`;
   }
 };
