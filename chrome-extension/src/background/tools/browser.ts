@@ -188,11 +188,18 @@ const tryAttach = async (tabId: number): Promise<string | null> => {
   attachFailureCache.delete(tabId);
   browserLog.info('Debugger attached', { tabId });
 
-  // Enable domains
-  await cdpSend(tabId, 'Runtime.enable');
-  await cdpSend(tabId, 'Network.enable');
-  await cdpSend(tabId, 'Page.enable');
-  await cdpSend(tabId, 'DOM.enable');
+  // Enable domains — may fail if the page immediately detaches the debugger
+  try {
+    await cdpSend(tabId, 'Runtime.enable');
+    await cdpSend(tabId, 'Network.enable');
+    await cdpSend(tabId, 'Page.enable');
+    await cdpSend(tabId, 'DOM.enable');
+  } catch (domainErr) {
+    const msg = domainErr instanceof Error ? domainErr.message : String(domainErr);
+    browserLog.warn('Domain enable failed after attach — page may have detached debugger', { tabId, error: msg });
+    session.attached = false;
+    return msg;
+  }
 
   return null;
 };
@@ -893,12 +900,32 @@ const handleSnapshot = async (args: BrowserArgs): Promise<string> => {
   browserLog.debug('handleSnapshot: attaching', { tabId: args.tabId });
   const attachErr = await ensureAttached(args.tabId);
   if (attachErr) {
-    browserLog.warn('handleSnapshot: attach failed', { tabId: args.tabId, error: attachErr });
+    browserLog.warn('handleSnapshot: attach failed, falling back to content', { tabId: args.tabId, error: attachErr });
+    try {
+      const contentResult = await handleContent({ ...args, action: 'content' });
+      if (contentResult && !contentResult.startsWith('Error:')) {
+        return `[Snapshot unavailable — showing page text instead]\n\n${contentResult}`;
+      }
+    } catch { /* content fallback also failed */ }
     return `Error: Cannot capture this page — the site blocks programmatic access (common with Google, banking, and enterprise apps). Detail: ${attachErr}. Try using execute_javascript with tabId to run JS in the page context instead, or ask the user to describe what they see.`;
   }
 
   browserLog.debug('handleSnapshot: building snapshot', { tabId: args.tabId });
-  let snapshot = await buildSnapshot(args.tabId);
+  let snapshot: string;
+  try {
+    snapshot = await buildSnapshot(args.tabId);
+  } catch (snapshotErr) {
+    // Debugger may have been immediately detached by the page — fall back to content extraction
+    const msg = snapshotErr instanceof Error ? snapshotErr.message : String(snapshotErr);
+    browserLog.warn('handleSnapshot: buildSnapshot failed, falling back to content', { tabId: args.tabId, error: msg });
+    try {
+      const contentResult = await handleContent({ ...args, action: 'content' });
+      if (contentResult && !contentResult.startsWith('Error:')) {
+        return `[Snapshot unavailable — showing page text instead]\n\n${contentResult}`;
+      }
+    } catch { /* content fallback also failed */ }
+    return `Error: Cannot capture this page — the site detaches the debugger immediately after attach. Detail: ${msg}. Try using browser content action or execute_javascript with tabId instead.`;
+  }
 
   // Warn on minimal content — use total snapshot length as a simple heuristic
   if (snapshot.length < 200) {
