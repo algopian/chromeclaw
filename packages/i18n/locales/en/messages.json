@@ -161,6 +161,57 @@
   "firstRun_advancedSetup": {
     "message": "Advanced setup"
   },
+  "firstRun_defaultAgentName": {
+    "message": "Main Agent"
+  },
+  "firstRun_webProviderRequired": {
+    "message": "Please select a web provider"
+  },
+  "firstRun_webLoginRequired": {
+    "message": "You must log in to the web provider before continuing."
+  },
+  "firstRun_webProvider": {
+    "message": "Web Provider"
+  },
+  "firstRun_webProviderHint": {
+    "message": "(Uses your browser session — no API key needed)"
+  },
+  "firstRun_selectWebProvider": {
+    "message": "Select a web provider"
+  },
+  "firstRun_webChecking": {
+    "message": "Checking..."
+  },
+  "firstRun_webLoggedIn": {
+    "message": "Logged in"
+  },
+  "firstRun_webNotLoggedIn": {
+    "message": "Click Login to check status"
+  },
+  "firstRun_webLogout": {
+    "message": "Logout"
+  },
+  "firstRun_webWaiting": {
+    "message": "Waiting for login..."
+  },
+  "firstRun_webLogin": {
+    "message": "Login"
+  },
+  "firstRun_webLoginInstruction": {
+    "message": "Log in on the opened page. The session will be captured automatically."
+  },
+  "firstRun_optional": {
+    "message": "(optional)"
+  },
+  "firstRun_autoDetected": {
+    "message": "Auto-detected"
+  },
+  "firstRun_autoDetectedHint": {
+    "message": "Auto-detected from web provider. Override only if needed."
+  },
+  "firstRun_tools": {
+    "message": "tools"
+  },
   "chat_placeholder": {
     "message": "What would you like to know?"
   },

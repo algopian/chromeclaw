@@ -642,16 +642,6 @@ const ModelConfig = () => {
 
             <div className="space-y-4">
               <div className="grid gap-2">
-                <Label htmlFor="model-name">{t('model_name')}</Label>
-                <Input
-                  id="model-name"
-                  onChange={e => handleFormChange('name', e.target.value)}
-                  placeholder={isLocal ? 'Qwen3 0.6B (Local)' : 'GPT-4o'}
-                  value={editForm.name}
-                />
-              </div>
-
-              <div className="grid gap-2">
                 <Label htmlFor="model-provider">{t('firstRun_provider')}</Label>
                 <Select
                   onValueChange={v => handleFormChange('provider', v)}
@@ -673,43 +663,17 @@ const ModelConfig = () => {
                 </Select>
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="model-id">
-                  {isLocal ? t('model_huggingFaceModelId') : t('firstRun_modelId')}
-                  {isWeb && <span className="text-muted-foreground ml-1 font-normal">(optional)</span>}
-                </Label>
-                <Input
-                  id="model-id"
-                  onChange={e => handleFormChange('modelId', e.target.value)}
-                  placeholder={
-                    isLocal
-                      ? 'HuggingFaceTB/SmolLM2-360M-Instruct'
-                      : isWeb
-                        ? WEB_PROVIDER_OPTIONS.find(w => w.value === editForm.webProviderId)?.defaultModelId ?? 'Auto-detected'
-                        : 'gpt-4o'
-                  }
-                  value={editForm.modelId}
-                />
-                <p className="text-muted-foreground text-xs">
-                  {isLocal
-                    ? 'The HuggingFace model ID (e.g. HuggingFaceTB/SmolLM2-360M-Instruct)'
-                    : isWeb
-                      ? 'Auto-detected from web provider. Override only if needed.'
-                      : 'The model identifier sent to the provider (e.g. gpt-4o, claude-sonnet-4-5)'}
-                </p>
-              </div>
-
               {isWeb && (
                 <div className="grid gap-2">
                   <Label htmlFor="web-provider-id">
-                    Web Provider
-                    <span className="text-muted-foreground ml-1 font-normal">(Uses your browser session — no API key needed)</span>
+                    {t('firstRun_webProvider')}
+                    <span className="text-muted-foreground ml-1 font-normal">{t('firstRun_webProviderHint')}</span>
                   </Label>
                   <Select
                     onValueChange={v => handleFormChange('webProviderId', v)}
                     value={editForm.webProviderId ?? ''}>
                     <SelectTrigger id="web-provider-id">
-                      <SelectValue placeholder="Select a web provider" />
+                      <SelectValue placeholder={t('firstRun_selectWebProvider')} />
                     </SelectTrigger>
                     <SelectContent>
                       {WEB_PROVIDER_OPTIONS.map(wp => (
@@ -723,25 +687,25 @@ const ModelConfig = () => {
                     {webAuthStatus === 'checking' && (
                       <Badge variant="outline" className="gap-1">
                         <Loader2Icon className="size-3 animate-spin" />
-                        Checking...
+                        {t('firstRun_webChecking')}
                       </Badge>
                     )}
                     {webAuthStatus === 'logged-in' && (
                       <Badge variant="outline" className="gap-1 border-green-500 text-green-600">
                         <CheckCircleIcon className="size-3" />
-                        Logged in
+                        {t('firstRun_webLoggedIn')}
                       </Badge>
                     )}
                     {(webAuthStatus === 'not-logged-in' || webAuthStatus === 'unknown') && (
                       <Badge variant="outline" className="gap-1 border-orange-500 text-orange-600">
                         <XCircleIcon className="size-3" />
-                        Click Login to check status
+                        {t('firstRun_webNotLoggedIn')}
                       </Badge>
                     )}
                     {webAuthStatus === 'logged-in' ? (
                       <Button onClick={handleWebLogout} size="sm" variant="outline">
                         <LogOutIcon className="mr-1 size-3" />
-                        Logout
+                        {t('firstRun_webLogout')}
                       </Button>
                     ) : (
                       <Button
@@ -754,17 +718,53 @@ const ModelConfig = () => {
                         ) : (
                           <LogInIcon className="mr-1 size-3" />
                         )}
-                        {webLoginLoading ? 'Waiting for login...' : 'Login'}
+                        {webLoginLoading ? t('firstRun_webWaiting') : t('firstRun_webLogin')}
                       </Button>
                     )}
                   </div>
                   {webLoginLoading && (
                     <p className="text-muted-foreground text-xs">
-                      Log in on the opened page. The session will be captured automatically.
+                      {t('firstRun_webLoginInstruction')}
                     </p>
                   )}
                 </div>
               )}
+
+              <div className="grid gap-2">
+                <Label htmlFor="model-name">{t('model_name')}</Label>
+                <Input
+                  id="model-name"
+                  onChange={e => handleFormChange('name', e.target.value)}
+                  placeholder={isLocal ? 'Qwen3 0.6B (Local)' : 'GPT-4o'}
+                  value={editForm.name}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="model-id">
+                  {isLocal ? t('model_huggingFaceModelId') : t('firstRun_modelId')}
+                  {isWeb && <span className="text-muted-foreground ml-1 font-normal">{t('firstRun_optional')}</span>}
+                </Label>
+                <Input
+                  id="model-id"
+                  onChange={e => handleFormChange('modelId', e.target.value)}
+                  placeholder={
+                    isLocal
+                      ? 'HuggingFaceTB/SmolLM2-360M-Instruct'
+                      : isWeb
+                        ? WEB_PROVIDER_OPTIONS.find(w => w.value === editForm.webProviderId)?.defaultModelId ?? t('firstRun_autoDetected')
+                        : 'gpt-4o'
+                  }
+                  value={editForm.modelId}
+                />
+                <p className="text-muted-foreground text-xs">
+                  {isLocal
+                    ? 'The HuggingFace model ID (e.g. HuggingFaceTB/SmolLM2-360M-Instruct)'
+                    : isWeb
+                      ? t('firstRun_autoDetectedHint')
+                      : 'The model identifier sent to the provider (e.g. gpt-4o, claude-sonnet-4-5)'}
+                </p>
+              </div>
 
               {!isLocal && !isWeb && (
                 <>
