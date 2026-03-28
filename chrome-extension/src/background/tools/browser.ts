@@ -1,5 +1,6 @@
 import { cdpSend, cdpSendWithReattach } from './cdp';
 import { executeBrowserFirefox } from './browser-firefox';
+import { injectControlIndicator, removeControlIndicator } from './tab-indicator';
 import { sanitizeImage } from './image-sanitization';
 import { IS_FIREFOX } from '@extension/env';
 import { createLogger } from '../logging/logger-buffer';
@@ -784,6 +785,8 @@ const handleTabs = async (): Promise<string> => {
 const handleOpen = async (args: BrowserArgs): Promise<string> => {
   if (!args.url) return 'Error: "url" is required for the "open" action.';
   const tab = await chrome.tabs.create({ url: args.url, active: args.active ?? false });
+  // Store the new tab ID so the caller can use it (e.g. for indicator highlight)
+  if (tab.id != null) (args as Record<string, unknown>).tabId = tab.id;
   return `Opened tab [${tab.id}]: ${tab.url ?? args.url}`;
 };
 
@@ -1184,37 +1187,55 @@ const executeBrowser = async (args: BrowserArgs): Promise<string | ScreenshotRes
     return executeBrowserFirefox(args);
   }
 
+  // Visual indicator — highlight the tab while the tool is executing
+  const noHighlight = args.action === 'tabs' || args.action === 'close';
+  let indicatorTabId: number | undefined = !noHighlight ? (args.tabId ?? undefined) : undefined;
+
+  // Inject before action (when tabId is known upfront)
+  if (indicatorTabId != null) {
+    await injectControlIndicator(indicatorTabId);
+  }
+
   try {
+    let result: string | ScreenshotResult;
     switch (args.action) {
       case 'tabs':
-        return await handleTabs();
+        result = await handleTabs(); break;
       case 'open':
-        return await handleOpen(args);
+        result = await handleOpen(args); break;
       case 'focus':
-        return await handleFocus(args);
+        result = await handleFocus(args); break;
       case 'close':
-        return await handleClose(args);
+        result = await handleClose(args); break;
       case 'navigate':
-        return await handleNavigate(args);
+        result = await handleNavigate(args); break;
       case 'content':
-        return await handleContent(args);
+        result = await handleContent(args); break;
       case 'snapshot':
-        return await handleSnapshot(args);
+        result = await handleSnapshot(args); break;
       case 'screenshot':
-        return await handleScreenshot(args);
+        result = await handleScreenshot(args); break;
       case 'click':
-        return await handleClick(args);
+        result = await handleClick(args); break;
       case 'type':
-        return await handleType(args);
+        result = await handleType(args); break;
       case 'evaluate':
-        return await handleEvaluate(args);
+        result = await handleEvaluate(args); break;
       case 'console':
-        return await handleConsole(args);
+        result = await handleConsole(args); break;
       case 'network':
-        return await handleNetwork(args);
+        result = await handleNetwork(args); break;
       default:
-        return `Error: Unknown action "${args.action}".`;
+        result = `Error: Unknown action "${args.action}".`;
     }
+
+    // For 'open', highlight the newly created tab (handleOpen sets args.tabId)
+    if (!noHighlight && args.action === 'open' && !indicatorTabId && args.tabId != null) {
+      indicatorTabId = args.tabId;
+      await injectControlIndicator(indicatorTabId);
+    }
+
+    return result;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     browserLog.error('executeBrowser error', { action: args.action, tabId: args.tabId, error: msg });
@@ -1242,6 +1263,11 @@ const executeBrowser = async (args: BrowserArgs): Promise<string | ScreenshotRes
     }
 
     return `Error: ${msg}`;
+  } finally {
+    // Remove visual indicator after tool execution completes
+    if (indicatorTabId != null) {
+      removeControlIndicator(indicatorTabId).catch(() => {});
+    }
   }
 };
 
