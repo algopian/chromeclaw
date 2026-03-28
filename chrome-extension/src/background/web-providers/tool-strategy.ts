@@ -283,6 +283,23 @@ const deepseekToolStrategy: WebProviderToolStrategy = {
   serializeAssistantContent,
 };
 
+// ── Doubao Strategy ────────────────────────────
+// Doubao is stateful — the MAIN world handler injects a synthetic
+// `{"type":"doubao:conversation_id","conversation_id":"..."}` SSE event
+// at the end of each stream so the bridge can cache and reuse the conversation.
+
+const doubaoToolStrategy: WebProviderToolStrategy = {
+  buildToolPrompt: buildMarkdownToolPrompt,
+  buildPrompt: buildStatefulPrompt,
+
+  extractConversationId: data => {
+    const obj = data as Record<string, unknown>;
+    return obj.conversation_id as string | undefined;
+  },
+
+  serializeAssistantContent,
+};
+
 // ── Gemini Strategy ────────────────────────────
 // Gemini's web API is stateless from our perspective (no server-side conversation ID reuse).
 // Always aggregates full history into a single user message (like Kimi/Claude).
@@ -340,6 +357,8 @@ const getToolStrategy = (providerId: WebProviderId): WebProviderToolStrategy => 
       return glmIntlToolStrategy;
     case 'deepseek-web':
       return deepseekToolStrategy;
+    case 'doubao-web':
+      return doubaoToolStrategy;
     default:
       return defaultToolStrategy;
   }
@@ -357,6 +376,7 @@ export {
   glmToolStrategy,
   glmIntlToolStrategy,
   deepseekToolStrategy,
+  doubaoToolStrategy,
   geminiToolStrategy,
 };
 export type { WebProviderToolStrategy, SimpleMessage, ContentPart };

@@ -4,6 +4,7 @@
 
 import { claudeWeb } from './providers/claude-web';
 import { deepseekWeb } from './providers/deepseek-web';
+import { doubaoWeb } from './providers/doubao-web';
 import { qwenWeb } from './providers/qwen-web';
 import { qwenCnWeb } from './providers/qwen-cn-web';
 import { kimiWeb } from './providers/kimi-web';
@@ -21,6 +22,7 @@ const providers: WebProviderDefinition[] = [
   glmIntlWeb,
   geminiWeb,
   deepseekWeb,
+  doubaoWeb,
 ];
 
 const providerMap = new Map<WebProviderId, WebProviderDefinition>(providers.map(p => [p.id, p]));

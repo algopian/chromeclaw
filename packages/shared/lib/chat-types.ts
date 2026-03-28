@@ -139,6 +139,7 @@ const WEB_PROVIDER_OPTIONS = [
   { value: 'glm-intl-web', label: 'GLM Intl (chat.z.ai)', loginUrl: 'https://chat.z.ai', cookieDomain: '.z.ai', sessionIndicators: ['token'], checkLocalStorage: true, defaultModelId: 'glm-5', defaultModelName: 'GLM-5' },
   { value: 'gemini-web', label: 'Gemini (gemini.google.com)', loginUrl: 'https://gemini.google.com', cookieDomain: '.google.com', sessionIndicators: ['__Secure-1PSID', 'SID'], defaultModelId: 'gemini-3-flash', defaultModelName: 'Gemini 3 Flash' },
   { value: 'deepseek-web', label: 'DeepSeek (chat.deepseek.com)', loginUrl: 'https://chat.deepseek.com', cookieDomain: '.deepseek.com', sessionIndicators: ['ds_session_id', 'HWSID'], defaultModelId: 'deepseek-chat', defaultModelName: 'DeepSeek V3' },
+  { value: 'doubao-web', label: 'Doubao (doubao.com)', loginUrl: 'https://www.doubao.com/chat/', cookieDomain: '.doubao.com', sessionIndicators: ['sessionid'], defaultModelId: 'doubao-seed-2.0', defaultModelName: 'Doubao Seed 2.0' },
 ] as const;
 
 /** Tool definition (metadata only — no execute function) */
