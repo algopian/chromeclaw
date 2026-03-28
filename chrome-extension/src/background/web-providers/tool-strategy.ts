@@ -266,6 +266,23 @@ const glmIntlToolStrategy: WebProviderToolStrategy = {
   serializeAssistantContent,
 };
 
+// ── DeepSeek Strategy ───────────────────────────
+// DeepSeek is stateful — the MAIN world handler injects a synthetic
+// `{"type":"deepseek:chat_session_id","chat_session_id":"..."}` SSE event
+// at the start of each stream so the bridge can cache and reuse the session.
+
+const deepseekToolStrategy: WebProviderToolStrategy = {
+  buildToolPrompt: buildMarkdownToolPrompt,
+  buildPrompt: buildStatefulPrompt,
+
+  extractConversationId: data => {
+    const obj = data as Record<string, unknown>;
+    return obj.chat_session_id as string | undefined;
+  },
+
+  serializeAssistantContent,
+};
+
 // ── Gemini Strategy ────────────────────────────
 // Gemini's web API is stateless from our perspective (no server-side conversation ID reuse).
 // Always aggregates full history into a single user message (like Kimi/Claude).
@@ -321,6 +338,8 @@ const getToolStrategy = (providerId: WebProviderId): WebProviderToolStrategy => 
       return glmToolStrategy;
     case 'glm-intl-web':
       return glmIntlToolStrategy;
+    case 'deepseek-web':
+      return deepseekToolStrategy;
     default:
       return defaultToolStrategy;
   }
@@ -337,6 +356,7 @@ export {
   kimiToolStrategy,
   glmToolStrategy,
   glmIntlToolStrategy,
+  deepseekToolStrategy,
   geminiToolStrategy,
 };
 export type { WebProviderToolStrategy, SimpleMessage, ContentPart };

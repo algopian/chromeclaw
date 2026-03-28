@@ -1,6 +1,6 @@
 {
   "name": "@extension/baileys",
-  "version": "1.9.4",
+  "version": "1.9.5",
   "description": "Local fork of @whiskeysockets/baileys for browser debugging",
   "private": true,
   "main": "lib/index.js",

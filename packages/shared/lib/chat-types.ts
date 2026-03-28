@@ -138,6 +138,7 @@ const WEB_PROVIDER_OPTIONS = [
   { value: 'glm-web', label: 'GLM (chatglm.cn)', loginUrl: 'https://chatglm.cn', cookieDomain: '.chatglm.cn', sessionIndicators: ['chatglm_refresh_token', 'chatglm_token'], defaultModelId: 'glm-5', defaultModelName: 'GLM-5', refreshUrl: 'https://chatglm.cn/chatglm/user-api/user/refresh' },
   { value: 'glm-intl-web', label: 'GLM Intl (chat.z.ai)', loginUrl: 'https://chat.z.ai', cookieDomain: '.z.ai', sessionIndicators: ['token'], checkLocalStorage: true, defaultModelId: 'glm-5', defaultModelName: 'GLM-5' },
   { value: 'gemini-web', label: 'Gemini (gemini.google.com)', loginUrl: 'https://gemini.google.com', cookieDomain: '.google.com', sessionIndicators: ['__Secure-1PSID', 'SID'], defaultModelId: 'gemini-3-flash', defaultModelName: 'Gemini 3 Flash' },
+  { value: 'deepseek-web', label: 'DeepSeek (chat.deepseek.com)', loginUrl: 'https://chat.deepseek.com', cookieDomain: '.deepseek.com', sessionIndicators: ['ds_session_id', 'HWSID'], defaultModelId: 'deepseek-chat', defaultModelName: 'DeepSeek V3' },
 ] as const;
 
 /** Tool definition (metadata only — no execute function) */

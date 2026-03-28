@@ -13,6 +13,7 @@ import {
   kimiToolStrategy,
   glmToolStrategy,
   glmIntlToolStrategy,
+  deepseekToolStrategy,
   geminiToolStrategy,
 } from './tool-strategy';
 
@@ -45,6 +46,10 @@ describe('getToolStrategy', () => {
 
   it('returns gemini strategy for gemini-web', () => {
     expect(getToolStrategy('gemini-web')).toBe(geminiToolStrategy);
+  });
+
+  it('returns deepseek strategy for deepseek-web', () => {
+    expect(getToolStrategy('deepseek-web')).toBe(deepseekToolStrategy);
   });
 });
 
@@ -675,6 +680,152 @@ describe('glmIntlToolStrategy', () => {
       expect(result).toContain('<think>');
       expect(result).toContain('I will search.');
       expect(result).toContain('<tool_call id="x1" name="web_search">');
+    });
+  });
+});
+
+// ── DeepSeek Strategy ───────────────────────────
+
+describe('deepseekToolStrategy', () => {
+  it('uses markdown tool prompt (same as qwen)', () => {
+    const tools = [
+      {
+        name: 'test',
+        description: 'A test tool',
+        parameters: { type: 'object', properties: {} },
+      },
+    ];
+    expect(deepseekToolStrategy.buildToolPrompt(tools)).toBe(
+      qwenToolStrategy.buildToolPrompt(tools),
+    );
+  });
+
+  describe('buildPrompt', () => {
+    it('aggregates full history on first turn (no conversationId)', () => {
+      const result = deepseekToolStrategy.buildPrompt({
+        systemPrompt: 'Be helpful.',
+        toolPrompt: '## Tools...',
+        messages: [
+          { role: 'user', content: 'Hello' },
+          { role: 'assistant', content: 'Hi there' },
+        ],
+      });
+      expect(result.systemPrompt).toBe('');
+      expect(result.messages).toHaveLength(1);
+      expect(result.messages[0].content).toContain('System: Be helpful.');
+      expect(result.messages[0].content).toContain('## Tools...');
+      expect(result.messages[0].content).toContain('User: Hello');
+      expect(result.messages[0].content).toContain('Assistant: Hi there');
+    });
+
+    it('sends only last message on continuation', () => {
+      const result = deepseekToolStrategy.buildPrompt({
+        systemPrompt: 'Be helpful.',
+        toolPrompt: '## Tools...',
+        messages: [
+          { role: 'user', content: 'Hello' },
+          { role: 'assistant', content: 'Hi' },
+          { role: 'user', content: 'Follow up' },
+        ],
+        conversationId: 'ds-session-123',
+      });
+      expect(result.messages).toHaveLength(1);
+      expect(result.messages[0].content).toContain('Follow up');
+      expect(result.messages[0].content).not.toContain('Hello');
+    });
+
+    it('appends SYSTEM HINT on continuation when tools are present', () => {
+      const result = deepseekToolStrategy.buildPrompt({
+        systemPrompt: 'Be helpful.',
+        toolPrompt: '## Tools...',
+        messages: [{ role: 'user', content: 'Search cats' }],
+        conversationId: 'ds-session-123',
+      });
+      expect(result.messages[0].content).toContain('[SYSTEM HINT]');
+    });
+
+    it('does not append SYSTEM HINT when no tools', () => {
+      const result = deepseekToolStrategy.buildPrompt({
+        systemPrompt: 'Be helpful.',
+        toolPrompt: '',
+        messages: [{ role: 'user', content: 'Hello' }],
+        conversationId: 'ds-session-123',
+      });
+      expect(result.messages[0].content).not.toContain('[SYSTEM HINT]');
+    });
+
+    it('sends tool response with proceed hint on continuation', () => {
+      const result = deepseekToolStrategy.buildPrompt({
+        systemPrompt: 'Be helpful.',
+        toolPrompt: '## Tools...',
+        messages: [
+          {
+            role: 'user',
+            content:
+              '<tool_response id="abc" name="web_search">\nresults here\n</tool_response>',
+          },
+        ],
+        conversationId: 'ds-session-123',
+      });
+      expect(result.messages[0].content).toContain('<tool_response');
+      expect(result.messages[0].content).toContain(
+        'Please proceed based on this tool result.',
+      );
+      expect(result.messages[0].content).toContain('[SYSTEM HINT]');
+    });
+
+    it('handles empty messages on continuation', () => {
+      const result = deepseekToolStrategy.buildPrompt({
+        systemPrompt: 'System',
+        toolPrompt: '',
+        messages: [],
+        conversationId: 'ds-session-123',
+      });
+      expect(result.messages).toHaveLength(1);
+      expect(result.messages[0].content).toBe('');
+    });
+  });
+
+  describe('extractConversationId', () => {
+    it('extracts chat_session_id from synthetic SSE event', () => {
+      expect(
+        deepseekToolStrategy.extractConversationId!({
+          type: 'deepseek:chat_session_id',
+          chat_session_id: 'ds-abc-123',
+        }),
+      ).toBe('ds-abc-123');
+    });
+
+    it('returns undefined when no chat_session_id present', () => {
+      expect(deepseekToolStrategy.extractConversationId!({ text: 'hello' })).toBeUndefined();
+    });
+
+    it('returns undefined for unrelated SSE data', () => {
+      expect(
+        deepseekToolStrategy.extractConversationId!({ response_message_id: 'msg-123' }),
+      ).toBeUndefined();
+    });
+  });
+
+  describe('serializeAssistantContent', () => {
+    it('serializes think, text, and tool_call blocks', () => {
+      const result = deepseekToolStrategy.serializeAssistantContent!([
+        { type: 'thinking', thinking: 'reasoning' },
+        { type: 'text', text: 'I will search.' },
+        { type: 'toolCall', id: 'x1', name: 'web_search', arguments: { query: 'cats' } },
+      ]);
+      expect(result).toContain('<think>');
+      expect(result).toContain('I will search.');
+      expect(result).toContain('<tool_call id="x1" name="web_search">');
+    });
+
+    it('skips empty thinking blocks', () => {
+      const result = deepseekToolStrategy.serializeAssistantContent!([
+        { type: 'thinking', thinking: '' },
+        { type: 'text', text: 'Hello' },
+      ]);
+      expect(result).not.toContain('<think>');
+      expect(result).toBe('Hello');
     });
   });
 });

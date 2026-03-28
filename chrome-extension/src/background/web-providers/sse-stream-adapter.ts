@@ -5,6 +5,7 @@
  */
 
 import { createClaudeStreamAdapter } from './providers/claude-web-stream-adapter';
+import { createDeepSeekStreamAdapter } from './providers/deepseek-stream-adapter';
 import { createGeminiStreamAdapter } from './providers/gemini-web-stream-adapter';
 import { createGlmIntlStreamAdapter } from './providers/glm-intl-stream-adapter';
 import { createGlmStreamAdapter } from './providers/glm-stream-adapter';
@@ -77,6 +78,8 @@ const getSseStreamAdapter = (providerId: WebProviderId, opts?: {
       return createGlmStreamAdapter();
     case 'glm-intl-web':
       return createGlmIntlStreamAdapter();
+    case 'deepseek-web':
+      return createDeepSeekStreamAdapter();
     case 'gemini-web':
       return createGeminiStreamAdapter();
     default:

@@ -93,6 +93,16 @@ describe('getSseStreamAdapter', () => {
     expect(result).toEqual({ feedText: 'hello' });
   });
 
+  it('returns a DeepSeek adapter for deepseek-web', () => {
+    const adapter = getSseStreamAdapter('deepseek-web');
+    // DeepSeek adapter handles JSON-patch style — wraps reasoning in <think>
+    const result = adapter.processEvent({
+      parsed: { p: ['reasoning'], v: 'hmm' },
+      delta: null,
+    });
+    expect(result).toEqual({ feedText: '<think>hmm' });
+  });
+
   it('returns a Claude adapter for claude-web', () => {
     const adapter = getSseStreamAdapter('claude-web');
     // Claude adapter extracts text from content_block_delta

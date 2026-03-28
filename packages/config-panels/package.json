@@ -1,6 +1,6 @@
 {
   "name": "@extension/config-panels",
-  "version": "1.9.4",
+  "version": "1.9.5",
   "description": "chrome extension - shared config panel components",
   "type": "module",
   "private": true,

@@ -12,7 +12,8 @@ type WebProviderId =
   | 'qwen-cn-web'
   | 'glm-web'
   | 'glm-intl-web'
-  | 'gemini-web';
+  | 'gemini-web'
+  | 'deepseek-web';
 
 /**
  * Credential type is defined in `@extension/storage` (web-credentials-storage.ts)
@@ -60,7 +61,7 @@ interface WebProviderDefinition {
     /** When true, `url` is a template — `{key}` placeholders are replaced from setup response. */
     urlTemplate?: boolean;
     /** When set, the response uses a binary-framed protocol instead of plain SSE text. */
-    binaryProtocol?: 'connect-json' | 'gemini-chunks' | 'glm-intl';
+    binaryProtocol?: 'connect-json' | 'gemini-chunks' | 'glm-intl' | 'deepseek';
     /** When true, encode the JSON body into a binary frame before sending. */
     binaryEncodeBody?: boolean;
   };
