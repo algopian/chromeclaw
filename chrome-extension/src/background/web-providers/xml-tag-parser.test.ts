@@ -389,12 +389,14 @@ describe('createXmlTagParser', () => {
 
     // First chunk ends mid-closing-tag: "<think>\n</"
     const e1 = parser.feed('<think>\n</');
-    expect(e1).toEqual([{ type: 'thinking_start' }]);
+    expect(e1).toEqual([
+      { type: 'thinking_start' },
+      { type: 'thinking_delta', text: '\n' },
+    ]);
 
     // Second chunk completes the closing tag and has a tool_call after it
     const e2 = parser.feed('think><tool_call id="abc" name="browser">{"action":"tabs"}</tool_call>');
     expect(e2).toEqual([
-      { type: 'thinking_delta', text: '\n' },
       { type: 'thinking_end' },
       { type: 'tool_call', id: 'abc', name: 'browser', arguments: { action: 'tabs' } },
     ]);

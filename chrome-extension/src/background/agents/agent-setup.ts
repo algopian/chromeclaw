@@ -650,7 +650,7 @@ export const buildHeadlessSystemPrompt = async (
     runtimeMeta: {
       modelName: model.name,
       currentDate: new Date().toISOString().split('T')[0],
-      browser: IS_FIREFOX ? 'firefox' : 'chrome',
+      browser: IS_FIREFOX ? 'firefox' as const : 'chrome' as const,
     },
   };
 

@@ -106,6 +106,19 @@ Object.defineProperty(globalThis, 'chrome', {
     scripting: {
       executeScript: mockScriptingExecuteScript,
     },
+    storage: {
+      local: {
+        get: vi.fn(() => Promise.resolve({})),
+        set: vi.fn(() => Promise.resolve()),
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+      session: {
+        get: vi.fn(() => Promise.resolve({})),
+        set: vi.fn(() => Promise.resolve()),
+        setAccessLevel: vi.fn(() => Promise.resolve()),
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+    },
     runtime: {
       lastError: undefined as { message: string } | undefined,
     },
@@ -862,10 +875,11 @@ describe('session management', () => {
     });
 
     const result = await mod.executeBrowser({
-      action: 'snapshot',
+      action: 'evaluate',
       tabId: 1,
+      expression: 'document.title',
     } as BrowserArgs);
-    expect(result).toContain('blocks programmatic access');
+    expect(result).toContain('blocks debugger access');
   });
 
   it('onDetach: cleans up session when user dismisses yellow bar', () => {
@@ -1445,7 +1459,12 @@ describe('executeBrowser — error paths', () => {
     session.refMap.set(1, { nodeId: 5, backendNodeId: 5 });
 
     mockDebuggerSendCommand.mockImplementation(
-      (_target: unknown, _method: string, _params: unknown, cb: (result: unknown) => void) => {
+      (_target: unknown, method: string, params: unknown, cb: (result: unknown) => void) => {
+        // Allow stale-session check to pass
+        if (method === 'Runtime.evaluate' && (params as Record<string, unknown>)?.expression === '1') {
+          cb({ result: { value: 1 } });
+          return;
+        }
         chrome.runtime.lastError = { message: 'Node not found' } as typeof chrome.runtime.lastError;
         cb({});
         chrome.runtime.lastError = undefined as unknown as typeof chrome.runtime.lastError;
@@ -1462,7 +1481,12 @@ describe('executeBrowser — error paths', () => {
     session.refMap.set(1, { nodeId: 5, backendNodeId: 5 });
 
     mockDebuggerSendCommand.mockImplementation(
-      (_target: unknown, _method: string, _params: unknown, cb: (result: unknown) => void) => {
+      (_target: unknown, method: string, params: unknown, cb: (result: unknown) => void) => {
+        // Allow stale-session check to pass
+        if (method === 'Runtime.evaluate' && (params as Record<string, unknown>)?.expression === '1') {
+          cb({ result: { value: 1 } });
+          return;
+        }
         chrome.runtime.lastError = { message: 'Node gone' } as typeof chrome.runtime.lastError;
         cb({});
         chrome.runtime.lastError = undefined as unknown as typeof chrome.runtime.lastError;
@@ -2037,13 +2061,13 @@ describe('attach failure caching', () => {
     });
 
     // First attempt — fresh error
-    const result1 = await mod.executeBrowser({ action: 'snapshot', tabId: 1 } as BrowserArgs);
-    expect(result1).toContain('blocks programmatic access');
+    const result1 = await mod.executeBrowser({ action: 'evaluate', tabId: 1, expression: '1' } as BrowserArgs);
+    expect(result1).toContain('blocks debugger access');
 
     // Second attempt — should return cached error without calling attach again
     mockDebuggerAttach.mockClear();
-    const result2 = await mod.executeBrowser({ action: 'snapshot', tabId: 1 } as BrowserArgs);
-    expect(result2).toContain('blocks programmatic access');
+    const result2 = await mod.executeBrowser({ action: 'evaluate', tabId: 1, expression: '1' } as BrowserArgs);
+    expect(result2).toContain('blocks debugger access');
     // Attach should not be called again due to cache
     expect(mockDebuggerAttach).not.toHaveBeenCalled();
   });
@@ -2548,12 +2572,12 @@ describe('concurrent attach attempts', () => {
     });
 
     const [result1, result2] = await Promise.all([
-      mod.executeBrowser({ action: 'snapshot', tabId: 1 } as BrowserArgs),
-      mod.executeBrowser({ action: 'snapshot', tabId: 1 } as BrowserArgs),
+      mod.executeBrowser({ action: 'evaluate', tabId: 1, expression: '1' } as BrowserArgs),
+      mod.executeBrowser({ action: 'evaluate', tabId: 1, expression: '1' } as BrowserArgs),
     ]);
 
-    expect(result1).toContain('blocks programmatic access');
-    expect(result2).toContain('blocks programmatic access');
+    expect(result1).toContain('blocks debugger access');
+    expect(result2).toContain('blocks debugger access');
   });
 });
 

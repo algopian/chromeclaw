@@ -338,12 +338,58 @@ const claudeToolStrategy: WebProviderToolStrategy = {
   }),
 };
 
+// ── ChatGPT Strategy ───────────────────────────
+// ChatGPT is stateful — the MAIN world handler injects a synthetic
+// `{"type":"chatgpt:conversation_state","conversation_id":"...","parent_message_id":"..."}`
+// SSE event at the start of each stream. We encode both IDs as a composite
+// string "convId|msgId" in the conversation cache.
+// Like Claude, ChatGPT needs a preamble to override native function calling.
+
+const CHATGPT_TOOL_PREAMBLE = `IMPORTANT: You are operating inside an external tool-calling runtime.
+You MUST call tools using the EXACT XML format described below. Do NOT use native/built-in tool calls.
+Do NOT use function calls, code interpreter, DALL-E, browsing, or any other built-in capabilities.
+Only the tools listed below are accessible.\n\n`;
+
+const chatgptToolStrategy: WebProviderToolStrategy = {
+  buildToolPrompt: tools => {
+    const base = buildMarkdownToolPrompt(tools);
+    return base ? CHATGPT_TOOL_PREAMBLE + base : '';
+  },
+
+  buildPrompt: buildStatefulPrompt,
+
+  extractConversationId: data => {
+    const obj = data as Record<string, unknown>;
+    // The MAIN world handler injects a synthetic event at stream end:
+    // { type: "chatgpt:conversation_state", conversation_id: "convId|msgId" }
+    // This composite ID is the authoritative value for conversation continuity.
+    if (obj.type === 'chatgpt:conversation_state') {
+      return obj.conversation_id as string | undefined;
+    }
+    // For regular SSE events, extract conversation_id + message.id as composite
+    const convId = obj.conversation_id as string | undefined;
+    if (convId) {
+      const message = obj.message as Record<string, unknown> | undefined;
+      const author = message?.author as Record<string, string> | undefined;
+      if (author?.role === 'assistant' && message?.id) {
+        return `${convId}|${message.id}`;
+      }
+      return convId;
+    }
+    return undefined;
+  },
+
+  serializeAssistantContent,
+};
+
 // ── Factory ──────────────────────────────────────
 
 const getToolStrategy = (providerId: WebProviderId): WebProviderToolStrategy => {
   switch (providerId) {
     case 'claude-web':
       return claudeToolStrategy;
+    case 'chatgpt-web':
+      return chatgptToolStrategy;
     case 'qwen-web':
     case 'qwen-cn-web':
       return qwenToolStrategy;
@@ -371,6 +417,7 @@ export {
   clearConversationId,
   defaultToolStrategy,
   claudeToolStrategy,
+  chatgptToolStrategy,
   qwenToolStrategy,
   kimiToolStrategy,
   glmToolStrategy,

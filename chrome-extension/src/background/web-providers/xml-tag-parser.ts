@@ -228,8 +228,10 @@ const createXmlTagParser = (): {
           }
           if (emitEnd > 0) {
             events.push({ type: 'thinking_delta', text: buffer.slice(0, emitEnd) });
+            buffer = buffer.slice(emitEnd);
           }
-          buffer = buffer.slice(emitEnd);
+          // emitEnd === 0 means entire buffer is a partial </think> prefix — wait for more data
+          break;
         }
       } else if (state === 'tool_call') {
         // Search in the combined toolCallBuffer + buffer so that a closing tag

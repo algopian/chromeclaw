@@ -48,6 +48,19 @@ Object.defineProperty(globalThis, 'chrome', {
     scripting: {
       executeScript: vi.fn(() => Promise.resolve([{ result: 'test' }])),
     },
+    storage: {
+      local: {
+        get: vi.fn(() => Promise.resolve({})),
+        set: vi.fn(() => Promise.resolve()),
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+      session: {
+        get: vi.fn(() => Promise.resolve({})),
+        set: vi.fn(() => Promise.resolve()),
+        setAccessLevel: vi.fn(() => Promise.resolve()),
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+    },
     runtime: { lastError: undefined },
   },
   writable: true,

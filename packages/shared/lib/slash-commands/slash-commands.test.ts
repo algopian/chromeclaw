@@ -59,8 +59,8 @@ describe('parseSlashCommand', () => {
     expect(parseSlashCommand('   ')).toBeNull();
   });
 
-  it('returns null for slash with args', () => {
-    expect(parseSlashCommand('/clear me')).toBeNull();
+  it('parses slash with args', () => {
+    expect(parseSlashCommand('/clear me')).toEqual({ command: 'clear', args: 'me' });
   });
 });
 
@@ -70,7 +70,9 @@ describe('getSlashCommands', () => {
     const names = cmds.map(c => c.name);
     expect(names).toContain('clear');
     expect(names).toContain('compact');
-    expect(cmds.length).toBe(2);
+    expect(names).toContain('copy');
+    expect(names).toContain('export');
+    expect(cmds.length).toBe(4);
   });
 
   it('each command has a name and description', () => {

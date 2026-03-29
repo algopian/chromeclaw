@@ -493,8 +493,8 @@ const executeToolCalls = async (
 
     // Log tool result for debugging
     const resultText = result.content
-      ?.filter((c: { type: string }) => c.type === 'text')
-      .map((c: { text?: string }) => c.text ?? '')
+      ?.filter((c): c is { type: 'text'; text: string } => c.type === 'text')
+      .map(c => c.text ?? '')
       .join('');
     agentLoopLog.debug('Tool result', {
       toolName: toolCall.name,

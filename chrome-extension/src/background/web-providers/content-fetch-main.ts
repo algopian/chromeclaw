@@ -29,7 +29,7 @@ export interface ContentFetchRequest {
    */
   urlTemplate?: boolean;
   /** When set, the response uses a binary-framed protocol instead of plain SSE text. */
-  binaryProtocol?: 'connect-json' | 'gemini-chunks' | 'glm-intl' | 'deepseek' | 'doubao';
+  binaryProtocol?: 'connect-json' | 'gemini-chunks' | 'glm-intl' | 'deepseek' | 'doubao' | 'chatgpt';
   /** When true, encode the JSON body into a binary frame before sending. */
   binaryEncodeBody?: boolean;
 }
@@ -929,15 +929,15 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
           appVersion = versionMeta.getAttribute('content')!;
         }
         // Check for __NEXT_DATA__ or similar build manifest
-        const nextData = (window as Record<string, unknown>).__NEXT_DATA__ as
+        const nextData = (window as unknown as Record<string, unknown>).__NEXT_DATA__ as
           | { buildId?: string } | undefined;
         if (nextData?.buildId) {
           appVersion = nextData.buildId;
         }
         // Check for window.__APP_VERSION__ or similar globals
-        const appVer = (window as Record<string, unknown>).__APP_VERSION__ as string | undefined;
+        const appVer = (window as unknown as Record<string, unknown>).__APP_VERSION__ as string | undefined;
         if (appVer) appVersion = appVer;
-        const clientVer = (window as Record<string, unknown>).__CLIENT_VERSION__ as string | undefined;
+        const clientVer = (window as unknown as Record<string, unknown>).__CLIENT_VERSION__ as string | undefined;
         if (clientVer) clientVersion = clientVer;
       } catch { /* use defaults */ }
 
@@ -1428,6 +1428,342 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       window.postMessage({ type: 'WEB_LLM_DONE', requestId }, origin);
     }
 
+    // ── ChatGPT (chatgpt.com) ──────────────────────────────────────────────
+    // Requires Sentinel antibot challenge solving, access token from session,
+    // and stateful conversation management (conversation_id + parent_message_id).
+    async function handleChatGPT(): Promise<void> {
+      // Parse the prompt and optional composite chatId from the lightweight stub body
+      let cgPrompt = '';
+      let existingConversationId = '';
+      let existingParentMsgId = '';
+      try {
+        const bodyObj = JSON.parse(typeof init.body === 'string' ? init.body : '{}') as Record<
+          string,
+          string
+        >;
+        cgPrompt = bodyObj.prompt ?? '';
+        // chatId may be a composite "conversationId|parentMessageId"
+        const chatId = bodyObj.chatId ?? '';
+        if (chatId.includes('|')) {
+          const parts = chatId.split('|');
+          existingConversationId = parts[0] ?? '';
+          existingParentMsgId = parts[1] ?? '';
+        } else {
+          existingConversationId = chatId;
+        }
+      } catch {
+        /* use defaults */
+      }
+
+      // ── Step 1: Fetch access token and device ID from /api/auth/session ──
+      let accessToken = '';
+      let deviceId = '';
+      try {
+        const sessionRes = await fetch('https://chatgpt.com/api/auth/session', {
+          credentials: 'include',
+        });
+        if (sessionRes.ok) {
+          const sessionData = (await sessionRes.json()) as Record<string, unknown>;
+          accessToken = (sessionData.accessToken ?? '') as string;
+          deviceId = ((sessionData as { oaiDeviceId?: string }).oaiDeviceId ?? '') as string;
+        }
+      } catch {
+        /* ignore */
+      }
+
+      if (!deviceId) {
+        deviceId = crypto.randomUUID();
+      }
+
+      if (!accessToken) {
+        window.postMessage(
+          {
+            type: 'WEB_LLM_ERROR',
+            requestId,
+            error: 'No access token found for ChatGPT. Please visit https://chatgpt.com, log in, then reconnect via Settings \u2192 Models.',
+          },
+          origin,
+        );
+        return;
+      }
+
+      // ── Step 2: Base headers ──
+      const baseHeaders = (at: string | undefined, did: string): Record<string, string> => ({
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+        'oai-device-id': did,
+        'oai-language': 'en-US',
+        Referer: window.location.href || 'https://chatgpt.com/',
+        Origin: 'https://chatgpt.com',
+        ...(at ? { Authorization: `Bearer ${at}` } : {}),
+      });
+
+      const cgHeaders = baseHeaders(accessToken, deviceId);
+
+      // ── Step 3: Warmup Sentinel endpoints (must run BEFORE challenge solving) ──
+      // Fire-and-forget — these prewarm sentinel state but should not block or throw.
+      fetch('https://chatgpt.com/backend-api/conversation/init', {
+        method: 'POST', headers: cgHeaders, body: '{}', credentials: 'include',
+      }).catch(() => {});
+      fetch('https://chatgpt.com/backend-api/sentinel/chat-requirements/prepare', {
+        method: 'POST', headers: cgHeaders, body: '{}', credentials: 'include',
+      }).catch(() => {});
+      fetch('https://chatgpt.com/backend-api/sentinel/chat-requirements/finalize', {
+        method: 'POST', headers: cgHeaders, body: '{}', credentials: 'include',
+      }).catch(() => {});
+
+      // ── Step 4: Sentinel antibot challenge solving ──
+      // ChatGPT uses oaistatic.com scripts for Turnstile, Arkose, and proof tokens.
+      // Dynamic import works because we're in MAIN world (page context).
+      // The function names are minified and may change — currently known as:
+      //   bk() = chat-requirements, bi() = turnstile solver,
+      //   bl = arkose enforcer, bm = proof enforcer, fX() = build extra headers
+      let sentinelHeaders: Record<string, string> = {};
+      let sentinelError = '';
+      try {
+        const scripts = Array.from(document.scripts);
+        const assetSrc = scripts
+          .map(s => s.src)
+          .find(s => s?.includes('oaistatic.com') && s.endsWith('.js'));
+        // Fallback to a known CDN URL if page scripts don't contain it
+        const assetUrl = assetSrc || 'https://cdn.oaistatic.com/assets/i5bamk05qmvsi6c3.js';
+
+        const sentinelModule = await import(/* @vite-ignore */ assetUrl);
+
+        if (typeof sentinelModule.bk !== 'function' || typeof sentinelModule.fX !== 'function') {
+          sentinelError = `Sentinel asset missing bk/fX exports (asset: ${assetUrl}). Function names may have been rotated.`;
+        } else {
+          const chatReqs = await sentinelModule.bk();
+          const turnstileKey = chatReqs?.turnstile?.bx ?? chatReqs?.turnstile?.dx;
+
+          if (!turnstileKey) {
+            sentinelError = 'Sentinel chat-requirements response missing turnstile key';
+          } else {
+            let turnstileToken: unknown = null;
+            if (typeof sentinelModule.bi === 'function') {
+              turnstileToken = await sentinelModule.bi(turnstileKey);
+            }
+
+            let arkoseToken: unknown = null;
+            try {
+              if (sentinelModule.bl?.getEnforcementToken) {
+                arkoseToken = await sentinelModule.bl.getEnforcementToken(chatReqs);
+              }
+            } catch {
+              /* Arkose may fail (captcha), continue without */
+            }
+
+            let proofToken: unknown = null;
+            try {
+              if (sentinelModule.bm?.getEnforcementToken) {
+                proofToken = await sentinelModule.bm.getEnforcementToken(chatReqs);
+              }
+            } catch {
+              /* Proof token may fail, continue without */
+            }
+
+            const extraHeaders = await sentinelModule.fX(
+              chatReqs,
+              arkoseToken,
+              turnstileToken,
+              proofToken,
+              null,
+            );
+            if (typeof extraHeaders === 'object' && extraHeaders !== null) {
+              sentinelHeaders = extraHeaders as Record<string, string>;
+            }
+          }
+        }
+      } catch (e) {
+        sentinelError = `Sentinel challenge failed: ${e instanceof Error ? e.message : String(e)}`;
+      }
+
+      // ── Step 5: Build conversation request body ──
+      const messageId = crypto.randomUUID();
+      const parentMessageId = existingParentMsgId || crypto.randomUUID();
+
+      const conversationBody: Record<string, unknown> = {
+        action: 'next',
+        messages: [
+          {
+            id: messageId,
+            author: { role: 'user' },
+            content: {
+              content_type: 'text',
+              parts: [cgPrompt],
+            },
+          },
+        ],
+        parent_message_id: parentMessageId,
+        model: 'auto',
+        timezone_offset_min: new Date().getTimezoneOffset(),
+        history_and_training_disabled: false,
+        conversation_mode: { kind: 'primary_assistant', plugin_ids: null },
+        force_paragen: false,
+        force_paragen_model_slug: '',
+        force_rate_limit: false,
+        reset_rate_limits: false,
+        force_use_sse: true,
+      };
+
+      // Include conversation_id for continuation turns
+      if (existingConversationId) {
+        conversationBody.conversation_id = existingConversationId;
+      }
+
+      // ── Step 6: Send conversation request (with sentinel headers if available) ──
+      let cgResponse: Response;
+      if (Object.keys(sentinelHeaders).length > 0) {
+        // Try with sentinel headers first
+        try {
+          cgResponse = await fetch('https://chatgpt.com/backend-api/conversation', {
+            method: 'POST',
+            headers: { ...cgHeaders, ...sentinelHeaders },
+            credentials: 'include',
+            body: JSON.stringify(conversationBody),
+          });
+        } catch {
+          // Network error with sentinel — fall back to plain request
+          cgResponse = await fetch('https://chatgpt.com/backend-api/conversation', {
+            method: 'POST',
+            headers: cgHeaders,
+            credentials: 'include',
+            body: JSON.stringify(conversationBody),
+          });
+        }
+      } else {
+        // No sentinel headers — plain request
+        cgResponse = await fetch('https://chatgpt.com/backend-api/conversation', {
+          method: 'POST',
+          headers: cgHeaders,
+          credentials: 'include',
+          body: JSON.stringify(conversationBody),
+        });
+      }
+
+      if (!cgResponse.ok) {
+        let errorBody = '';
+        try {
+          errorBody = await cgResponse.text();
+          if (errorBody.length > 500) errorBody = errorBody.slice(0, 500);
+        } catch {
+          /* ignore */
+        }
+        const sentinelHint = sentinelError
+          ? ` Sentinel: ${sentinelError}`
+          : Object.keys(sentinelHeaders).length === 0
+            ? ' Sentinel headers were not available \u2014 the oaistatic script may not have loaded on this page.'
+            : '';
+        const authHint =
+          cgResponse.status === 401 || cgResponse.status === 403
+            ? ` Please visit https://chatgpt.com to verify your account is active, then log out and log back in via Settings \u2192 Models.${sentinelHint}`
+            : '';
+        window.postMessage(
+          {
+            type: 'WEB_LLM_ERROR',
+            requestId,
+            error: `HTTP ${cgResponse.status}: ${cgResponse.statusText}${errorBody ? ` \u2014 ${errorBody}` : ''}${authHint}`,
+          },
+          origin,
+        );
+        return;
+      }
+
+      const cgReader = cgResponse.body?.getReader();
+      if (!cgReader) {
+        window.postMessage(
+          { type: 'WEB_LLM_ERROR', requestId, error: 'No response body from ChatGPT' },
+          origin,
+        );
+        return;
+      }
+
+      // ── Stream SSE response ──
+
+      // Track conversation_id and last assistant message ID for continuation
+      let capturedConversationId = existingConversationId;
+      let capturedParentMsgId = '';
+
+      const cgDecoder = new TextDecoder();
+      let cgBuffer = '';
+
+      while (true) {
+        const { done, value } = await cgReader.read();
+        if (done) break;
+
+        cgBuffer += cgDecoder.decode(value, { stream: true });
+
+        // Process complete lines
+        while (cgBuffer.includes('\n')) {
+          const lineEnd = cgBuffer.indexOf('\n');
+          const line = cgBuffer.slice(0, lineEnd).trim();
+          cgBuffer = cgBuffer.slice(lineEnd + 1);
+
+          if (line.startsWith('data: ')) {
+            const dataStr = line.slice(6).trim();
+
+            // Extract conversation_id and message ID for continuity
+            if (dataStr !== '[DONE]') {
+              try {
+                const parsed = JSON.parse(dataStr) as Record<string, unknown>;
+                if (parsed.conversation_id && typeof parsed.conversation_id === 'string') {
+                  capturedConversationId = parsed.conversation_id;
+                }
+                const msg = parsed.message as Record<string, unknown> | undefined;
+                if (msg?.id && typeof msg.id === 'string') {
+                  const author = msg.author as Record<string, string> | undefined;
+                  if (author?.role === 'assistant') {
+                    capturedParentMsgId = msg.id;
+                  }
+                }
+              } catch {
+                /* ignore parse errors */
+              }
+            }
+
+            const sseChunk = `${line}\n\n`;
+            window.postMessage({ type: 'WEB_LLM_CHUNK', requestId, chunk: sseChunk }, origin);
+          }
+        }
+      }
+
+      // Flush remaining data from decoder
+      const cgFinal = cgDecoder.decode();
+      if (cgFinal) cgBuffer += cgFinal;
+      // Process any remaining complete lines
+      while (cgBuffer.includes('\n')) {
+        const lineEnd = cgBuffer.indexOf('\n');
+        const line = cgBuffer.slice(0, lineEnd).trim();
+        cgBuffer = cgBuffer.slice(lineEnd + 1);
+        if (line.startsWith('data: ')) {
+          window.postMessage(
+            { type: 'WEB_LLM_CHUNK', requestId, chunk: `${line}\n\n` },
+            origin,
+          );
+        }
+      }
+      // Handle final line with no trailing newline
+      const cgRemaining = cgBuffer.trim();
+      if (cgRemaining.startsWith('data: ')) {
+        window.postMessage(
+          { type: 'WEB_LLM_CHUNK', requestId, chunk: `${cgRemaining}\n\n` },
+          origin,
+        );
+      }
+
+      // Inject synthetic conversation state event so the bridge can cache
+      // conversation_id + parent_message_id for the next turn.
+      if (capturedConversationId) {
+        const compositeId = capturedParentMsgId
+          ? `${capturedConversationId}|${capturedParentMsgId}`
+          : capturedConversationId;
+        const idChunk = `data: ${JSON.stringify({ type: 'chatgpt:conversation_state', conversation_id: compositeId })}\n\n`;
+        window.postMessage({ type: 'WEB_LLM_CHUNK', requestId, chunk: idChunk }, origin);
+      }
+
+      window.postMessage({ type: 'WEB_LLM_DONE', requestId }, origin);
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════
     // ROUTING — dispatch to provider-specific handler or fall through to shared
     // ═══════════════════════════════════════════════════════════════════════════
@@ -1449,6 +1785,11 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
 
     if (binaryProtocol === 'doubao') {
       await handleDoubao();
+      return;
+    }
+
+    if (binaryProtocol === 'chatgpt') {
+      await handleChatGPT();
       return;
     }
 

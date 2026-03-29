@@ -132,6 +132,7 @@ interface ChatModel {
 /** Web provider options for UI dropdowns and auth — single source of truth. */
 const WEB_PROVIDER_OPTIONS = [
   { value: 'claude-web', label: 'Claude (claude.ai)', loginUrl: 'https://claude.ai', cookieDomain: '.claude.ai', sessionIndicators: ['sessionKey'], defaultModelId: 'claude-sonnet-4.6', defaultModelName: 'Claude Sonnet 4.6' },
+  { value: 'chatgpt-web', label: 'ChatGPT (chatgpt.com)', loginUrl: 'https://chatgpt.com', cookieDomain: '.chatgpt.com', sessionIndicators: ['__Secure-next-auth.session-token', '__Secure-next-auth.session-token.0'], defaultModelId: 'auto', defaultModelName: 'ChatGPT' },
   { value: 'kimi-web', label: 'Kimi (kimi.com)', loginUrl: 'https://www.kimi.com', cookieDomain: '.kimi.com', sessionIndicators: ['access_token'], checkLocalStorage: true, defaultModelId: 'kimi', defaultModelName: 'Kimi' },
   { value: 'qwen-web', label: 'Qwen (chat.qwen.ai)', loginUrl: 'https://chat.qwen.ai', cookieDomain: '.qwen.ai', sessionIndicators: ['token', 'ctoken', 'login_aliyunid_ticket'], defaultModelId: 'qwen3.5-plus', defaultModelName: 'Qwen 3.5 Plus' },
   { value: 'qwen-cn-web', label: 'Qwen CN (qianwen.com)', loginUrl: 'https://qianwen.com', cookieDomain: '.qianwen.com', sessionIndicators: ['tongyi_sso_ticket'], defaultModelId: 'qwen-max', defaultModelName: 'Qwen Max (CN)' },

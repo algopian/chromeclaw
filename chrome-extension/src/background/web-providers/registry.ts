@@ -3,6 +3,7 @@
  */
 
 import { claudeWeb } from './providers/claude-web';
+import { chatgptWeb } from './providers/chatgpt-web';
 import { deepseekWeb } from './providers/deepseek-web';
 import { doubaoWeb } from './providers/doubao-web';
 import { qwenWeb } from './providers/qwen-web';
@@ -15,6 +16,7 @@ import type { WebProviderDefinition, WebProviderId } from './types';
 
 const providers: WebProviderDefinition[] = [
   claudeWeb,
+  chatgptWeb,
   kimiWeb,
   qwenWeb,
   qwenCnWeb,

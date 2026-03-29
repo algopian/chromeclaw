@@ -5,6 +5,7 @@
  */
 
 import { createClaudeStreamAdapter } from './providers/claude-web-stream-adapter';
+import { createChatGPTStreamAdapter } from './providers/chatgpt-stream-adapter';
 import { createDeepSeekStreamAdapter } from './providers/deepseek-stream-adapter';
 import { createDoubaoStreamAdapter } from './providers/doubao-stream-adapter';
 import { createGeminiStreamAdapter } from './providers/gemini-web-stream-adapter';
@@ -70,6 +71,8 @@ const getSseStreamAdapter = (providerId: WebProviderId, opts?: {
   switch (providerId) {
     case 'claude-web':
       return createClaudeStreamAdapter();
+    case 'chatgpt-web':
+      return createChatGPTStreamAdapter();
     case 'qwen-web':
     case 'qwen-cn-web':
       return createQwenStreamAdapter({ skipNativeTools: opts?.excludeTools });

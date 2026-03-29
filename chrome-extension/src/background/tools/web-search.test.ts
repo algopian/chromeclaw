@@ -409,8 +409,11 @@ describe('runBrowserSearch', () => {
     );
 
     const promise = runBrowserSearch('test', 5, 'google');
+    // Attach a no-op catch handler to prevent unhandled rejection during timer advancement
+    const caught = promise.catch(() => {});
     // Advance past the load timeout (15s)
     await vi.advanceTimersByTimeAsync(20000);
+    await caught;
 
     await expect(promise).rejects.toThrow('Page load timed out');
     expect(mockTabsRemove).toHaveBeenCalledWith(4);

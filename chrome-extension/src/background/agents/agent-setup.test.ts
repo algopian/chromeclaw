@@ -169,15 +169,20 @@ describe('agent-setup', () => {
 
       expect(result).toEqual({
         id: 'gpt-4o',
+        dbId: 'db-id-1',
         name: 'GPT-4o',
         provider: 'openai',
         description: 'OpenAI GPT-4o',
         supportsTools: true,
         supportsReasoning: false,
         routingMode: 'direct',
+        api: undefined,
         apiKey: 'sk-test-key',
         baseUrl: 'https://api.openai.com/v1',
         toolTimeoutSeconds: 300,
+        contextWindow: undefined,
+        azureApiVersion: undefined,
+        webProviderId: undefined,
       });
     });
 
