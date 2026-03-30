@@ -6,6 +6,7 @@ import type {
   ChatMessagePart,
   ChatModel,
   SessionUsage,
+  ThinkingLevel,
   StreamingStatus,
   LLMStreamChunk,
   LLMStreamEnd,
@@ -17,6 +18,7 @@ interface UseLLMStreamOptions {
   chatId: string;
   initialMessages?: ChatMessage[];
   model: ChatModel;
+  thinkingLevel?: ThinkingLevel;
   onStreamComplete?: (assistantMessage: ChatMessage, usage?: SessionUsage) => Promise<void> | void;
   onChatCreated?: (chatId: string, firstUserMessage: string) => void;
   onUserMessageCreated?: (userMessage: ChatMessage) => void;
@@ -42,6 +44,7 @@ const useLLMStream = ({
   chatId,
   initialMessages = [],
   model,
+  thinkingLevel,
   onStreamComplete,
   onChatCreated,
   onUserMessageCreated,
@@ -294,6 +297,7 @@ const useLLMStream = ({
           messages: messagesToSend,
           model,
           assistantMessageId: assistantMessage.id,
+          ...(thinkingLevel ? { thinkingLevel } : {}),
         });
 
         return newMessages;
@@ -304,6 +308,7 @@ const useLLMStream = ({
     [
       chatId,
       model,
+      thinkingLevel,
       status,
       handleChunk,
       handleEnd,

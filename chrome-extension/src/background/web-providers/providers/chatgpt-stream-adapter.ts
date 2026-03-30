@@ -15,8 +15,29 @@
 
 import type { SseStreamAdapter } from '../sse-stream-adapter';
 
+/**
+ * Strip ChatGPT-specific entity markup from text.
+ *
+ * ChatGPT's web API embeds rich-entity references in the raw text stream:
+ *   entity["turn0business0","Cinemark Lincoln Square"]
+ *   entity_metadata["turn0business0","one-line","Cinemark Lincoln Square"]
+ *
+ * These render as business cards / map pins in ChatGPT's own UI but appear
+ * as ugly raw syntax in third-party consumers. Strip them entirely and
+ * collapse any leftover blank lines.
+ */
+const CHATGPT_ENTITY_RE = /entity(?:_metadata)?\["[^"]*"(?:,\s*"[^"]*")*\]\n?/g;
+const EXCESS_NEWLINES_RE = /\n{3,}/g;
+
+const stripChatGPTEntities = (text: string): string => {
+  if (!text.includes('entity')) return text;
+  return text.replace(CHATGPT_ENTITY_RE, '').replace(EXCESS_NEWLINES_RE, '\n\n');
+};
+
 const createChatGPTStreamAdapter = (): SseStreamAdapter => {
   let accumulatedLength = 0;
+  /** Capture the last error message from ChatGPT (e.g. rate-limit errors). */
+  let lastError: string | undefined;
 
   return {
     processEvent({ parsed }) {
@@ -25,6 +46,12 @@ const createChatGPTStreamAdapter = (): SseStreamAdapter => {
       // --- Conversation continuity metadata (passthrough for extractConversationId) ---
       // The bridge's extractConversationId will pick up conversation_id + message.id
       // via the chatgpt tool strategy.
+
+      // Capture error messages from ChatGPT (e.g. "You've hit your limit.")
+      // These arrive as { message: null, error: "..." }
+      if (typeof obj.error === 'string' && obj.error) {
+        lastError = obj.error;
+      }
 
       // Skip non-assistant messages
       const message = obj.message as Record<string, unknown> | undefined;
@@ -56,7 +83,8 @@ const createChatGPTStreamAdapter = (): SseStreamAdapter => {
       const delta = fullText.slice(accumulatedLength);
       accumulatedLength = fullText.length;
 
-      return { feedText: delta };
+      const cleaned = stripChatGPTEntities(delta);
+      return cleaned ? { feedText: cleaned } : null;
     },
 
     flush() {
@@ -67,6 +95,9 @@ const createChatGPTStreamAdapter = (): SseStreamAdapter => {
 
     onFinish({ fullText, hasToolCalls }) {
       if (!fullText && !hasToolCalls) {
+        if (lastError) {
+          return { error: `ChatGPT: ${lastError}` };
+        }
         return { error: 'Empty response from ChatGPT. Please verify your ChatGPT session is active and try again.' };
       }
       return null;

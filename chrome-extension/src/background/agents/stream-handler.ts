@@ -100,7 +100,7 @@ const handleLLMStream = async (
   port: chrome.runtime.Port,
   request: LLMRequestMessage,
 ): Promise<void> => {
-  const { chatId, messages, model: modelConfig, assistantMessageId } = request;
+  const { chatId, messages, model: modelConfig, assistantMessageId, thinkingLevel } = request;
   const assistantParts: ChatMessagePart[] = [];
 
   streamLog.info('Stream started', { chatId, model: modelConfig.id });
@@ -109,6 +109,7 @@ const handleLLMStream = async (
     modelId: modelConfig.id,
     provider: modelConfig.provider,
     messageCount: messages.length,
+    ...(thinkingLevel ? { thinkingLevel } : {}),
   });
 
   try {
@@ -193,6 +194,7 @@ const handleLLMStream = async (
       convertToLlm: makeConvertToLlm(modelConfig),
       transformContext: notifyingTransformContext,
       chatId,
+      thinkingLevel,
       onProviderLimitDetected: setProviderLimit,
       onRetry: info => {
         // Reset accumulated parts on retry — the stream restarts fresh

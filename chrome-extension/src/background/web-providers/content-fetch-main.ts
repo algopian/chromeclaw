@@ -161,12 +161,14 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
 
       // Parse the prompt from the init body (passed as JSON from buildRequest)
       let geminiPrompt = '';
+      let geminiThinkingLevel = 'fast';
       try {
         const bodyObj = JSON.parse(typeof init.body === 'string' ? init.body : '{}') as Record<
           string,
           string
         >;
         geminiPrompt = bodyObj.prompt ?? '';
+        geminiThinkingLevel = bodyObj.thinkingLevel ?? 'fast';
       } catch {
         /* use empty */
       }
@@ -176,6 +178,9 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       // We randomize it since we don't persist session-level state.
       const gemReqId = Math.floor(Math.random() * 9_000_000) + 1_000_000;
       const clientUuid = crypto.randomUUID();
+
+      // Thinking flag: [[0]] = thinking ON, [[1]] = thinking OFF (fast)
+      const thinkingFlag = geminiThinkingLevel === 'thinking' ? [[0]] : [[1]];
 
       // prettier-ignore
       const innerJson = JSON.stringify([
@@ -192,7 +197,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
         /* [10] unknown (1) */               1,
         /* [11] unknown (0) */               0,
         /* [12-16] */                        null, null, null, null, null,
-        /* [17] thinking: [[0]]=ON, [[1]]=OFF (fast) */ [[1]],
+        /* [17] thinking: [[0]]=ON, [[1]]=OFF (fast) */ thinkingFlag,
         /* [18] unknown (0) */               0,
         /* [19-26] */                        null, null, null, null, null, null, null, null,
         /* [27] unknown (1) */               1,
@@ -1495,22 +1500,32 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
         'oai-language': 'en-US',
         Referer: window.location.href || 'https://chatgpt.com/',
         Origin: 'https://chatgpt.com',
+        'sec-ch-ua': (navigator as Navigator & { userAgentData?: { brands?: { brand: string; version: string }[] } })
+          .userAgentData?.brands
+          ? (navigator as Navigator & { userAgentData: { brands: { brand: string; version: string }[] } })
+              .userAgentData.brands.map(b => `"${b.brand}";v="${b.version}"`).join(', ')
+          : '"Chromium";v="131", "Not_A Brand";v="24"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': (navigator as Navigator & { userAgentData?: { platform?: string } })
+          .userAgentData?.platform
+          ? `"${(navigator as Navigator & { userAgentData: { platform: string } }).userAgentData.platform}"`
+          : '"Unknown"',
         ...(at ? { Authorization: `Bearer ${at}` } : {}),
       });
 
       const cgHeaders = baseHeaders(accessToken, deviceId);
 
-      // ── Step 3: Warmup Sentinel endpoints (must run BEFORE challenge solving) ──
-      // Fire-and-forget — these prewarm sentinel state but should not block or throw.
-      fetch('https://chatgpt.com/backend-api/conversation/init', {
+      // ── Step 3: Warmup Sentinel endpoints (must complete BEFORE challenge solving) ──
+      // These prime server-side sentinel state; skipping them causes 403 "unusual activity".
+      try { await fetch('https://chatgpt.com/backend-api/conversation/init', {
         method: 'POST', headers: cgHeaders, body: '{}', credentials: 'include',
-      }).catch(() => {});
-      fetch('https://chatgpt.com/backend-api/sentinel/chat-requirements/prepare', {
+      }); } catch { /* ignore */ }
+      try { await fetch('https://chatgpt.com/backend-api/sentinel/chat-requirements/prepare', {
         method: 'POST', headers: cgHeaders, body: '{}', credentials: 'include',
-      }).catch(() => {});
-      fetch('https://chatgpt.com/backend-api/sentinel/chat-requirements/finalize', {
+      }); } catch { /* ignore */ }
+      try { await fetch('https://chatgpt.com/backend-api/sentinel/chat-requirements/finalize', {
         method: 'POST', headers: cgHeaders, body: '{}', credentials: 'include',
-      }).catch(() => {});
+      }); } catch { /* ignore */ }
 
       // ── Step 4: Sentinel antibot challenge solving ──
       // ChatGPT uses oaistatic.com scripts for Turnstile, Arkose, and proof tokens.
@@ -1521,11 +1536,17 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       let sentinelHeaders: Record<string, string> = {};
       let sentinelError = '';
       try {
-        const scripts = Array.from(document.scripts);
-        const assetSrc = scripts
-          .map(s => s.src)
-          .find(s => s?.includes('oaistatic.com') && s.endsWith('.js'));
-        // Fallback to a known CDN URL if page scripts don't contain it
+        // Wait up to 10s for the oaistatic sentinel script to appear in the DOM.
+        // The page may still be loading scripts; using the live DOM script ensures
+        // the tokens match the current page session (stale CDN fallbacks cause 403).
+        let assetSrc: string | undefined;
+        for (let i = 0; i < 20; i++) {
+          assetSrc = Array.from(document.scripts)
+            .map(s => s.src)
+            .find(s => s?.includes('oaistatic.com') && s.endsWith('.js'));
+          if (assetSrc) break;
+          await new Promise(r => setTimeout(r, 500));
+        }
         const assetUrl = assetSrc || 'https://cdn.oaistatic.com/assets/i5bamk05qmvsi6c3.js';
 
         const sentinelModule = await import(/* @vite-ignore */ assetUrl);
@@ -1533,42 +1554,69 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
         if (typeof sentinelModule.bk !== 'function' || typeof sentinelModule.fX !== 'function') {
           sentinelError = `Sentinel asset missing bk/fX exports (asset: ${assetUrl}). Function names may have been rotated.`;
         } else {
-          const chatReqs = await sentinelModule.bk();
+          const chatReqs = await Promise.race([
+            sentinelModule.bk(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('chat-requirements timed out after 15s')), 15_000)),
+          ]) as Record<string, unknown>;
           const turnstileKey = chatReqs?.turnstile?.bx ?? chatReqs?.turnstile?.dx;
 
           if (!turnstileKey) {
             sentinelError = 'Sentinel chat-requirements response missing turnstile key';
           } else {
             let turnstileToken: unknown = null;
-            if (typeof sentinelModule.bi === 'function') {
-              turnstileToken = await sentinelModule.bi(turnstileKey);
+            try {
+              if (typeof sentinelModule.bi === 'function') {
+                turnstileToken = await Promise.race([
+                  sentinelModule.bi(turnstileKey),
+                  new Promise((_, reject) => setTimeout(() => reject(new Error('Turnstile solver timed out after 15s')), 15_000)),
+                ]);
+              }
+            } catch {
+              /* Turnstile may fail or hang, continue without */
             }
 
             let arkoseToken: unknown = null;
             try {
               if (sentinelModule.bl?.getEnforcementToken) {
-                arkoseToken = await sentinelModule.bl.getEnforcementToken(chatReqs);
+                arkoseToken = await Promise.race([
+                  sentinelModule.bl.getEnforcementToken(chatReqs),
+                  new Promise((_, reject) => setTimeout(() => reject(new Error('Arkose timed out after 15s')), 15_000)),
+                ]);
               }
             } catch {
               /* Arkose may fail (captcha), continue without */
             }
 
+            // Resolve proof-of-work token. bm may be:
+            // - An enforcer object with getEnforcementToken() (older API)
+            // - A PoW solver object with {answers, maxAttempts, requirementsSeed, sid}
+            //   which fX() uses directly to build the Proof-Token header
             let proofToken: unknown = null;
             try {
-              if (sentinelModule.bm?.getEnforcementToken) {
-                proofToken = await sentinelModule.bm.getEnforcementToken(chatReqs);
+              if (sentinelModule.bm) {
+                if (typeof sentinelModule.bm.getEnforcementToken === 'function') {
+                  proofToken = await Promise.race([
+                    sentinelModule.bm.getEnforcementToken(chatReqs),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Proof token timed out after 15s')), 15_000)),
+                  ]);
+                } else if (sentinelModule.bm.answers !== undefined) {
+                  proofToken = sentinelModule.bm;
+                }
               }
             } catch {
               /* Proof token may fail, continue without */
             }
 
-            const extraHeaders = await sentinelModule.fX(
-              chatReqs,
-              arkoseToken,
-              turnstileToken,
-              proofToken,
-              null,
-            );
+            const extraHeaders = await Promise.race([
+              sentinelModule.fX(
+                chatReqs,
+                arkoseToken,
+                turnstileToken,
+                proofToken,
+                null,
+              ),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('fX header builder timed out after 15s')), 15_000)),
+            ]);
             if (typeof extraHeaders === 'object' && extraHeaders !== null) {
               sentinelHeaders = extraHeaders as Record<string, string>;
             }
@@ -1612,27 +1660,20 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       }
 
       // ── Step 6: Send conversation request (with sentinel headers if available) ──
+      const finalHeaders = Object.keys(sentinelHeaders).length > 0
+        ? { ...cgHeaders, ...sentinelHeaders }
+        : cgHeaders;
+
       let cgResponse: Response;
-      if (Object.keys(sentinelHeaders).length > 0) {
-        // Try with sentinel headers first
-        try {
-          cgResponse = await fetch('https://chatgpt.com/backend-api/conversation', {
-            method: 'POST',
-            headers: { ...cgHeaders, ...sentinelHeaders },
-            credentials: 'include',
-            body: JSON.stringify(conversationBody),
-          });
-        } catch {
-          // Network error with sentinel — fall back to plain request
-          cgResponse = await fetch('https://chatgpt.com/backend-api/conversation', {
-            method: 'POST',
-            headers: cgHeaders,
-            credentials: 'include',
-            body: JSON.stringify(conversationBody),
-          });
-        }
-      } else {
-        // No sentinel headers — plain request
+      try {
+        cgResponse = await fetch('https://chatgpt.com/backend-api/conversation', {
+          method: 'POST',
+          headers: finalHeaders,
+          credentials: 'include',
+          body: JSON.stringify(conversationBody),
+        });
+      } catch {
+        // Network error — retry without sentinel headers
         cgResponse = await fetch('https://chatgpt.com/backend-api/conversation', {
           method: 'POST',
           headers: cgHeaders,

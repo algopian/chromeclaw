@@ -657,6 +657,137 @@ describe('createXmlTagParser', () => {
   });
 });
 
+describe('tool_call inside <think> block (Gemini pattern)', () => {
+  it('auto-closes thinking and parses tool_call when tool_call is inside <think>', () => {
+    const parser = createXmlTagParser();
+    const events = parser.feed(
+      '<think>\n<tool_call id="a689b271" name="web_search">{"query":"latest AI trends March 2026"}</tool_call>',
+    );
+    expect(events).toEqual([
+      { type: 'thinking_start' },
+      { type: 'thinking_delta', text: '\n' },
+      { type: 'thinking_end' },
+      {
+        type: 'tool_call',
+        id: 'a689b271',
+        name: 'web_search',
+        arguments: { query: 'latest AI trends March 2026' },
+      },
+    ]);
+  });
+
+  it('handles tool_call inside <think> with streamed chunks (Gemini SSE pattern)', () => {
+    const parser = createXmlTagParser();
+
+    const e1 = parser.feed('<think');
+    expect(e1).toEqual([]);
+
+    const e2 = parser.feed('>');
+    expect(e2).toEqual([{ type: 'thinking_start' }]);
+
+    const e3 = parser.feed('\n<tool_call id="');
+    expect(e3).toEqual([{ type: 'thinking_delta', text: '\n' }]);
+
+    const e4 = parser.feed('a689b271');
+    expect(e4).toEqual([]);
+
+    // Once the full opening tag is complete, thinking auto-closes
+    const e5 = parser.feed('" name="web_search">{"query":"latest');
+    expect(e5).toEqual([{ type: 'thinking_end' }]);
+
+    const e6 = parser.feed(' AI trends March 2026"');
+    expect(e6).toEqual([]);
+
+    const e7 = parser.feed('}</tool_call>');
+    expect(e7).toEqual([
+      {
+        type: 'tool_call',
+        id: 'a689b271',
+        name: 'web_search',
+        arguments: { query: 'latest AI trends March 2026' },
+      },
+    ]);
+  });
+
+  it('handles thinking text before tool_call inside <think>', () => {
+    const parser = createXmlTagParser();
+    const events = parser.feed(
+      '<think>The user wants to search for AI trends.\n<tool_call id="t1" name="web_search">{"query":"AI"}</tool_call>',
+    );
+    expect(events).toEqual([
+      { type: 'thinking_start' },
+      { type: 'thinking_delta', text: 'The user wants to search for AI trends.\n' },
+      { type: 'thinking_end' },
+      {
+        type: 'tool_call',
+        id: 't1',
+        name: 'web_search',
+        arguments: { query: 'AI' },
+      },
+    ]);
+  });
+
+  it('prefers </think> over <tool_call> when </think> comes first', () => {
+    const parser = createXmlTagParser();
+    const events = parser.feed(
+      '<think>reasoning</think><tool_call id="t1" name="web_search">{"query":"test"}</tool_call>',
+    );
+    expect(events).toEqual([
+      { type: 'thinking_start' },
+      { type: 'thinking_delta', text: 'reasoning' },
+      { type: 'thinking_end' },
+      {
+        type: 'tool_call',
+        id: 't1',
+        name: 'web_search',
+        arguments: { query: 'test' },
+      },
+    ]);
+  });
+
+  it('retains partial <tool_call prefix inside thinking block', () => {
+    const parser = createXmlTagParser();
+
+    const e1 = parser.feed('<think>thinking...<tool_');
+    expect(e1).toEqual([
+      { type: 'thinking_start' },
+      { type: 'thinking_delta', text: 'thinking...' },
+    ]);
+
+    const e2 = parser.feed('call id="t1" name="search">{"q":"x"}</tool_call>');
+    expect(e2).toEqual([
+      { type: 'thinking_end' },
+      {
+        type: 'tool_call',
+        id: 't1',
+        name: 'search',
+        arguments: { q: 'x' },
+      },
+    ]);
+  });
+
+  it('flush() with unclosed <think> containing unclosed <tool_call> parses the tool_call', () => {
+    const parser = createXmlTagParser();
+    // feed() detects <tool_call> inside thinking, auto-closes thinking, enters tool_call state
+    const feedEvents = parser.feed('<think>\n<tool_call id="t1" name="web_search">{"query":"test"}');
+    expect(feedEvents).toEqual([
+      { type: 'thinking_start' },
+      { type: 'thinking_delta', text: '\n' },
+      { type: 'thinking_end' },
+    ]);
+    // flush() now just needs to close the unclosed tool_call
+    const events = parser.flush();
+    expect(events).toEqual([
+      {
+        type: 'tool_call',
+        id: 't1',
+        name: 'web_search',
+        arguments: { query: 'test' },
+      },
+    ]);
+  });
+});
+
 describe('hallucinated tool_response suppression', () => {
   it('discards <tool_response>...</tool_response> content entirely', () => {
     const parser = createXmlTagParser();

@@ -211,6 +211,85 @@ describe('createChatGPTStreamAdapter', () => {
       // may have produced only tool calls without any text output.
       expect(result).toBeNull();
     });
+
+    it('surfaces ChatGPT error message (e.g. rate limit) instead of generic error', () => {
+      const adapter = createChatGPTStreamAdapter();
+      // Simulate a rate-limit error event: { message: null, error: "..." }
+      const errorEvent = {
+        message: null,
+        conversation_id: 'conv-123',
+        error: "You've hit your limit. Please try again later.",
+        error_code: null,
+      };
+      adapter.processEvent({ parsed: errorEvent, delta: null });
+      const result = adapter.onFinish?.({
+        hasToolCalls: false,
+        fullText: '',
+        thinkingContent: undefined,
+      });
+      expect(result).toEqual({
+        error: "ChatGPT: You've hit your limit. Please try again later.",
+      });
+    });
+  });
+
+  describe('entity stripping', () => {
+    it('strips entity[] references from text', () => {
+      const adapter = createChatGPTStreamAdapter();
+      const text = '### entity["turn0business0","Cinemark Lincoln Square"]\nThis is the main theater.';
+      expect(adapter.processEvent({ parsed: assistantEvent(text), delta: null })).toEqual({
+        feedText: '### This is the main theater.',
+      });
+    });
+
+    it('strips entity_metadata[] references from text', () => {
+      const adapter = createChatGPTStreamAdapter();
+      const text = 'entity_metadata["turn0business0","one-line","Cinemark Lincoln Square"]\nThis is the main theater.';
+      expect(adapter.processEvent({ parsed: assistantEvent(text), delta: null })).toEqual({
+        feedText: 'This is the main theater.',
+      });
+    });
+
+    it('strips mixed entity and entity_metadata references', () => {
+      const adapter = createChatGPTStreamAdapter();
+      const text = [
+        '## Theater in Bellevue',
+        '### entity["turn0business0","Cinemark Lincoln Square"]',
+        'entity_metadata["turn0business0","one-line","Cinemark Lincoln Square"]',
+        'This is the main theater.',
+      ].join('\n');
+      expect(adapter.processEvent({ parsed: assistantEvent(text), delta: null })).toEqual({
+        feedText: '## Theater in Bellevue\n### This is the main theater.',
+      });
+    });
+
+    it('does not strip text without entity patterns', () => {
+      const adapter = createChatGPTStreamAdapter();
+      const text = 'Hello, this is a normal response.';
+      expect(adapter.processEvent({ parsed: assistantEvent(text), delta: null })).toEqual({
+        feedText: 'Hello, this is a normal response.',
+      });
+    });
+
+    it('strips entity-only delta down to whitespace', () => {
+      const adapter = createChatGPTStreamAdapter();
+      // First event: normal text
+      adapter.processEvent({ parsed: assistantEvent('Hello'), delta: null });
+      // Second event adds only entity markup on a new line
+      const text = 'Hello\nentity["turn0business0","Theater"]';
+      // After stripping, only a newline remains — still valid whitespace output
+      expect(adapter.processEvent({ parsed: assistantEvent(text), delta: null })).toEqual({
+        feedText: '\n',
+      });
+    });
+
+    it('collapses excess newlines after stripping', () => {
+      const adapter = createChatGPTStreamAdapter();
+      const text = 'Before\n\n\nentity["id","Name"]\n\n\nAfter';
+      expect(adapter.processEvent({ parsed: assistantEvent(text), delta: null })).toEqual({
+        feedText: 'Before\n\nAfter',
+      });
+    });
   });
 
   describe('text with object-style parts', () => {

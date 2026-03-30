@@ -167,6 +167,10 @@
   "chat_modelSelect": {
     "message": "模型"
   },
+  "chat_thinkLevelThinking": { "message": "深度思考" },
+  "chat_thinkLevelThinkingDesc": { "message": "解决复杂问题" },
+  "chat_thinkLevelFast": { "message": "快速" },
+  "chat_thinkLevelFastDesc": { "message": "快速回答" },
   "chat_fileSizeError": {
     "message": "文件「$FILE_NAME$」超过 10MB 限制。",
     "placeholders": {

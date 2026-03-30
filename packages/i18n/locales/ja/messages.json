@@ -167,6 +167,10 @@
   "chat_modelSelect": {
     "message": "モデル"
   },
+  "chat_thinkLevelThinking": { "message": "思考" },
+  "chat_thinkLevelThinkingDesc": { "message": "複雑な問題を解決" },
+  "chat_thinkLevelFast": { "message": "高速" },
+  "chat_thinkLevelFastDesc": { "message": "すばやく回答" },
   "chat_fileSizeError": {
     "message": "ファイル「$FILE_NAME$」が 10MB の制限を超えています。",
     "placeholders": {

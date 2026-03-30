@@ -4,6 +4,8 @@
  * inheriting the user's logged-in session on provider websites.
  */
 
+import type { ThinkingLevel } from '@extension/shared';
+
 /** Identifier for each supported web LLM provider. */
 type WebProviderId =
   | 'claude-web'
@@ -32,6 +34,8 @@ interface WebRequestOpts {
   credential: { providerId: string; cookies: Record<string, string>; token?: string };
   /** Conversation ID for providers that use stateful conversations. */
   conversationId?: string;
+  /** Thinking level selected by the user (fast/thinking). */
+  thinkingLevel?: ThinkingLevel;
 }
 
 /** Definition for a web LLM provider. */

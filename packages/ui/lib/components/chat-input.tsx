@@ -14,9 +14,16 @@ import { useT } from '@extension/i18n';
 import { SendIcon, SquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { Check } from 'lucide-react';
+import { Select as SelectPrimitive } from 'radix-ui';
 import { getSlashCommands } from '@extension/shared';
-import type { Attachment, ChatModel, SlashCommandDef, StreamingStatus } from '@extension/shared';
+import type { Attachment, ChatModel, SlashCommandDef, ThinkingLevel, StreamingStatus } from '@extension/shared';
 import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent } from 'react';
+
+const THINKING_LEVEL_I18N = {
+  fast: { label: 'chat_thinkLevelFast', desc: 'chat_thinkLevelFastDesc' },
+  thinking: { label: 'chat_thinkLevelThinking', desc: 'chat_thinkLevelThinkingDesc' },
+} as const;
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_FILES = 5;
@@ -31,6 +38,10 @@ type ChatInputProps = {
   models: ChatModel[];
   selectedModelId: string;
   onModelChange: (modelId: string) => void;
+  thinkingLevel?: ThinkingLevel;
+  onThinkingLevelChange?: (level: ThinkingLevel) => void;
+  /** Supported thinking levels for the current web provider (empty = no dropdown). */
+  supportedThinkingLevels?: ThinkingLevel[];
 };
 
 const ChatInput = ({
@@ -42,6 +53,9 @@ const ChatInput = ({
   models,
   selectedModelId,
   onModelChange,
+  thinkingLevel,
+  onThinkingLevelChange,
+  supportedThinkingLevels,
 }: ChatInputProps) => {
   const t = useT();
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -67,6 +81,8 @@ const ChatInput = ({
 
   const isStreaming = status === 'streaming' || status === 'connecting';
   const isUploading = uploadQueue.length > 0;
+
+  const showThinkingLevel = supportedThinkingLevels && supportedThinkingLevels.length > 0;
 
   const processFile = useCallback(
     (file: File): Promise<Attachment | null> =>
@@ -311,14 +327,43 @@ const ChatInput = ({
               </Select>
             )}
           </div>
-          <Button
-            className="gap-1.5 rounded-lg"
-            disabled={isUploading || (!isStreaming && !input.trim() && attachments.length === 0)}
-            size="icon"
-            type="submit"
-            variant="default">
-            {isStreaming ? <SquareIcon className="size-4" /> : <SendIcon className="size-4" />}
-          </Button>
+          <div className="flex items-center gap-1">
+            {showThinkingLevel && (
+              <Select onValueChange={v => onThinkingLevelChange?.(v as ThinkingLevel)} value={thinkingLevel ?? 'fast'}>
+                <SelectTrigger
+                  className={cn(
+                    'text-muted-foreground h-auto border-none bg-transparent px-2 py-1.5 font-medium shadow-none transition-colors',
+                    'hover:bg-accent hover:text-foreground',
+                  )}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {supportedThinkingLevels.map(level => (
+                    <SelectPrimitive.Item
+                      key={level}
+                      value={level}
+                      className="focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none">
+                      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                        <SelectPrimitive.ItemIndicator><Check className="h-4 w-4" /></SelectPrimitive.ItemIndicator>
+                      </span>
+                      <div className="flex flex-col">
+                        <SelectPrimitive.ItemText>{t(THINKING_LEVEL_I18N[level].label)}</SelectPrimitive.ItemText>
+                        <span className="text-muted-foreground text-xs">{t(THINKING_LEVEL_I18N[level].desc)}</span>
+                      </div>
+                    </SelectPrimitive.Item>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Button
+              className="gap-1.5 rounded-lg"
+              disabled={isUploading || (!isStreaming && !input.trim() && attachments.length === 0)}
+              size="icon"
+              type="submit"
+              variant="default">
+              {isStreaming ? <SquareIcon className="size-4" /> : <SendIcon className="size-4" />}
+            </Button>
+          </div>
         </div>
       </form>
     </div>

@@ -238,8 +238,9 @@ const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) =>
       const wpMatch = WEB_PROVIDER_OPTIONS.find(w => w.value === webProviderId);
       const resolvedModelId = modelId || (isWeb ? wpMatch?.defaultModelId : undefined) || '';
       const defaultName = isWeb ? wpMatch?.defaultModelName : undefined;
-      const resolvedName = p?.label
-        ? `${p.label} ${resolvedModelId || defaultName || ''}`.trim()
+      const displayLabel = isWeb && webProviderId ? webProviderId : p?.label;
+      const resolvedName = displayLabel
+        ? `${displayLabel} / ${resolvedModelId || defaultName || ''}`.trim()
         : resolvedModelId || defaultName || '';
       await customModelsStorage.set([
         {

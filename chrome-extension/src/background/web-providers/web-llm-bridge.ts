@@ -32,7 +32,7 @@ import type { AssistantMessage, AssistantMessageEventStream, TextContent } from 
 import type { ContentFetchRequest } from './content-fetch-main';
 import type { WebProviderId } from './types';
 import type { ParsedEvent } from './xml-tag-parser';
-import type { ChatModel } from '@extension/shared';
+import type { ChatModel, ThinkingLevel } from '@extension/shared';
 
 const bridgeLog = createLogger('web-llm');
 
@@ -50,6 +50,8 @@ export const requestWebGeneration = (opts: {
   supportsReasoning?: boolean;
   /** Chat ID for conversation caching — allows conversation ID reuse across turns. */
   chatId?: string;
+  /** Thinking level for web providers (fast/thinking). */
+  thinkingLevel?: ThinkingLevel;
 }): AssistantMessageEventStream => {
   const stream = createAssistantMessageEventStream();
   const requestId = crypto.randomUUID();
@@ -439,6 +441,7 @@ export const requestWebGeneration = (opts: {
           systemPrompt: finalSystemPrompt,
           credential,
           conversationId,
+          thinkingLevel: opts.thinkingLevel,
         });
 
       // Find or create a tab at the provider domain

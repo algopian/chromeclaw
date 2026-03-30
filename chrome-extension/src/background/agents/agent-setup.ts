@@ -31,7 +31,7 @@ import {
 import { nanoid } from 'nanoid';
 import { IS_FIREFOX } from '@extension/env';
 import type { ErrorCategory } from '../errors/error-classification';
-import type { ChatModel, ChatMessagePart, ModelApi, ModelProvider } from '@extension/shared';
+import type { ChatModel, ChatMessagePart, ModelApi, ModelProvider, ThinkingLevel } from '@extension/shared';
 import type { DbChatModel, DbChat } from '@extension/storage';
 import type { AgentEvent, AgentMessage } from '@mariozechner/pi-agent-core';
 import type { AssistantMessage, ImageContent, Message, TextContent } from '@mariozechner/pi-ai';
@@ -85,6 +85,8 @@ export interface RunAgentOpts {
   tools?: Awaited<ReturnType<typeof getAgentTools>>;
   signal?: AbortSignal;
   chatId?: string;
+  /** Thinking level for web providers (fast/thinking). */
+  thinkingLevel?: ThinkingLevel;
 
   // Retry callback (optional — UI can wire to show retry notifications)
   onRetry?: (info: RetryInfo) => void;
@@ -427,6 +429,7 @@ export const runAgent = async (opts: RunAgentOpts): Promise<RunAgentResult> => {
     tools: toolsOverride,
     signal,
     chatId,
+    thinkingLevel,
     onRetry,
     onTextDelta,
     onReasoningDelta,
@@ -438,7 +441,7 @@ export const runAgent = async (opts: RunAgentOpts): Promise<RunAgentResult> => {
 
   // 1. Build pi-mono primitives (shared across attempts)
   const { model: piModel } = chatModelToPiModel(model);
-  const streamFn = createStreamFn(model, chatId);
+  const streamFn = createStreamFn(model, { chatId, thinkingLevel });
   let tools =
     toolsOverride ??
     (model.supportsTools !== false

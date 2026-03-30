@@ -15,16 +15,16 @@ import { geminiWeb } from './providers/gemini-web';
 import type { WebProviderDefinition, WebProviderId } from './types';
 
 const providers: WebProviderDefinition[] = [
-  claudeWeb,
+  geminiWeb,
   chatgptWeb,
+  claudeWeb,
+  deepseekWeb,
+  doubaoWeb,
   kimiWeb,
   qwenWeb,
   qwenCnWeb,
   glmWeb,
   glmIntlWeb,
-  geminiWeb,
-  deepseekWeb,
-  doubaoWeb,
 ];
 
 const providerMap = new Map<WebProviderId, WebProviderDefinition>(providers.map(p => [p.id, p]));

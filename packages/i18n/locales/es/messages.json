@@ -167,6 +167,10 @@
   "chat_modelSelect": {
     "message": "Modelo"
   },
+  "chat_thinkLevelThinking": { "message": "Pensamiento" },
+  "chat_thinkLevelThinkingDesc": { "message": "Resuelve problemas complejos" },
+  "chat_thinkLevelFast": { "message": "Rápido" },
+  "chat_thinkLevelFastDesc": { "message": "Responde rápidamente" },
   "chat_fileSizeError": {
     "message": "El archivo \"$FILE_NAME$\" supera el límite de 10 MB.",
     "placeholders": {

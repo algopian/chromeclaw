@@ -167,6 +167,10 @@
   "chat_modelSelect": {
     "message": "Модель"
   },
+  "chat_thinkLevelThinking": { "message": "Размышление" },
+  "chat_thinkLevelThinkingDesc": { "message": "Решает сложные задачи" },
+  "chat_thinkLevelFast": { "message": "Быстро" },
+  "chat_thinkLevelFastDesc": { "message": "Отвечает быстро" },
   "chat_fileSizeError": {
     "message": "Файл \"$FILE_NAME$\" превышает лимит в 10 МБ.",
     "placeholders": {

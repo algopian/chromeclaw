@@ -1,3 +1,4 @@
+import { extractGeminiText } from './gemini-web-stream-adapter';
 import type { WebProviderDefinition } from '../types';
 
 /**
@@ -38,42 +39,12 @@ const geminiWeb: WebProviderDefinition = {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, thinkingLevel: opts.thinkingLevel }),
         credentials: 'include' as RequestCredentials,
       },
     };
   },
-  parseSseDelta: data => {
-    // The stream adapter handles cumulative text deduplication — this just extracts
-    // the raw cumulative text from the deeply nested response structure.
-    // Outer: [["wrb.fr", null, "<inner_json>"]]
-    // Inner[4][0][1] = text segments array
-    try {
-      const arr = data as unknown[];
-      if (!Array.isArray(arr) || !arr[0] || !Array.isArray(arr[0])) return null;
-      const inner = arr[0][2];
-      if (typeof inner !== 'string') return null;
-      const parsed = JSON.parse(inner);
-      const candidates = parsed?.[4];
-      if (!Array.isArray(candidates) || candidates.length === 0) return null;
-      const firstCandidate = candidates[0];
-      if (!Array.isArray(firstCandidate)) return null;
-      const textArr = firstCandidate[1];
-      if (Array.isArray(textArr) && textArr.length > 0) {
-        const text = textArr.join('');
-        // Gemini escapes Markdown-special characters with backslashes; strip them
-        // so XML tool-call tags and other structured content parse correctly.
-        // Also strip auto-linkified markdown URLs [text](url) → text (see
-        // gemini-web-stream-adapter.ts for detailed rationale).
-        return text
-          .replace(/\\([\\`*_{}[\]()#+\-.!|<>~])/g, '$1')
-          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  },
+  parseSseDelta: data => extractGeminiText(data),
 };
 
 export { geminiWeb };

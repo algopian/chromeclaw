@@ -18,6 +18,7 @@ export {
   type SuggestedAction,
 } from './suggested-actions-storage.js';
 export { selectedModelStorage } from './selected-model-storage.js';
+export { thinkingLevelStorage } from './speed-mode-storage.js';
 export { activeAgentStorage } from './active-agent-storage.js';
 export { lastActiveSessionStorage } from './session-storage.js';
 export { logConfigStorage, defaultLogConfig } from './log-config-storage.js';

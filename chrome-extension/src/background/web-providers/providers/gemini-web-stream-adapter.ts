@@ -105,7 +105,14 @@ const createGeminiStreamAdapter = (): SseStreamAdapter => {
       // Gemini sometimes prefixes cumulative text with bare "think\n" (its native
       // chain-of-thought without XML tags), followed later by proper <think>...</think>.
       // Suppress the bare prefix so only the XML-tagged thinking reaches the parser.
+      // The prefix may arrive in pieces (e.g. "think" then "\n<think>..."), so we
+      // also suppress partial prefixes that could grow into "think\n".
       if (!prefixResolved) {
+        if ('think\n'.startsWith(fullText)) {
+          // Partial prefix — suppress and wait for more data
+          prevText = fullText;
+          return null;
+        }
         if (fullText.startsWith('think\n')) {
           const thinkIdx = fullText.indexOf('<think>');
           const toolIdx = fullText.indexOf('<tool_call');

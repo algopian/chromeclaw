@@ -21,7 +21,7 @@ const chatgptWeb: WebProviderDefinition = {
   // ChatGPT uses __Secure-next-auth.session-token (may be split into .0 / .1)
   sessionIndicators: ['__Secure-next-auth.session-token', '__Secure-next-auth.session-token.0'],
   defaultModelId: 'auto',
-  defaultModelName: 'ChatGPT',
+  defaultModelName: 'GPT-5.3',
   supportsTools: true,
   supportsReasoning: true,
   contextWindow: 128_000,

@@ -182,6 +182,53 @@ describe('createGeminiStreamAdapter', () => {
       })).toEqual({ feedText: 'Hello world' });
     });
 
+    it('suppresses partial "think" prefix until full "think\\n" is confirmed', () => {
+      const adapter = createGeminiStreamAdapter();
+      // First chunk: just "think" (no newline yet)
+      expect(adapter.processEvent({
+        parsed: textChunk('think'),
+        delta: null,
+      })).toBeNull();
+      // Second chunk: grows to "think\n<think>" — bare prefix confirmed + XML tag found
+      expect(adapter.processEvent({
+        parsed: textChunk('think\n<think>\nreasoning\n</think>Hello'),
+        delta: null,
+      })).toEqual({ feedText: '<think>\nreasoning\n</think>Hello' });
+    });
+
+    it('suppresses partial "thi" prefix until resolved', () => {
+      const adapter = createGeminiStreamAdapter();
+      // Partial prefix that could grow into "think\n"
+      expect(adapter.processEvent({
+        parsed: textChunk('thi'),
+        delta: null,
+      })).toBeNull();
+      // Grows into "think\n<tool_call...>"
+      const fullText = 'think\n<tool_call id="t1" name="search">{"q":"x"}</tool_call>';
+      expect(adapter.processEvent({
+        parsed: textChunk(fullText),
+        delta: null,
+      })).toEqual({ feedText: '<tool_call id="t1" name="search">{"q":"x"}</tool_call>' });
+    });
+
+    it('emits immediately when partial prefix diverges from "think\\n"', () => {
+      const adapter = createGeminiStreamAdapter();
+      // "the" is NOT a prefix of "think\n" — emits immediately
+      expect(adapter.processEvent({
+        parsed: textChunk('the answer is 42'),
+        delta: null,
+      })).toEqual({ feedText: 'the answer is 42' });
+    });
+
+    it('resolves prefix for text starting with "t" followed by non-think content', () => {
+      const adapter = createGeminiStreamAdapter();
+      // "to" is not a prefix of "think\n"
+      expect(adapter.processEvent({
+        parsed: textChunk('to'),
+        delta: null,
+      })).toEqual({ feedText: 'to' });
+    });
+
     it('emits cumulative deltas correctly after prefix is resolved', () => {
       const adapter = createGeminiStreamAdapter();
       // Bare think prefix — suppressed

@@ -3,12 +3,12 @@ import { ChatHeader } from './chat-header';
 import { ChatInput } from './chat-input';
 import { Messages } from './messages';
 import { ArtifactContext, initialArtifactData } from '../hooks/use-artifact';
-import { getEffectiveContextLimit, useLLMStream, parseSlashCommand, executeSlashCommand } from '@extension/shared';
-import { addMessage, deleteMessagesAfter } from '@extension/storage';
+import { getEffectiveContextLimit, useLLMStream, parseSlashCommand, executeSlashCommand, WEB_PROVIDER_OPTIONS } from '@extension/shared';
+import { addMessage, deleteMessagesAfter, thinkingLevelStorage } from '@extension/storage';
 import { toast } from 'sonner';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { UIArtifact } from '../artifact-types';
-import type { Attachment, ChatMessage, ChatModel, SessionUsage, SubagentProgressInfo } from '@extension/shared';
+import type { Attachment, ChatMessage, ChatModel, SessionUsage, ThinkingLevel, SubagentProgressInfo } from '@extension/shared';
 
 type AgentInfo = { id: string; name: string; emoji: string };
 
@@ -162,9 +162,47 @@ const Chat = ({
 
   const [isCompacting, setIsCompacting] = useState(false);
 
+  // ── Thinking level for web providers ──
+  const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel>('fast');
+
+  const supportedThinkingLevels = useMemo(() => {
+    if (selectedModel.provider !== 'web' || !selectedModel.webProviderId) return [];
+    const opt = WEB_PROVIDER_OPTIONS.find(o => o.value === selectedModel.webProviderId);
+    return (opt?.supportedThinkingLevels ?? []) as ThinkingLevel[];
+  }, [selectedModel.provider, selectedModel.webProviderId]);
+
+  // Load persisted thinking level when the web provider changes
+  useEffect(() => {
+    if (!selectedModel.webProviderId || supportedThinkingLevels.length === 0) {
+      setThinkingLevel('fast');
+      return;
+    }
+    thinkingLevelStorage.get().then(prefs => {
+      const saved = prefs[selectedModel.webProviderId!];
+      if (saved && supportedThinkingLevels.includes(saved as ThinkingLevel)) {
+        setThinkingLevel(saved as ThinkingLevel);
+      } else {
+        setThinkingLevel('fast');
+      }
+    });
+  }, [selectedModel.webProviderId, supportedThinkingLevels]);
+
+  const handleThinkingLevelChange = useCallback(
+    (mode: ThinkingLevel) => {
+      setThinkingLevel(mode);
+      if (selectedModel.webProviderId) {
+        thinkingLevelStorage.get().then(prefs => {
+          thinkingLevelStorage.set({ ...prefs, [selectedModel.webProviderId!]: mode });
+        });
+      }
+    },
+    [selectedModel.webProviderId],
+  );
+
   const { messages, setMessages, sendMessage, status, stop, input, setInput } = useLLMStream({
     chatId,
     model: selectedModel,
+    thinkingLevel: supportedThinkingLevels.length > 0 ? thinkingLevel : undefined,
     onStreamComplete: handleStreamCompleteWithUsage,
     onChatCreated,
     onUserMessageCreated: handleUserMessageCreated,
@@ -308,6 +346,9 @@ const Chat = ({
             }}
             selectedModelId={selectedModel.dbId ?? selectedModel.id}
             setInput={setInput}
+            thinkingLevel={thinkingLevel}
+            onThinkingLevelChange={handleThinkingLevelChange}
+            supportedThinkingLevels={supportedThinkingLevels}
             status={isCompacting ? 'connecting' : status}
             stop={stop}
           />

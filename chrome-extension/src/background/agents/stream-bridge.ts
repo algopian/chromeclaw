@@ -18,7 +18,7 @@ import {
   completeSimple,
   createAssistantMessageEventStream,
 } from '@mariozechner/pi-ai';
-import type { ChatModel } from '@extension/shared';
+import type { ChatModel, ThinkingLevel } from '@extension/shared';
 import type { StreamFn } from '@mariozechner/pi-agent-core';
 import type {
   Context,
@@ -164,7 +164,8 @@ const createProviderErrorStream = (
  * For cloud providers, streamSimple() already returns AssistantMessageEventStream.
  * For local/web models, routes to the offscreen document or tab-context bridge.
  */
-export const createStreamFn = (modelConfig: ChatModel, chatId?: string): StreamFn => {
+export const createStreamFn = (modelConfig: ChatModel, opts?: { chatId?: string; thinkingLevel?: ThinkingLevel }): StreamFn => {
+  const { chatId, thinkingLevel } = opts ?? {};
   if (modelConfig.provider === 'web') {
     const webStrategy = modelConfig.webProviderId
       ? getToolStrategy(modelConfig.webProviderId as WebProviderId)
@@ -189,6 +190,7 @@ export const createStreamFn = (modelConfig: ChatModel, chatId?: string): StreamF
           tools: tools.length > 0 ? tools : undefined,
           supportsReasoning: modelConfig.supportsReasoning,
           chatId,
+          thinkingLevel,
         });
       } catch (err) {
         console.error('[stream-bridge] Web LLM streamFn error:', err);

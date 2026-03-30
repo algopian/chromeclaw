@@ -206,7 +206,32 @@ const createXmlTagParser = (): {
           buffer = buffer.slice(nextTag);
         }
       } else if (state === 'thinking') {
-        const end = buffer.search(THINK_CLOSE_RE);
+        // Check for <tool_call> inside thinking block — some providers (e.g. Gemini)
+        // emit tool calls inside <think> without closing it first. Auto-close
+        // thinking and transition to tool_call state so the call is parsed.
+        // Skip regex work entirely when buffer has no '<' (common case for plain thinking text).
+        const hasLt = buffer.includes('<');
+        const toolInThinkMatch = hasLt
+          ? (buffer.match(TOOL_CALL_OPEN_START_RE) ?? buffer.match(TOOL_CALL_OPEN_RE))
+          : null;
+        const toolInThinkIdx = toolInThinkMatch ? buffer.indexOf(toolInThinkMatch[0]) : -1;
+
+        const end = hasLt ? buffer.search(THINK_CLOSE_RE) : -1;
+
+        // If tool_call appears before </think> (or there's no </think>), handle it
+        if (toolInThinkIdx >= 0 && (end < 0 || toolInThinkIdx < end)) {
+          if (toolInThinkIdx > 0) {
+            events.push({ type: 'thinking_delta', text: buffer.slice(0, toolInThinkIdx) });
+          }
+          events.push({ type: 'thinking_end' });
+          const fullOpenTag = toolInThinkMatch![0];
+          toolCallAttrs = parseToolCallAttributes(fullOpenTag);
+          state = 'tool_call';
+          buffer = buffer.slice(toolInThinkIdx + fullOpenTag.length);
+          toolCallBuffer = '';
+          continue;
+        }
+
         if (end >= 0) {
           const text = buffer.slice(0, end);
           if (text) {
@@ -216,8 +241,8 @@ const createXmlTagParser = (): {
           buffer = buffer.slice(end + 8); // len('</think>') — always 8 regardless of case
           state = 'text';
         } else {
-          // Stream incrementally, but retain any partial </think> suffix
-          // so the next feed() can complete the closing tag match.
+          // Stream incrementally, but retain any partial </think> or <tool_call
+          // suffix so the next feed() can complete the tag match.
           let emitEnd = buffer.length;
           for (let i = Math.max(0, buffer.length - 8); i < buffer.length; i++) {
             const suffix = buffer.slice(i);
@@ -226,11 +251,21 @@ const createXmlTagParser = (): {
               break;
             }
           }
+          // Also retain partial <tool_call prefix at end of buffer
+          if (emitEnd === buffer.length) {
+            const lastLt = buffer.lastIndexOf('<');
+            if (lastLt >= 0) {
+              const suffix = buffer.slice(lastLt);
+              if (isPlausibleTagPrefix(suffix)) {
+                emitEnd = lastLt;
+              }
+            }
+          }
           if (emitEnd > 0) {
             events.push({ type: 'thinking_delta', text: buffer.slice(0, emitEnd) });
             buffer = buffer.slice(emitEnd);
           }
-          // emitEnd === 0 means entire buffer is a partial </think> prefix — wait for more data
+          // emitEnd === 0 means entire buffer is a partial tag prefix — wait for more data
           break;
         }
       } else if (state === 'tool_call') {
