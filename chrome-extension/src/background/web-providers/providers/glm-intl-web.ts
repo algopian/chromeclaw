@@ -23,8 +23,8 @@ const glmIntlWeb: WebProviderDefinition = {
   // z.ai stores auth in localStorage, not cookies. Use analytics cookies
   // that are always present to detect that the user has visited the site.
   sessionIndicators: ['_ga', '_gcl_au'],
-  defaultModelId: 'glm-5',
-  defaultModelName: 'GLM-5',
+  defaultModelId: 'GLM-5-Turbo',
+  defaultModelName: 'GLM-5-Turbo',
   supportsTools: true,
   supportsReasoning: true,
   contextWindow: 128_000,
@@ -50,7 +50,7 @@ const glmIntlWeb: WebProviderDefinition = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         // Lightweight body — real request is built in MAIN world (content-fetch-main.ts)
-        body: JSON.stringify({ prompt, chatId, model: glmIntlWeb.defaultModelId }),
+        body: JSON.stringify({ prompt, chatId, model: glmIntlWeb.defaultModelId, thinkingLevel: opts.thinkingLevel }),
         credentials: 'include' as RequestCredentials,
       },
     };

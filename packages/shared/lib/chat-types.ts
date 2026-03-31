@@ -143,7 +143,7 @@ const WEB_PROVIDER_OPTIONS = [
   { value: 'qwen-web', label: 'Qwen (chat.qwen.ai)', loginUrl: 'https://chat.qwen.ai', cookieDomain: '.qwen.ai', sessionIndicators: ['token', 'ctoken', 'login_aliyunid_ticket'], defaultModelId: 'qwen3.5-plus', defaultModelName: 'Qwen 3.5 Plus', supportedThinkingLevels: ['thinking'] as ThinkingLevel[] },
   { value: 'qwen-cn-web', label: 'Qwen CN (qianwen.com)', loginUrl: 'https://qianwen.com', cookieDomain: '.qianwen.com', sessionIndicators: ['tongyi_sso_ticket'], defaultModelId: 'qwen-max', defaultModelName: 'Qwen Max (CN)', supportedThinkingLevels: ['thinking'] as ThinkingLevel[] },
   { value: 'glm-web', label: 'GLM (chatglm.cn)', loginUrl: 'https://chatglm.cn', cookieDomain: '.chatglm.cn', sessionIndicators: ['chatglm_refresh_token', 'chatglm_token'], defaultModelId: 'glm-5', defaultModelName: 'GLM-5', refreshUrl: 'https://chatglm.cn/chatglm/user-api/user/refresh', supportedThinkingLevels: [] as ThinkingLevel[] },
-  { value: 'glm-intl-web', label: 'GLM Intl (chat.z.ai)', loginUrl: 'https://chat.z.ai', cookieDomain: '.z.ai', sessionIndicators: ['token'], checkLocalStorage: true, defaultModelId: 'glm-5', defaultModelName: 'GLM-5', supportedThinkingLevels: [] as ThinkingLevel[] },
+  { value: 'glm-intl-web', label: 'GLM Intl (chat.z.ai)', loginUrl: 'https://chat.z.ai', cookieDomain: '.z.ai', sessionIndicators: ['token'], checkLocalStorage: true, defaultModelId: 'GLM-5-Turbo', defaultModelName: 'GLM-5-Turbo', supportedThinkingLevels: ['fast', 'thinking'] as ThinkingLevel[] },
 ] as const;
 
 /** Tool definition (metadata only — no execute function) */

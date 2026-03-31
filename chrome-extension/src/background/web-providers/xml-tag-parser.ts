@@ -20,7 +20,7 @@ const THINK_OPEN_RE = /<think>/i;
 const THINK_CLOSE_RE = /<\/think>/i;
 const TOOL_CALL_OPEN_START_RE = /^<tool_call(?:\s[^>]*)?>/i;
 const TOOL_CALL_OPEN_RE = /<tool_call(?:\s[^>]*)?>/i;
-const TOOL_CALL_CLOSE_RE = /<\/tool_call\s*>/i;
+const TOOL_CALL_CLOSE_RE = /<\/(?:tool_)?call[^>]*[>〉＞]/i;
 const TOOL_CALL_PREFIX_RE = /^<tool_call/i;
 /** Matches hallucinated tool_response tags — these are fake and should be discarded. */
 const TOOL_RESPONSE_OPEN_RE = /<tool_response(?:\s[^>]*)?>/i;
@@ -321,8 +321,8 @@ const createXmlTagParser = (): {
     } else if (state === 'tool_call') {
       toolCallBuffer += buffer;
       buffer = '';
-      // Strip trailing incomplete closing tag (e.g. GLM sends "</tool_call" without ">")
-      toolCallBuffer = toolCallBuffer.replace(/<\/tool_call[^>]*$/i, '');
+      // Strip trailing incomplete closing tag (e.g. GLM sends "</tool_call sinhalese" without ">")
+      toolCallBuffer = toolCallBuffer.replace(/<\/(?:tool_)?call[^>]*$/i, '');
       if (toolCallBuffer) {
         // Try parsing the buffer — some models (e.g. Qwen) omit the closing </tool_call> tag
         const event = parseToolCallJson(toolCallBuffer);

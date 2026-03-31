@@ -311,7 +311,8 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       // Parse the prompt and optional chatId from the lightweight stub body
       let glmPrompt = '';
       let existingChatId = '';
-      let glmModel = 'glm-5';
+      let glmModel = 'GLM-5-Turbo';
+      let glmThinkingLevel = 'thinking'; // default: thinking on
       try {
         const bodyObj = JSON.parse(typeof init.body === 'string' ? init.body : '{}') as Record<
           string,
@@ -320,6 +321,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
         glmPrompt = bodyObj.prompt ?? '';
         existingChatId = bodyObj.chatId ?? '';
         if (bodyObj.model) glmModel = bodyObj.model;
+        if (bodyObj.thinkingLevel) glmThinkingLevel = bodyObj.thinkingLevel;
       } catch {
         /* use defaults */
       }
@@ -485,10 +487,13 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
         features: {
           image_generation: false,
           web_search: false,
-          auto_web_search: false,
+          auto_web_search: glmThinkingLevel === 'thinking',
           preview_mode: true,
           flags: [],
-          enable_thinking: true,
+          vlm_tools_enable: false,
+          vlm_web_search_enable: false,
+          vlm_website_mode: false,
+          enable_thinking: glmThinkingLevel === 'thinking',
         },
         variables: {
           '{{USER_NAME}}': 'user',
@@ -552,7 +557,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
         'Accept-Language': 'en-US',
-        'X-FE-Version': 'prod-fe-1.0.272',
+        'X-FE-Version': 'prod-fe-1.0.288',
         'X-Signature': xSignature,
       };
 
