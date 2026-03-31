@@ -183,4 +183,27 @@ describe('createGlmStreamAdapter', () => {
       expect(adapter.shouldAbort()).toBe(false);
     });
   });
+
+  describe('onFinish', () => {
+    it('returns error when response is empty (no text, no tool calls)', () => {
+      const adapter = createGlmStreamAdapter();
+      const result = adapter.onFinish!({ hasToolCalls: false, fullText: '', thinkingContent: undefined });
+      expect(result).toEqual({
+        error: expect.stringContaining('GLM returned an empty response'),
+      });
+      expect(result).toEqual({
+        error: expect.stringContaining('chatglm.cn'),
+      });
+    });
+
+    it('returns null when response has text', () => {
+      const adapter = createGlmStreamAdapter();
+      expect(adapter.onFinish!({ hasToolCalls: false, fullText: 'Hello', thinkingContent: undefined })).toBeNull();
+    });
+
+    it('returns null when response has tool calls', () => {
+      const adapter = createGlmStreamAdapter();
+      expect(adapter.onFinish!({ hasToolCalls: true, fullText: '', thinkingContent: undefined })).toBeNull();
+    });
+  });
 });

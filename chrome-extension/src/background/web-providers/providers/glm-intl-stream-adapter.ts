@@ -44,6 +44,14 @@ const createGlmIntlStreamAdapter = (): SseStreamAdapter => {
       const d = obj.data as Record<string, unknown> | undefined;
       if (!d) return null;
 
+      // Detect error frames (e.g. MODEL_CONCURRENCY_LIMIT, rate limits)
+      if (d.error) {
+        const err = d.error as Record<string, unknown>;
+        const detail = (err.detail ?? err.message ?? 'Unknown GLM error') as string;
+        const code = err.code as string | undefined;
+        throw new Error(code ? `${code}: ${detail}` : detail);
+      }
+
       let delta = d.delta_content as string | undefined;
       const phase = d.phase as string | undefined;
 
@@ -79,6 +87,17 @@ const createGlmIntlStreamAdapter = (): SseStreamAdapter => {
     },
 
     shouldAbort: () => false,
+
+    onFinish({ hasToolCalls, fullText }) {
+      if (!hasToolCalls && !fullText) {
+        return {
+          error:
+            'GLM returned an empty response. This usually means your account has been rate-limited or restricted. ' +
+            'Please check your account status at chat.z.ai and try again.',
+        };
+      }
+      return null;
+    },
   };
 };
 

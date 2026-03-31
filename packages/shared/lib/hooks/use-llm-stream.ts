@@ -157,6 +157,13 @@ const useLLMStream = ({
 
   const handleEnd = useCallback(
     async (end: LLMStreamEnd) => {
+      // Show timeout notice so the user knows the response was cut short
+      if (end.finishReason === 'timeout') {
+        updateAssistantPart(parts => [
+          ...parts,
+          { type: 'text' as const, text: '\n\n⚠️ Agent timed out — response may be incomplete.' },
+        ]);
+      }
       setStatus('idle');
       portRef.current?.disconnect();
       portRef.current = null;
@@ -175,7 +182,7 @@ const useLLMStream = ({
         await onStreamComplete?.(assistantMessageRef.current, usage);
       }
     },
-    [onStreamComplete],
+    [onStreamComplete, updateAssistantPart],
   );
 
   const handleError = useCallback(

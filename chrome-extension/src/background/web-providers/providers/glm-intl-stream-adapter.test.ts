@@ -138,4 +138,89 @@ describe('createGlmIntlStreamAdapter', () => {
       expect(adapter.shouldAbort()).toBe(false);
     });
   });
+
+  describe('error detection', () => {
+    it('throws on MODEL_CONCURRENCY_LIMIT error frame', () => {
+      const adapter = createGlmIntlStreamAdapter();
+      expect(() =>
+        adapter.processEvent({
+          parsed: {
+            type: 'chat:completion',
+            data: {
+              content: '',
+              done: true,
+              error: {
+                code: 'MODEL_CONCURRENCY_LIMIT',
+                detail: 'Model is currently at capacity. Please try again later or switch to another model.',
+                model_id: 'GLM-5-Turbo',
+              },
+            },
+          },
+          delta: null,
+        }),
+      ).toThrow('MODEL_CONCURRENCY_LIMIT: Model is currently at capacity. Please try again later or switch to another model.');
+    });
+
+    it('throws on error frame with detail but no code', () => {
+      const adapter = createGlmIntlStreamAdapter();
+      expect(() =>
+        adapter.processEvent({
+          parsed: {
+            type: 'chat:completion',
+            data: { error: { detail: 'Rate limit exceeded' } },
+          },
+          delta: null,
+        }),
+      ).toThrow('Rate limit exceeded');
+    });
+
+    it('throws on error frame with message fallback', () => {
+      const adapter = createGlmIntlStreamAdapter();
+      expect(() =>
+        adapter.processEvent({
+          parsed: {
+            type: 'chat:completion',
+            data: { error: { message: 'Something went wrong' } },
+          },
+          delta: null,
+        }),
+      ).toThrow('Something went wrong');
+    });
+
+    it('throws generic message when error has no detail or message', () => {
+      const adapter = createGlmIntlStreamAdapter();
+      expect(() =>
+        adapter.processEvent({
+          parsed: {
+            type: 'chat:completion',
+            data: { error: {} },
+          },
+          delta: null,
+        }),
+      ).toThrow('Unknown GLM error');
+    });
+  });
+
+  describe('onFinish', () => {
+    it('returns error when response is empty (no text, no tool calls)', () => {
+      const adapter = createGlmIntlStreamAdapter();
+      const result = adapter.onFinish!({ hasToolCalls: false, fullText: '', thinkingContent: undefined });
+      expect(result).toEqual({
+        error: expect.stringContaining('GLM returned an empty response'),
+      });
+      expect(result).toEqual({
+        error: expect.stringContaining('chat.z.ai'),
+      });
+    });
+
+    it('returns null when response has text', () => {
+      const adapter = createGlmIntlStreamAdapter();
+      expect(adapter.onFinish!({ hasToolCalls: false, fullText: 'Hello', thinkingContent: undefined })).toBeNull();
+    });
+
+    it('returns null when response has tool calls', () => {
+      const adapter = createGlmIntlStreamAdapter();
+      expect(adapter.onFinish!({ hasToolCalls: true, fullText: '', thinkingContent: undefined })).toBeNull();
+    });
+  });
 });

@@ -99,6 +99,17 @@ const createGlmStreamAdapter = (): SseStreamAdapter => {
     },
 
     shouldAbort: () => false,
+
+    onFinish({ hasToolCalls, fullText }) {
+      if (!hasToolCalls && !fullText) {
+        return {
+          error:
+            'GLM returned an empty response. This usually means your account has been rate-limited or restricted. ' +
+            'Please check your account status at chatglm.cn and try again.',
+        };
+      }
+      return null;
+    },
   };
 };
 
