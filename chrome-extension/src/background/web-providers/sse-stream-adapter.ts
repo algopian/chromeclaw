@@ -13,6 +13,7 @@ import { createGlmIntlStreamAdapter } from './providers/glm-intl-stream-adapter'
 import { createGlmStreamAdapter } from './providers/glm-stream-adapter';
 import { createKimiStreamAdapter } from './providers/kimi-web-stream-adapter';
 import { createQwenStreamAdapter } from './providers/qwen-stream-adapter';
+import { createRakutenStreamAdapter } from './providers/rakuten-stream-adapter';
 import type { WebProviderId } from './types';
 
 interface SseStreamAdapter {
@@ -64,10 +65,13 @@ const createDefaultAdapter = (): SseStreamAdapter => ({
   shouldAbort: () => false,
 });
 
-const getSseStreamAdapter = (providerId: WebProviderId, opts?: {
-  /** Tool names excluded from the prompt — Qwen adapter skips native interception for these. */
-  excludeTools?: ReadonlySet<string>;
-}): SseStreamAdapter => {
+const getSseStreamAdapter = (
+  providerId: WebProviderId,
+  opts?: {
+    /** Tool names excluded from the prompt — Qwen adapter skips native interception for these. */
+    excludeTools?: ReadonlySet<string>;
+  },
+): SseStreamAdapter => {
   switch (providerId) {
     case 'claude-web':
       return createClaudeStreamAdapter();
@@ -88,6 +92,8 @@ const getSseStreamAdapter = (providerId: WebProviderId, opts?: {
       return createDoubaoStreamAdapter();
     case 'gemini-web':
       return createGeminiStreamAdapter();
+    case 'rakuten-web':
+      return createRakutenStreamAdapter();
     default:
       return createDefaultAdapter();
   }

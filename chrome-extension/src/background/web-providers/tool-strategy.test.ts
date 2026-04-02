@@ -16,6 +16,7 @@ import {
   deepseekToolStrategy,
   doubaoToolStrategy,
   geminiToolStrategy,
+  rakutenToolStrategy,
 } from './tool-strategy';
 
 // ── Factory ──────────────────────────────────────
@@ -55,6 +56,10 @@ describe('getToolStrategy', () => {
 
   it('returns doubao strategy for doubao-web', () => {
     expect(getToolStrategy('doubao-web')).toBe(doubaoToolStrategy);
+  });
+
+  it('returns rakuten strategy for rakuten-web', () => {
+    expect(getToolStrategy('rakuten-web')).toBe(rakutenToolStrategy);
   });
 });
 
@@ -295,17 +300,14 @@ describe('qwenToolStrategy', () => {
         messages: [
           {
             role: 'user',
-            content:
-              '<tool_response id="abc" name="web_search">\nresults here\n</tool_response>',
+            content: '<tool_response id="abc" name="web_search">\nresults here\n</tool_response>',
           },
         ],
         conversationId: 'conv-123',
       });
 
       expect(result.messages[0].content).toContain('<tool_response');
-      expect(result.messages[0].content).toContain(
-        'Please proceed based on this tool result.',
-      );
+      expect(result.messages[0].content).toContain('Please proceed based on this tool result.');
       expect(result.messages[0].content).toContain('[SYSTEM HINT]');
     });
 
@@ -422,9 +424,7 @@ describe('kimiToolStrategy', () => {
         parameters: { type: 'object', properties: {} },
       },
     ];
-    expect(kimiToolStrategy.buildToolPrompt(tools)).toBe(
-      qwenToolStrategy.buildToolPrompt(tools),
-    );
+    expect(kimiToolStrategy.buildToolPrompt(tools)).toBe(qwenToolStrategy.buildToolPrompt(tools));
   });
 
   it('always aggregates full history (no conversation ID support)', () => {
@@ -548,17 +548,14 @@ describe('glmToolStrategy', () => {
         messages: [
           {
             role: 'user',
-            content:
-              '<tool_response id="abc" name="web_search">\nresults here\n</tool_response>',
+            content: '<tool_response id="abc" name="web_search">\nresults here\n</tool_response>',
           },
         ],
         conversationId: 'conv-glm-123',
       });
 
       expect(result.messages[0].content).toContain('<tool_response');
-      expect(result.messages[0].content).toContain(
-        'Please proceed based on this tool result.',
-      );
+      expect(result.messages[0].content).toContain('Please proceed based on this tool result.');
       expect(result.messages[0].content).toContain('[SYSTEM HINT]');
     });
 
@@ -663,11 +660,15 @@ describe('glmIntlToolStrategy', () => {
 
   describe('extractConversationId', () => {
     it('extracts chat_id from synthetic SSE event', () => {
-      expect(glmIntlToolStrategy.extractConversationId!({ type: 'glm:chat_id', chat_id: 'abc-123' })).toBe('abc-123');
+      expect(
+        glmIntlToolStrategy.extractConversationId!({ type: 'glm:chat_id', chat_id: 'abc-123' }),
+      ).toBe('abc-123');
     });
 
     it('returns undefined when no chat_id present', () => {
-      expect(glmIntlToolStrategy.extractConversationId!({ type: 'chat:completion', data: {} })).toBeUndefined();
+      expect(
+        glmIntlToolStrategy.extractConversationId!({ type: 'chat:completion', data: {} }),
+      ).toBeUndefined();
     });
 
     it('returns undefined for unrelated data', () => {
@@ -766,16 +767,13 @@ describe('deepseekToolStrategy', () => {
         messages: [
           {
             role: 'user',
-            content:
-              '<tool_response id="abc" name="web_search">\nresults here\n</tool_response>',
+            content: '<tool_response id="abc" name="web_search">\nresults here\n</tool_response>',
           },
         ],
         conversationId: 'ds-session-123',
       });
       expect(result.messages[0].content).toContain('<tool_response');
-      expect(result.messages[0].content).toContain(
-        'Please proceed based on this tool result.',
-      );
+      expect(result.messages[0].content).toContain('Please proceed based on this tool result.');
       expect(result.messages[0].content).toContain('[SYSTEM HINT]');
     });
 
@@ -846,9 +844,7 @@ describe('doubaoToolStrategy', () => {
         parameters: { type: 'object', properties: {} },
       },
     ];
-    expect(doubaoToolStrategy.buildToolPrompt(tools)).toBe(
-      qwenToolStrategy.buildToolPrompt(tools),
-    );
+    expect(doubaoToolStrategy.buildToolPrompt(tools)).toBe(qwenToolStrategy.buildToolPrompt(tools));
   });
 
   describe('buildPrompt', () => {
@@ -912,16 +908,13 @@ describe('doubaoToolStrategy', () => {
         messages: [
           {
             role: 'user',
-            content:
-              '<tool_response id="abc" name="web_search">\nresults here\n</tool_response>',
+            content: '<tool_response id="abc" name="web_search">\nresults here\n</tool_response>',
           },
         ],
         conversationId: 'doubao-conv-123',
       });
       expect(result.messages[0].content).toContain('<tool_response');
-      expect(result.messages[0].content).toContain(
-        'Please proceed based on this tool result.',
-      );
+      expect(result.messages[0].content).toContain('Please proceed based on this tool result.');
       expect(result.messages[0].content).toContain('[SYSTEM HINT]');
     });
 
@@ -992,9 +985,7 @@ describe('geminiToolStrategy', () => {
         parameters: { type: 'object', properties: {} },
       },
     ];
-    expect(geminiToolStrategy.buildToolPrompt(tools)).toBe(
-      qwenToolStrategy.buildToolPrompt(tools),
-    );
+    expect(geminiToolStrategy.buildToolPrompt(tools)).toBe(qwenToolStrategy.buildToolPrompt(tools));
   });
 
   it('returns empty string for no tools', () => {
@@ -1080,5 +1071,39 @@ describe('conversation ID cache', () => {
 
   it('clearConversationId returns false for unknown key', () => {
     expect(clearConversationId('nonexistent-clear-key')).toBe(false);
+  });
+});
+
+// ── Rakuten AI Strategy ─────────────────────────
+
+describe('rakutenToolStrategy', () => {
+  describe('extractConversationId', () => {
+    it('extracts thread_id from rakuten:thread_id event', () => {
+      expect(
+        rakutenToolStrategy.extractConversationId!({
+          type: 'rakuten:thread_id',
+          thread_id: 'abc-123',
+        }),
+      ).toBe('abc-123');
+    });
+
+    it('returns undefined for conversation events (ignores thread_id on wrong type)', () => {
+      expect(
+        rakutenToolStrategy.extractConversationId!({
+          type: 'rakuten:conversation',
+          thread_id: 'should-ignore',
+        }),
+      ).toBeUndefined();
+    });
+
+    it('returns undefined for events without type', () => {
+      expect(rakutenToolStrategy.extractConversationId!({ data: {} })).toBeUndefined();
+    });
+
+    it('returns undefined for unrelated events', () => {
+      expect(
+        rakutenToolStrategy.extractConversationId!({ type: 'rakuten:ack', action: 'ACK' }),
+      ).toBeUndefined();
+    });
   });
 });

@@ -5,9 +5,9 @@ import { describe, it, expect } from 'vitest';
 import { getWebProvider, getAllWebProviders } from './registry';
 
 describe('web provider registry', () => {
-  it('returns all 10 providers', () => {
+  it('returns all 11 providers', () => {
     const all = getAllWebProviders();
-    expect(all).toHaveLength(10);
+    expect(all).toHaveLength(11);
   });
 
   it('looks up claude-web provider by ID', () => {
@@ -29,6 +29,13 @@ describe('web provider registry', () => {
     expect(provider).toBeDefined();
     expect(provider!.name).toBe('Doubao (Web)');
     expect(provider!.loginUrl).toBe('https://www.doubao.com/chat/');
+  });
+
+  it('looks up rakuten-web provider by ID', () => {
+    const provider = getWebProvider('rakuten-web');
+    expect(provider).toBeDefined();
+    expect(provider!.name).toBe('Rakuten AI (Web)');
+    expect(provider!.loginUrl).toBe('https://ai.rakuten.co.jp');
   });
 
   it('returns undefined for unknown provider ID', () => {

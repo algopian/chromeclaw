@@ -250,6 +250,16 @@ const WEB_PROVIDER_OPTIONS = [
     defaultModelName: 'GLM-5-Turbo',
     supportedThinkingLevels: ['fast', 'thinking'] as ThinkingLevel[],
   },
+  {
+    value: 'rakuten-web',
+    label: 'Rakuten AI (ai.rakuten.co.jp)',
+    loginUrl: 'https://ai.rakuten.co.jp',
+    cookieDomain: '.rakuten.co.jp',
+    sessionIndicators: ['Rp', 'Rz'],
+    defaultModelId: 'rakuten-ai',
+    defaultModelName: 'Rakuten AI',
+    supportedThinkingLevels: ['fast', 'thinking'] as ThinkingLevel[],
+  },
 ] as const;
 
 /** Tool definition (metadata only — no execute function) */

@@ -116,10 +116,7 @@ describe('getSseStreamAdapter', () => {
   it('returns a Gemini adapter for gemini-web', () => {
     const adapter = getSseStreamAdapter('gemini-web');
     const chunk = (text: string) => {
-      const inner = JSON.stringify([
-        null, ['c1', 'r1'], null, null,
-        [['rc_1', [text]]],
-      ]);
+      const inner = JSON.stringify([null, ['c1', 'r1'], null, null, [['rc_1', [text]]]]);
       return [['wrb.fr', null, inner]];
     };
     expect(adapter.processEvent({ parsed: chunk('Hello'), delta: null })).toEqual({
@@ -128,6 +125,22 @@ describe('getSseStreamAdapter', () => {
     expect(adapter.processEvent({ parsed: chunk('Hello world'), delta: null })).toEqual({
       feedText: ' world',
     });
+  });
+
+  it('returns a Rakuten adapter for rakuten-web', () => {
+    const adapter = getSseStreamAdapter('rakuten-web');
+    // Rakuten adapter handles typed conversation events with SUMMARY_TEXT thinking
+    const result = adapter.processEvent({
+      parsed: {
+        type: 'rakuten:conversation',
+        data: {
+          chatResponseStatus: 'APPEND',
+          contents: [{ contentType: 'SUMMARY_TEXT', textData: { text: 'thinking...' } }],
+        },
+      },
+      delta: null,
+    });
+    expect(result).toEqual({ feedText: '<think>thinking...' });
   });
 
   it('returns independent adapter instances per call', () => {

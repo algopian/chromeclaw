@@ -12,6 +12,7 @@ import { kimiWeb } from './providers/kimi-web';
 import { glmWeb } from './providers/glm-web';
 import { glmIntlWeb } from './providers/glm-intl-web';
 import { geminiWeb } from './providers/gemini-web';
+import { rakutenWeb } from './providers/rakuten-web';
 import type { WebProviderDefinition, WebProviderId } from './types';
 
 const providers: WebProviderDefinition[] = [
@@ -25,6 +26,7 @@ const providers: WebProviderDefinition[] = [
   qwenCnWeb,
   glmWeb,
   glmIntlWeb,
+  rakutenWeb,
 ];
 
 const providerMap = new Map<WebProviderId, WebProviderDefinition>(providers.map(p => [p.id, p]));

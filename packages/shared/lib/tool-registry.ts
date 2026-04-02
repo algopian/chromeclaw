@@ -267,34 +267,7 @@ When the user asks to schedule something, create a task with an appropriate sche
     iconName: 'WorkflowIcon',
     promptHint: `## Subagents
 
-You can spawn background subagents to work on tasks in parallel while you continue
-the conversation. **Default to handling tasks directly. Only spawn a subagent when
-the task genuinely requires parallel independent work streams.**
-
-**When to spawn a subagent:**
-- When the user requests **multiple independent tasks** that can run in parallel
-  (e.g. "research X and also research Y") — spawn one subagent per independent task
-- When a single task requires **3 or more sequential tool calls** with intermediate
-  reasoning (e.g. search → fetch multiple pages → synthesize) — offload to a subagent
-- When you are already mid-conversation and want to do background work without
-  blocking the reply
-
-**Do NOT spawn a subagent for:**
-- A single web search or weather check — just call the tool directly
-- A single URL fetch — just call web_fetch directly
-- Any task that needs only 1–2 tool calls — handle it inline
-- Simple questions, lookups, or calculations — respond directly
-- Tasks where the user is waiting for an immediate answer
-
-**How to use:**
-- Use spawn_subagent with a clear, self-contained task description. Include all
-  relevant context — the subagent cannot access memory or ask follow-up questions.
-- Use list_subagents to check on running subagents.
-- Use kill_subagent to cancel a subagent that is no longer needed.
-
-**When a subagent completes:**
-When you see a subagent-result in the conversation, briefly acknowledge the findings.
-Summarize the key points naturally — do not just say "the subagent finished."`,
+Use spawn_subagent to run tasks in the background when the user requests multiple independent tasks in parallel or a single task needing 3+ sequential tool calls. Provide a clear, self-contained task description with all context — subagents cannot access memory or ask follow-ups. For simple tasks (1–2 tool calls, single lookups), handle them directly instead. Use list_subagents to check status and kill_subagent to cancel. When a subagent completes, briefly summarize its findings.`,
     tools: [
       {
         name: 'spawn_subagent',
