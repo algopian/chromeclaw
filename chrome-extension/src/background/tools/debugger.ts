@@ -1,4 +1,5 @@
 import { cdpSend, cdpAttach } from './cdp';
+import { injectControlIndicator, removeControlIndicator } from './tab-indicator';
 import { Type } from '@sinclair/typebox';
 import type { Static } from '@sinclair/typebox';
 
@@ -43,6 +44,8 @@ type DebuggerArgs = Static<typeof debuggerSchema>;
 // ---------------------------------------------------------------------------
 
 const executeDebugger = async (args: DebuggerArgs): Promise<string> => {
+  const highlightTabId = (args.action === 'attach' || args.action === 'send') ? args.tabId : undefined;
+  if (highlightTabId != null) await injectControlIndicator(highlightTabId);
   try {
     switch (args.action) {
       case 'list_targets': {
@@ -92,6 +95,8 @@ const executeDebugger = async (args: DebuggerArgs): Promise<string> => {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return `Error: ${msg}`;
+  } finally {
+    if (highlightTabId != null) removeControlIndicator(highlightTabId).catch(() => {});
   }
 };
 

@@ -336,6 +336,7 @@ const Chat = ({
                     setContextUsage({ ...usageRef.current });
                   },
                   setIsCompacting,
+                  onNewChat,
                 }).catch(err => {
                   console.error('[slash-cmd] unhandled error:', err);
                   toast.error(err instanceof Error ? err.message : 'Command failed');

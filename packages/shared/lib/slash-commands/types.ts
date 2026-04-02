@@ -24,6 +24,8 @@ interface SlashCommandContext {
   incrementCompactionCount: () => void;
   /** Block/unblock user input during compaction. */
   setIsCompacting: (isCompacting: boolean) => void;
+  /** Start a new chat session (equivalent to clicking the new session button). */
+  onNewChat?: () => void;
 }
 
 export type { SlashCommandDef, SlashCommandContext };

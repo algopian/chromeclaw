@@ -15,14 +15,29 @@ const roleLabel = (role: ChatMessage['role']): string => {
   }
 };
 
+const formatResult = (result: unknown): string =>
+  typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+
 const formatPart = (part: ChatMessagePart): string | null => {
   switch (part.type) {
     case 'text':
       return part.text;
     case 'reasoning':
       return `<details>\n<summary>Reasoning</summary>\n\n${part.text}\n</details>`;
-    case 'tool-call':
-      return `> Used tool: **${part.toolName}**`;
+    case 'tool-call': {
+      const lines = [`### Tool: ${part.toolName}`];
+      if (part.args && Object.keys(part.args).length > 0) {
+        lines.push('', '**Parameters:**', '```json', JSON.stringify(part.args, null, 2), '```');
+      }
+      if (part.result != null) {
+        lines.push('', '**Result:**', '```', formatResult(part.result), '```');
+      }
+      return lines.join('\n');
+    }
+    case 'tool-result': {
+      const resultStr = formatResult(part.result);
+      return `### Tool Result: ${part.toolName}\n\n\`\`\`\n${resultStr}\n\`\`\``;
+    }
     default:
       return null;
   }
@@ -32,9 +47,13 @@ const formatMessages = (title: string, messages: ChatMessage[]): string => {
   const date = new Date().toISOString().slice(0, 10);
   const lines: string[] = [`# ${title}`, '', `*Exported on ${date}*`, ''];
 
+  const exportedToolCallIds = new Set<string>();
   for (const msg of messages) {
     lines.push(`## ${roleLabel(msg.role)}`, '');
     for (const part of msg.parts) {
+      // Skip tool-result if the matching tool-call already exported the result
+      if (part.type === 'tool-result' && exportedToolCallIds.has(part.toolCallId)) continue;
+      if (part.type === 'tool-call' && part.result != null) exportedToolCallIds.add(part.toolCallId);
       const text = formatPart(part);
       if (text) {
         lines.push(text, '');

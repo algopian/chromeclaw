@@ -348,7 +348,7 @@ const MarkdownEditor = ({
               showEditor ? 'w-1/2 rounded border' : 'w-full',
             )}>
             <Streamdown
-              className="prose dark:prose-invert max-w-none text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+              className="prose dark:prose-invert max-w-none text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_pre]:!bg-[unset] [&_pre]:!text-[unset]"
               plugins={{ mermaid: mermaidPlugin }}>
               {content || '*Empty*'}
             </Streamdown>

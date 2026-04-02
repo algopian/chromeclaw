@@ -218,11 +218,11 @@ const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) =>
       return;
     }
     if (isWeb && !webProviderId) {
-      setError('Please select a web provider');
+      setError(t('firstRun_webProviderRequired'));
       return;
     }
     if (isWeb && webAuthStatus !== 'logged-in') {
-      setError('You must log in to the web provider before continuing.');
+      setError(t('firstRun_webLoginRequired'));
       return;
     }
     if (!isWeb && !modelId.trim()) {
@@ -323,8 +323,8 @@ const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) =>
         {provider === 'web' ? (
           <div className="grid gap-2">
             <Label htmlFor="setup-web-provider">
-              Web Provider
-              <span className="text-muted-foreground ml-1 font-normal">(Uses your browser session — no API key needed)</span>
+              {t('firstRun_webProvider')}
+              <span className="text-muted-foreground ml-1 font-normal">{t('firstRun_webProviderHint')}</span>
             </Label>
             <Select
               onValueChange={v => {
@@ -335,7 +335,7 @@ const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) =>
               }}
               value={webProviderId}>
               <SelectTrigger id="setup-web-provider">
-                <SelectValue placeholder="Select a web provider" />
+                <SelectValue placeholder={t('firstRun_selectWebProvider')} />
               </SelectTrigger>
               <SelectContent>
                 {WEB_PROVIDER_OPTIONS.map(wp => (
@@ -349,25 +349,25 @@ const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) =>
               {webAuthStatus === 'checking' && (
                 <Badge variant="outline" className="gap-1">
                   <Loader2Icon className="size-3 animate-spin" />
-                  Checking...
+                  {t('firstRun_webChecking')}
                 </Badge>
               )}
               {webAuthStatus === 'logged-in' && (
                 <Badge variant="outline" className="gap-1 border-green-500 text-green-600">
                   <CheckCircleIcon className="size-3" />
-                  Logged in
+                  {t('firstRun_webLoggedIn')}
                 </Badge>
               )}
               {(webAuthStatus === 'not-logged-in' || webAuthStatus === 'unknown') && (
                 <Badge variant="outline" className="gap-1 border-orange-500 text-orange-600">
                   <XCircleIcon className="size-3" />
-                  Click Login to check status
+                  {t('firstRun_webNotLoggedIn')}
                 </Badge>
               )}
               {webAuthStatus === 'logged-in' ? (
                 <Button onClick={handleWebLogout} size="sm" variant="outline">
                   <LogOutIcon className="mr-1 size-3" />
-                  Logout
+                  {t('firstRun_webLogout')}
                 </Button>
               ) : (
                 <Button
@@ -380,13 +380,13 @@ const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) =>
                   ) : (
                     <LogInIcon className="mr-1 size-3" />
                   )}
-                  {webLoginLoading ? 'Waiting for login...' : 'Login'}
+                  {webLoginLoading ? t('firstRun_webWaiting') : t('firstRun_webLogin')}
                 </Button>
               )}
             </div>
             {webLoginLoading && (
               <p className="text-muted-foreground text-xs">
-                Log in on the opened page. The session will be captured automatically.
+                {t('firstRun_webLoginInstruction')}
               </p>
             )}
           </div>
@@ -436,7 +436,7 @@ const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) =>
         <div className="grid gap-2">
           <Label htmlFor="setup-model">
             {t('firstRun_modelId')}
-            {provider === 'web' && <span className="text-muted-foreground ml-1 font-normal">(optional)</span>}
+            {provider === 'web' && <span className="text-muted-foreground ml-1 font-normal">{t('firstRun_optional')}</span>}
           </Label>
           <Input
             data-testid="setup-model-id"
@@ -448,14 +448,14 @@ const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) =>
             onKeyDown={handleKeyDown}
             placeholder={
               provider === 'web'
-                ? WEB_PROVIDER_OPTIONS.find(w => w.value === webProviderId)?.defaultModelId ?? 'Auto-detected'
+                ? WEB_PROVIDER_OPTIONS.find(w => w.value === webProviderId)?.defaultModelId ?? t('firstRun_autoDetected')
                 : 'gpt-4o'
             }
             value={modelId}
           />
           {provider === 'web' && (
             <p className="text-muted-foreground text-xs">
-              Auto-detected from web provider. Override only if needed.
+              {t('firstRun_autoDetectedHint')}
             </p>
           )}
         </div>
@@ -887,7 +887,7 @@ const Step3AgentSetup = ({
               data-testid="setup-agent-name"
               id="setup-agent-name"
               onChange={e => setAgentName(e.target.value)}
-              placeholder="Main Agent"
+              placeholder={t('firstRun_defaultAgentName')}
               value={agentName}
             />
           </div>
@@ -1044,7 +1044,7 @@ const Step4ToolsSetup = ({
                 <span className="text-sm font-medium">{group.label}</span>
                 {group.tools.length > 1 && (
                   <span className="text-muted-foreground text-xs">
-                    ({group.tools.length} tools)
+                    ({group.tools.length} {t('firstRun_tools')})
                   </span>
                 )}
               </label>
