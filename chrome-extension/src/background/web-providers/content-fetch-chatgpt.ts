@@ -31,10 +31,7 @@ export const chatgptMainWorldFetch = async (request: ContentFetchRequest): Promi
     );
   }, 30_000);
   const origHiddenDesc = Object.getOwnPropertyDescriptor(Document.prototype, 'hidden');
-  const origVisibilityDesc = Object.getOwnPropertyDescriptor(
-    Document.prototype,
-    'visibilityState',
-  );
+  const origVisibilityDesc = Object.getOwnPropertyDescriptor(Document.prototype, 'visibilityState');
   try {
     Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
     Object.defineProperty(document, 'visibilityState', {
@@ -133,9 +130,7 @@ export const chatgptMainWorldFetch = async (request: ContentFetchRequest): Promi
         oaiClientVersion = nextData.buildId;
       }
       // Strategy 2: meta tag
-      const metaBuild = document.querySelector(
-        'meta[name="build-id"]',
-      ) as HTMLMetaElement | null;
+      const metaBuild = document.querySelector('meta[name="build-id"]') as HTMLMetaElement | null;
       if (metaBuild?.content) {
         oaiClientVersion = metaBuild.content;
       }
@@ -456,9 +451,7 @@ export const chatgptMainWorldFetch = async (request: ContentFetchRequest): Promi
 
         // Performance API (catches dynamically import()-loaded scripts)
         try {
-          const entries = performance.getEntriesByType(
-            'resource',
-          ) as PerformanceResourceTiming[];
+          const entries = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
           for (const e of entries
             .filter(e => e.name.includes('oaistatic.com') && e.name.endsWith('.js'))
             .sort((a, b) => b.startTime - a.startTime)) {
@@ -540,9 +533,10 @@ export const chatgptMainWorldFetch = async (request: ContentFetchRequest): Promi
             // Try each candidate — import and check for sentinel exports
             for (const candidateUrl of uniqueUrls) {
               try {
-                const candidateModule = (await import(
-                  /* @vite-ignore */ candidateUrl
-                )) as Record<string, unknown>;
+                const candidateModule = (await import(/* @vite-ignore */ candidateUrl)) as Record<
+                  string,
+                  unknown
+                >;
                 const testDiag: string[] = [];
                 const exports = discoverSentinelExports(candidateModule, testDiag);
                 if (exports) {
@@ -595,9 +589,10 @@ export const chatgptMainWorldFetch = async (request: ContentFetchRequest): Promi
       // module's export names have rotated.
       const FALLBACK_SENTINEL_URL = 'https://cdn.oaistatic.com/assets/i5bamk05qmvsi6c3.js';
       try {
-        const fallbackModule = (await import(
-          /* @vite-ignore */ FALLBACK_SENTINEL_URL
-        )) as Record<string, unknown>;
+        const fallbackModule = (await import(/* @vite-ignore */ FALLBACK_SENTINEL_URL)) as Record<
+          string,
+          unknown
+        >;
         const testDiag: string[] = [];
         const exports = discoverSentinelExports(fallbackModule, testDiag);
         if (exports) {
@@ -672,10 +667,7 @@ export const chatgptMainWorldFetch = async (request: ContentFetchRequest): Promi
         const chatReqs = await Promise.race([
           exports.chatRequirements(),
           new Promise<never>((_, reject) =>
-            setTimeout(
-              () => reject(new Error('chat-requirements timed out after 15s')),
-              15_000,
-            ),
+            setTimeout(() => reject(new Error('chat-requirements timed out after 15s')), 15_000),
           ),
         ]);
 
@@ -695,10 +687,7 @@ export const chatgptMainWorldFetch = async (request: ContentFetchRequest): Promi
             turnstileToken = await Promise.race([
               exports.turnstileSolver(turnstileKey),
               new Promise<never>((_, reject) =>
-                setTimeout(
-                  () => reject(new Error('Turnstile solver timed out after 15s')),
-                  15_000,
-                ),
+                setTimeout(() => reject(new Error('Turnstile solver timed out after 15s')), 15_000),
               ),
             ]);
           }
@@ -733,10 +722,7 @@ export const chatgptMainWorldFetch = async (request: ContentFetchRequest): Promi
               proofToken = await Promise.race([
                 (pow.getEnforcementToken as (r: unknown) => Promise<unknown>)(chatReqs),
                 new Promise<never>((_, reject) =>
-                  setTimeout(
-                    () => reject(new Error('Proof token timed out after 15s')),
-                    15_000,
-                  ),
+                  setTimeout(() => reject(new Error('Proof token timed out after 15s')), 15_000),
                 ),
               ]);
             } else if (pow.answers !== undefined) {
@@ -764,9 +750,7 @@ export const chatgptMainWorldFetch = async (request: ContentFetchRequest): Promi
       // Check for Signal Orchestrator (behavioral biometrics) — informational only
       try {
         const soKeys = Object.keys(window).filter(k => k.startsWith('__oai_so_'));
-        diag.push(
-          `signal-orchestrator=${soKeys.length > 0 ? `${soKeys.length}-props` : 'absent'}`,
-        );
+        diag.push(`signal-orchestrator=${soKeys.length > 0 ? `${soKeys.length}-props` : 'absent'}`);
       } catch {
         /* ignore */
       }
@@ -969,6 +953,20 @@ export const chatgptMainWorldFetch = async (request: ContentFetchRequest): Promi
           if (dataStr !== '[DONE]') {
             try {
               const parsed = JSON.parse(dataStr) as Record<string, unknown>;
+
+              // Extract model information from server_ste_metadata events
+              if (parsed.type === 'server_ste_metadata') {
+                const metadata = parsed.metadata as Record<string, unknown> | undefined;
+                const modelSlug = metadata?.model_slug as string | undefined;
+                if (modelSlug) {
+                  // Emit model metadata for the bridge to capture
+                  window.postMessage(
+                    { type: 'WEB_LLM_METADATA', requestId, metadata: { modelId: modelSlug } },
+                    origin,
+                  );
+                }
+              }
+
               if (parsed.conversation_id && typeof parsed.conversation_id === 'string') {
                 capturedConversationId = parsed.conversation_id;
               }
@@ -1005,10 +1003,7 @@ export const chatgptMainWorldFetch = async (request: ContentFetchRequest): Promi
     // Handle final line with no trailing newline
     const cgRemaining = cgBuffer.trim();
     if (cgRemaining.startsWith('data: ')) {
-      window.postMessage(
-        { type: 'WEB_LLM_CHUNK', requestId, chunk: `${cgRemaining}\n\n` },
-        origin,
-      );
+      window.postMessage({ type: 'WEB_LLM_CHUNK', requestId, chunk: `${cgRemaining}\n\n` }, origin);
     }
 
     // Inject synthetic conversation state event so the bridge can cache
