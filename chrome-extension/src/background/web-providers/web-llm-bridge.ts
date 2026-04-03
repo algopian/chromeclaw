@@ -466,10 +466,13 @@ export const requestWebGeneration = (opts: {
               ...req,
               retryAttempt: (req.retryAttempt ?? 0) + 1,
             };
+            const retryFetchFunc =
+              (cachedProviderId ? getPlugin(cachedProviderId)?.contentFetchHandler : undefined) ??
+              mainWorldFetch;
             await chrome.scripting.executeScript({
               target: { tabId: tid },
               world: 'MAIN',
-              func: mainWorldFetch,
+              func: retryFetchFunc,
               args: [retryRequest],
             });
           } catch (err) {
@@ -641,10 +644,12 @@ export const requestWebGeneration = (opts: {
       activeProvider = provider;
       activeFetchRequest = fetchRequest;
 
+      // Use per-provider MAIN world handler if available, else shared mainWorldFetch
+      const fetchFunc = getPlugin(providerId)?.contentFetchHandler ?? mainWorldFetch;
       await chrome.scripting.executeScript({
         target: { tabId },
         world: 'MAIN',
-        func: mainWorldFetch,
+        func: fetchFunc,
         args: [fetchRequest],
       });
 
