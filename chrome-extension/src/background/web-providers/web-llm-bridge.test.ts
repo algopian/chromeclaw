@@ -123,7 +123,11 @@ vi.stubGlobal('chrome', {
     },
   },
   tabs: {
-    query: vi.fn(async () => [{ id: 1 }]),
+    query: vi.fn(async (queryInfo: { active?: boolean; currentWindow?: boolean; url?: string }) => {
+      // Return a different tab for "active tab" queries vs provider tab queries
+      if (queryInfo.active && queryInfo.currentWindow) return [{ id: 99 }];
+      return [{ id: 1 }];
+    }),
     create: vi.fn(async () => ({ id: 1 })),
     update: vi.fn(async () => {}),
     reload: vi.fn(async () => {}),
@@ -569,27 +573,40 @@ describe('requestWebGeneration — chatgpt-web inactivity handling', () => {
       expect(chrome.tabs.reload).not.toHaveBeenCalled();
     });
 
-    it('reloads tab when lastRequestAt is stale (> 10 min)', async () => {
+    it('reloads tab when lastRequestAt is stale (> 10 min) and restores previous tab', async () => {
       mockChatgptCredential({ lastRequestAt: Date.now() - 15 * 60_000 }); // 15 min ago
 
-      // When tabs.reload is called, simulate the tab completing load
+      // When tabs.reload is called, simulate the tab completing load shortly after.
+      // The production code registers the onUpdated listener BEFORE calling reload,
+      // so the listener is already in place when this mock fires.
       vi.mocked(chrome.tabs.reload).mockImplementation(async () => {
-        // Trigger the onUpdated listener
         const addListenerCalls = vi.mocked(chrome.tabs.onUpdated.addListener).mock.calls;
         const lastListener = addListenerCalls[addListenerCalls.length - 1]?.[0] as
           | ((id: number, info: { status: string }) => void)
           | undefined;
         if (lastListener) {
-          setTimeout(() => lastListener(1, { status: 'complete' }), 0);
+          setTimeout(() => lastListener(1, { status: 'complete' }), 10);
         }
       });
 
       requestWebGeneration(chatgptOpts);
 
-      await vi.waitFor(() => {
-        expect(chrome.tabs.reload).toHaveBeenCalledWith(1);
-      });
-    });
+      // Wait for the full setup to complete (scripts injected — happens after tab restore).
+      // The 5s hydration delay in waitForTabLoad means this takes >5s real time.
+      await vi.waitFor(
+        () => {
+          expect(chrome.scripting.executeScript).toHaveBeenCalled();
+        },
+        { timeout: 10000 },
+      );
+
+      // Verify previous tab (id: 99) was restored after foregrounding
+      const updateCalls = vi.mocked(chrome.tabs.update).mock.calls;
+      // First call: foreground chatgpt tab (id: 1)
+      expect(updateCalls).toContainEqual([1, { active: true }]);
+      // Second call: restore previous tab (id: 99)
+      expect(updateCalls).toContainEqual([99, { active: true }]);
+    }, 15_000);
 
     it('reloads tab when lastRequestAt is missing (first request after login)', async () => {
       mockChatgptCredential({}); // no lastRequestAt
@@ -600,7 +617,7 @@ describe('requestWebGeneration — chatgpt-web inactivity handling', () => {
           | ((id: number, info: { status: string }) => void)
           | undefined;
         if (lastListener) {
-          setTimeout(() => lastListener(1, { status: 'complete' }), 0);
+          setTimeout(() => lastListener(1, { status: 'complete' }), 10);
         }
       });
 
@@ -787,7 +804,6 @@ describe('requestWebGeneration — chatgpt-web inactivity handling', () => {
 
       // Mock tabs.reload to simulate page load completion after a tick
       vi.mocked(chrome.tabs.reload).mockImplementation(async () => {
-        // Use a longer delay to ensure waitForTabLoad's addListener has registered
         setTimeout(() => {
           const addListenerCalls = vi.mocked(chrome.tabs.onUpdated.addListener).mock.calls;
           const lastListener = addListenerCalls[addListenerCalls.length - 1]?.[0] as
@@ -799,20 +815,25 @@ describe('requestWebGeneration — chatgpt-web inactivity handling', () => {
         }, 10);
       });
 
-      const stream = requestWebGeneration(chatgptOpts);
+      requestWebGeneration(chatgptOpts);
 
-      // Wait for initial setup to complete (scripts injected)
+      // Wait for initial setup to complete: the initial MAIN world script must be injected
+      // before the retry handler can work, because activeTabId/activeProvider/activeFetchRequest
+      // are set just before script injection (line ~686 in web-llm-bridge.ts).
+      // We look for a MAIN call WITHOUT retryAttempt (the initial request).
       await vi.waitFor(
         () => {
-          const events = (stream as any).events as Array<{ type: string }>;
-          const hasScript = vi.mocked(chrome.scripting.executeScript).mock.calls.length > 0;
-          const hasError = events.some(e => e.type === 'error');
-          expect(hasScript || hasError).toBe(true);
+          const calls = vi.mocked(chrome.scripting.executeScript).mock.calls;
+          const initialMain = calls.find(c => {
+            const opt = c[0] as { world?: string; args?: unknown[] };
+            if (opt.world !== 'MAIN') return false;
+            const req = opt.args?.[0] as Record<string, unknown> | undefined;
+            return req?.retryAttempt === undefined;
+          });
+          expect(initialMain).toBeDefined();
         },
         { timeout: 5000 },
       );
-
-      const executeCountBefore = vi.mocked(chrome.scripting.executeScript).mock.calls.length;
 
       fireMessage({
         type: 'WEB_LLM_RETRY_REFRESH',
@@ -820,12 +841,19 @@ describe('requestWebGeneration — chatgpt-web inactivity handling', () => {
         diag: '[diag: retry=403; retry=tab-refresh-requested]',
       });
 
+      // Wait for the retry to complete: look for a MAIN world call with retryAttempt set.
+      // We can't use call counts because async work from prior tests may leak additional
+      // executeScript calls into this test's mock (stale-session test has 5s hydration).
       await vi.waitFor(
         () => {
-          // Should re-inject both ISOLATED and MAIN scripts
-          expect(vi.mocked(chrome.scripting.executeScript).mock.calls.length).toBeGreaterThan(
-            executeCountBefore,
-          );
+          const calls = vi.mocked(chrome.scripting.executeScript).mock.calls;
+          const retryCall = calls.find(c => {
+            const opt = c[0] as { world?: string; args?: unknown[] };
+            if (opt.world !== 'MAIN') return false;
+            const req = opt.args?.[0] as Record<string, unknown> | undefined;
+            return req?.retryAttempt !== undefined;
+          });
+          expect(retryCall).toBeDefined();
         },
         { timeout: 10000 },
       );
@@ -834,10 +862,11 @@ describe('requestWebGeneration — chatgpt-web inactivity handling', () => {
 
       // Verify retryAttempt is incremented in the re-injected request
       const calls = vi.mocked(chrome.scripting.executeScript).mock.calls;
-      const retryMainCall = calls
-        .slice(executeCountBefore)
-        .find(c => (c[0] as { world?: string }).world === 'MAIN');
-      expect(retryMainCall).toBeDefined();
+      const retryMainCall = calls.find(c => {
+        const opt = c[0] as { world?: string; args?: unknown[] };
+        const req = opt.args?.[0] as Record<string, unknown> | undefined;
+        return opt.world === 'MAIN' && req?.retryAttempt !== undefined;
+      });
       const retryArgs = (retryMainCall![0] as { args?: unknown[] }).args;
       const retryRequest = retryArgs?.[0] as Record<string, unknown>;
       expect(retryRequest?.retryAttempt).toBe(1);

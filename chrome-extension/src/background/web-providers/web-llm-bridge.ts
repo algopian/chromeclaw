@@ -456,23 +456,44 @@ export const requestWebGeneration = (opts: {
         });
         (async () => {
           try {
-            await chrome.tabs.update(activeTabId!, { active: true });
-            await chrome.tabs.reload(activeTabId!);
-            await waitForTabLoad(activeTabId!, 5000);
-            const providerOrigin = new URL(activeProvider!.loginUrl).origin;
+            const tid = activeTabId!;
+            const prov = activeProvider!;
+            const req = activeFetchRequest!;
+            // Save current tab to restore after foregrounding
+            let previousTabId: number | undefined;
+            try {
+              const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+              if (activeTab?.id && activeTab.id !== tid) previousTabId = activeTab.id;
+            } catch {
+              /* ignore */
+            }
+            await chrome.tabs.update(tid, { active: true });
+            // Start listening for load completion BEFORE triggering reload
+            // to avoid a race where the tab completes before the listener registers.
+            const tabLoaded = waitForTabLoad(tid, 5000);
+            await chrome.tabs.reload(tid);
+            await tabLoaded;
+            if (previousTabId) {
+              try {
+                await chrome.tabs.update(previousTabId, { active: true });
+              } catch {
+                /* tab may have been closed */
+              }
+            }
+            const providerOrigin = new URL(prov.loginUrl).origin;
             await chrome.scripting.executeScript({
-              target: { tabId: activeTabId! },
+              target: { tabId: tid },
               world: 'ISOLATED',
               func: installRelay,
               args: [requestId, providerOrigin, WEB_LLM_TIMEOUT_MS + 30_000],
             });
             // Re-inject with retryAttempt incremented to prevent infinite loops
             const retryRequest: ContentFetchRequest = {
-              ...activeFetchRequest!,
-              retryAttempt: (activeFetchRequest!.retryAttempt ?? 0) + 1,
+              ...req,
+              retryAttempt: (req.retryAttempt ?? 0) + 1,
             };
             await chrome.scripting.executeScript({
-              target: { tabId: activeTabId! },
+              target: { tabId: tid },
               world: 'MAIN',
               func: mainWorldFetch,
               args: [retryRequest],
@@ -584,10 +605,29 @@ export const requestWebGeneration = (opts: {
               lastRequestAt: lastReq,
               staleSec: Math.round((Date.now() - lastReq) / 1000),
             });
+            // Save the user's current active tab so we can restore focus after reload
+            let previousTabId: number | undefined;
+            try {
+              const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+              if (activeTab?.id && activeTab.id !== tabId) previousTabId = activeTab.id;
+            } catch {
+              /* ignore — worst case the chatgpt tab stays foregrounded */
+            }
             // Bring to foreground so SPA hydrates with full Turnstile/CF support
             await chrome.tabs.update(tabId, { active: true });
+            // Start listening for load completion BEFORE triggering reload
+            // to avoid a race where the tab completes before the listener registers.
+            const tabLoaded = waitForTabLoad(tabId, 5000);
             await chrome.tabs.reload(tabId);
-            await waitForTabLoad(tabId, 5000);
+            await tabLoaded;
+            // Restore the user's previously active tab
+            if (previousTabId) {
+              try {
+                await chrome.tabs.update(previousTabId, { active: true });
+              } catch {
+                /* tab may have been closed in the meantime */
+              }
+            }
           }
         }
       } else {
