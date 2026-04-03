@@ -456,23 +456,31 @@ export const requestWebGeneration = (opts: {
         });
         (async () => {
           try {
-            await chrome.tabs.update(activeTabId!, { active: true });
-            await chrome.tabs.reload(activeTabId!);
-            await waitForTabLoad(activeTabId!, 5000);
-            const providerOrigin = new URL(activeProvider!.loginUrl).origin;
+            const tid = activeTabId!;
+            const prov = activeProvider!;
+            const req = activeFetchRequest!;
+            await chrome.tabs.update(tid, { active: true });
+            // Start listening for load completion BEFORE triggering reload
+            // to avoid a race where the tab completes before the listener registers.
+            const tabLoaded = waitForTabLoad(tid, 5000);
+            await chrome.tabs.reload(tid);
+            await tabLoaded;
+            // Do NOT restore previous tab here — the MAIN world script needs
+            // the tab foregrounded for Turnstile/CF sentinel challenge to succeed.
+            const providerOrigin = new URL(prov.loginUrl).origin;
             await chrome.scripting.executeScript({
-              target: { tabId: activeTabId! },
+              target: { tabId: tid },
               world: 'ISOLATED',
               func: installRelay,
               args: [requestId, providerOrigin, WEB_LLM_TIMEOUT_MS + 30_000],
             });
             // Re-inject with retryAttempt incremented to prevent infinite loops
             const retryRequest: ContentFetchRequest = {
-              ...activeFetchRequest!,
-              retryAttempt: (activeFetchRequest!.retryAttempt ?? 0) + 1,
+              ...req,
+              retryAttempt: (req.retryAttempt ?? 0) + 1,
             };
             await chrome.scripting.executeScript({
-              target: { tabId: activeTabId! },
+              target: { tabId: tid },
               world: 'MAIN',
               func: mainWorldFetch,
               args: [retryRequest],
@@ -574,8 +582,8 @@ export const requestWebGeneration = (opts: {
         // The tab must be brought to the foreground before reloading — ChatGPT's
         // SPA (Turnstile, Cloudflare challenges, telemetry heartbeats) does not
         // fully hydrate in a background tab, causing warmup:finalize=500 and
-        // chat-requirements timeouts. Foregrounding lets the page complete its
-        // antibot initialization, then we move it back to the background.
+        // chat-requirements timeouts. The tab must stay foregrounded until the
+        // MAIN world script completes its sentinel challenge flow.
         if (providerId === 'chatgpt-web') {
           const lastReq = storedCredential.lastRequestAt ?? 0;
           if (Date.now() - lastReq > CHATGPT_STALE_SESSION_MS) {
@@ -586,8 +594,14 @@ export const requestWebGeneration = (opts: {
             });
             // Bring to foreground so SPA hydrates with full Turnstile/CF support
             await chrome.tabs.update(tabId, { active: true });
+            // Start listening for load completion BEFORE triggering reload
+            // to avoid a race where the tab completes before the listener registers.
+            const tabLoaded = waitForTabLoad(tabId, 5000);
             await chrome.tabs.reload(tabId);
-            await waitForTabLoad(tabId, 5000);
+            await tabLoaded;
+            // Do NOT restore previous tab here — the MAIN world script needs
+            // the tab foregrounded for Turnstile/CF sentinel challenge to succeed.
+            // The tab will naturally lose focus when the user interacts elsewhere.
           }
         }
       } else {
