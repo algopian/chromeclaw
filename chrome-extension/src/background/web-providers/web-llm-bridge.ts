@@ -13,7 +13,7 @@
  * 7. Parse SSE → extract delta via provider's parseSseDelta → feed XML parser → emit stream events
  */
 
-import { getWebCredential, storeWebCredential } from './auth';
+import { getWebCredential } from './auth';
 import { mainWorldFetch } from './content-fetch-main';
 import { installRelay } from './content-fetch-relay';
 import { getWebProvider } from './registry';
@@ -38,39 +38,6 @@ const bridgeLog = createLogger('web-llm');
 
 /** Default timeout for web generation (5 minutes). */
 const WEB_LLM_TIMEOUT_MS = 300_000;
-
-/**
- * ChatGPT-web only: if the last successful request was more than this many ms ago,
- * refresh the provider tab before injecting the MAIN world script to reset
- * server-side sentinel state and avoid 403 "unusual activity" errors.
- */
-const CHATGPT_STALE_SESSION_MS = 10 * 60_000; // 10 minutes
-
-/** Timeout when waiting for a tab to finish loading. */
-const TAB_LOAD_TIMEOUT_MS = 30_000;
-
-/** Wait for a tab to finish loading (status === 'complete') + SPA hydration settle time. */
-const waitForTabLoad = (tabId: number, hydrationMs = 0): Promise<void> =>
-  new Promise<void>((resolve, reject) => {
-    const loadTimeout = setTimeout(() => {
-      chrome.tabs.onUpdated.removeListener(onUpdated);
-      reject(
-        new Error(`Provider tab did not finish loading within ${TAB_LOAD_TIMEOUT_MS / 1000}s`),
-      );
-    }, TAB_LOAD_TIMEOUT_MS);
-    const onUpdated = (id: number, info: chrome.tabs.TabChangeInfo) => {
-      if (id === tabId && info.status === 'complete') {
-        clearTimeout(loadTimeout);
-        chrome.tabs.onUpdated.removeListener(onUpdated);
-        if (hydrationMs > 0) {
-          setTimeout(resolve, hydrationMs);
-        } else {
-          resolve();
-        }
-      }
-    };
-    chrome.tabs.onUpdated.addListener(onUpdated);
-  });
 
 export const requestWebGeneration = (opts: {
   modelConfig: ChatModel;
@@ -125,12 +92,6 @@ export const requestWebGeneration = (opts: {
   }
 
   let settled = false;
-
-  // Mutable state populated by the async setup block — used by WEB_LLM_RETRY_REFRESH handler
-  let activeTabId: number | undefined;
-  let activeProvider: ReturnType<typeof getWebProvider>;
-  let activeFetchRequest: ContentFetchRequest | undefined;
-
   const cleanup = () => {
     if (settled) return;
     settled = true;
@@ -151,8 +112,9 @@ export const requestWebGeneration = (opts: {
       const result = adapter.onFinish({
         hasToolCalls,
         fullText,
-        thinkingContent:
-          thinkingPart && thinkingPart.type === 'thinking' ? thinkingPart.thinking : undefined,
+        thinkingContent: thinkingPart && thinkingPart.type === 'thinking'
+          ? thinkingPart.thinking
+          : undefined,
       });
       if (result && 'error' in result) {
         emitError(result.error);
@@ -394,21 +356,6 @@ export const requestWebGeneration = (opts: {
 
         finishStream(hasToolCalls ? 'toolUse' : 'stop');
         bridgeLog.debug('Web generation complete', { requestId, hasToolCalls });
-
-        // ChatGPT-web only: record successful request time for stale-session detection
-        if (cachedProviderId === 'chatgpt-web') {
-          getWebCredential(cachedProviderId)
-            .then(cred => {
-              if (cred) {
-                storeWebCredential({ ...cred, lastRequestAt: Date.now() }).catch(() => {
-                  /* non-critical — stale detection degrades gracefully */
-                });
-              }
-            })
-            .catch(() => {
-              /* ignore */
-            });
-        }
         break;
       }
 
@@ -418,71 +365,6 @@ export const requestWebGeneration = (opts: {
             ? message.error
             : String(message.error ?? 'Unknown error');
         emitError(errorMsg);
-        break;
-      }
-
-      // ChatGPT-web only: persist provider metadata (e.g., deviceId) for cross-request stability
-      case 'WEB_LLM_METADATA': {
-        if (cachedProviderId === 'chatgpt-web' && message.metadata) {
-          const meta = message.metadata as Record<string, string>;
-          getWebCredential(cachedProviderId)
-            .then(cred => {
-              if (cred) {
-                const merged = { ...cred.metadata, ...meta };
-                storeWebCredential({ ...cred, metadata: merged }).catch(() => {
-                  /* non-critical */
-                });
-              }
-            })
-            .catch(() => {
-              /* ignore */
-            });
-        }
-        break;
-      }
-
-      // ChatGPT-web only: MAIN world 403 retry exhausted — refresh tab and re-inject from scratch
-      case 'WEB_LLM_RETRY_REFRESH': {
-        if (
-          cachedProviderId !== 'chatgpt-web' ||
-          !activeTabId ||
-          !activeProvider ||
-          !activeFetchRequest
-        )
-          break;
-        bridgeLog.info('ChatGPT 403 retry — refreshing tab and re-injecting', {
-          requestId,
-          diag: message.diag,
-        });
-        (async () => {
-          try {
-            await chrome.tabs.update(activeTabId!, { active: true });
-            await chrome.tabs.reload(activeTabId!);
-            await waitForTabLoad(activeTabId!, 5000);
-            const providerOrigin = new URL(activeProvider!.loginUrl).origin;
-            await chrome.scripting.executeScript({
-              target: { tabId: activeTabId! },
-              world: 'ISOLATED',
-              func: installRelay,
-              args: [requestId, providerOrigin, WEB_LLM_TIMEOUT_MS + 30_000],
-            });
-            // Re-inject with retryAttempt incremented to prevent infinite loops
-            const retryRequest: ContentFetchRequest = {
-              ...activeFetchRequest!,
-              retryAttempt: (activeFetchRequest!.retryAttempt ?? 0) + 1,
-            };
-            await chrome.scripting.executeScript({
-              target: { tabId: activeTabId! },
-              world: 'MAIN',
-              func: mainWorldFetch,
-              args: [retryRequest],
-            });
-          } catch (err) {
-            emitError(
-              `Tab refresh retry failed: ${err instanceof Error ? err.message : String(err)}`,
-            );
-          }
-        })();
         break;
       }
     }
@@ -568,28 +450,6 @@ export const requestWebGeneration = (opts: {
       let tabId: number;
       if (tabs.length > 0 && tabs[0].id) {
         tabId = tabs[0].id;
-
-        // ChatGPT-web only: refresh the tab if the session is stale to reset
-        // server-side sentinel state and prevent 403 "unusual activity" errors.
-        // The tab must be brought to the foreground before reloading — ChatGPT's
-        // SPA (Turnstile, Cloudflare challenges, telemetry heartbeats) does not
-        // fully hydrate in a background tab, causing warmup:finalize=500 and
-        // chat-requirements timeouts. Foregrounding lets the page complete its
-        // antibot initialization, then we move it back to the background.
-        if (providerId === 'chatgpt-web') {
-          const lastReq = storedCredential.lastRequestAt ?? 0;
-          if (Date.now() - lastReq > CHATGPT_STALE_SESSION_MS) {
-            bridgeLog.info('ChatGPT session stale — foregrounding and reloading tab', {
-              requestId,
-              lastRequestAt: lastReq,
-              staleSec: Math.round((Date.now() - lastReq) / 1000),
-            });
-            // Bring to foreground so SPA hydrates with full Turnstile/CF support
-            await chrome.tabs.update(tabId, { active: true });
-            await chrome.tabs.reload(tabId);
-            await waitForTabLoad(tabId, 5000);
-          }
-        }
       } else {
         const newTab = await chrome.tabs.create({
           url: provider.loginUrl,
@@ -600,7 +460,26 @@ export const requestWebGeneration = (opts: {
           return;
         }
         tabId = newTab.id;
-        await waitForTabLoad(tabId);
+        // Wait for tab to load (with 30s timeout to avoid hanging)
+        const TAB_LOAD_TIMEOUT_MS = 30_000;
+        await new Promise<void>((resolve, reject) => {
+          const loadTimeout = setTimeout(() => {
+            chrome.tabs.onUpdated.removeListener(onUpdated);
+            reject(
+              new Error(
+                `Provider tab did not finish loading within ${TAB_LOAD_TIMEOUT_MS / 1000}s`,
+              ),
+            );
+          }, TAB_LOAD_TIMEOUT_MS);
+          const onUpdated = (id: number, info: chrome.tabs.TabChangeInfo) => {
+            if (id === tabId && info.status === 'complete') {
+              clearTimeout(loadTimeout);
+              chrome.tabs.onUpdated.removeListener(onUpdated);
+              resolve();
+            }
+          };
+          chrome.tabs.onUpdated.addListener(onUpdated);
+        });
       }
 
       // Inject relay script (ISOLATED world) first — pass origin for validation and timeout
@@ -621,10 +500,6 @@ export const requestWebGeneration = (opts: {
         urlTemplate,
         binaryProtocol,
         binaryEncodeBody,
-        // ChatGPT-web only: pass stored metadata (e.g., deviceId) for cross-request stability
-        ...(providerId === 'chatgpt-web' && credential.metadata
-          ? { providerMetadata: credential.metadata }
-          : {}),
       };
 
       if (binaryProtocol) {
@@ -637,11 +512,6 @@ export const requestWebGeneration = (opts: {
 
       stream.push({ type: 'start', partial });
       stream.push({ type: 'text_start', contentIndex: 0, partial });
-
-      // Expose state for the WEB_LLM_RETRY_REFRESH handler (chatgpt-web only)
-      activeTabId = tabId;
-      activeProvider = provider;
-      activeFetchRequest = fetchRequest;
 
       await chrome.scripting.executeScript({
         target: { tabId },

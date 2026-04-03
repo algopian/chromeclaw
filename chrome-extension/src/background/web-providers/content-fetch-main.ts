@@ -39,10 +39,6 @@ export interface ContentFetchRequest {
     | 'rakuten';
   /** When true, encode the JSON body into a binary frame before sending. */
   binaryEncodeBody?: boolean;
-  /** Provider-specific metadata passed from the bridge (e.g., chatgpt-web deviceId). */
-  providerMetadata?: Record<string, string>;
-  /** Retry attempt counter — prevents infinite tab-refresh loops (max 1). */
-  retryAttempt?: number;
 }
 
 /**
@@ -50,15 +46,7 @@ export interface ContentFetchRequest {
  * This function is serialized and injected into the page context.
  */
 export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void> => {
-  const {
-    requestId,
-    setupRequest,
-    urlTemplate,
-    binaryProtocol,
-    binaryEncodeBody,
-    providerMetadata,
-    retryAttempt,
-  } = request;
+  const { requestId, setupRequest, urlTemplate, binaryProtocol, binaryEncodeBody } = request;
   let { url, init } = request;
   const origin = window.location.origin;
 
@@ -1569,7 +1557,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
 
         // ── Step 1: Fetch access token and device ID from /api/auth/session ──
         let accessToken = '';
-        let deviceId = providerMetadata?.deviceId ?? '';
+        let deviceId = '';
         try {
           const sessionRes = await fetch('https://chatgpt.com/api/auth/session', {
             credentials: 'include',
@@ -1577,9 +1565,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
           if (sessionRes.ok) {
             const sessionData = (await sessionRes.json()) as Record<string, unknown>;
             accessToken = (sessionData.accessToken ?? '') as string;
-            const serverDeviceId = ((sessionData as { oaiDeviceId?: string }).oaiDeviceId ??
-              '') as string;
-            if (serverDeviceId) deviceId = serverDeviceId;
+            deviceId = ((sessionData as { oaiDeviceId?: string }).oaiDeviceId ?? '') as string;
           }
         } catch {
           /* ignore */
@@ -1588,9 +1574,6 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
         if (!deviceId) {
           deviceId = crypto.randomUUID();
         }
-
-        // Persist deviceId back to the bridge for cross-request stability
-        window.postMessage({ type: 'WEB_LLM_METADATA', requestId, metadata: { deviceId } }, origin);
 
         if (!accessToken) {
           window.postMessage(
@@ -1606,59 +1589,16 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
         }
 
         // ── Step 2: Base headers ──
-        // Try to extract OAI-Client-Version and OAI-Client-Build-Number from the page.
-        // These rotate with each OpenAI deploy. Dynamic extraction avoids stale hardcodes.
-        const FALLBACK_CLIENT_VERSION = 'prod-80cda9c7df3122f53ffea02ee38084601d19d627';
-        const FALLBACK_BUILD_NUMBER = '5623993';
-        let oaiClientVersion = FALLBACK_CLIENT_VERSION;
-        let oaiBuildNumber = FALLBACK_BUILD_NUMBER;
-        try {
-          const w = window as unknown as Record<string, unknown>;
-          // Strategy 1: __NEXT_DATA__ (Next.js build manifest)
-          const nextData = w.__NEXT_DATA__ as { buildId?: string } | undefined;
-          if (nextData?.buildId && typeof nextData.buildId === 'string') {
-            oaiClientVersion = nextData.buildId;
-          }
-          // Strategy 2: meta tag
-          const metaBuild = document.querySelector(
-            'meta[name="build-id"]',
-          ) as HTMLMetaElement | null;
-          if (metaBuild?.content) {
-            oaiClientVersion = metaBuild.content;
-          }
-          // Strategy 3: page globals set by ChatGPT bundle
-          const oaiConfig = w.__oai_SSR_HTML as Record<string, unknown> | undefined;
-          if (oaiConfig) {
-            if (typeof oaiConfig.buildId === 'string') oaiClientVersion = oaiConfig.buildId;
-            if (typeof oaiConfig.buildNumber === 'string') oaiBuildNumber = oaiConfig.buildNumber;
-          }
-          // Strategy 4: script tag content scan (last resort, only check first few)
-          if (oaiClientVersion === FALLBACK_CLIENT_VERSION) {
-            const scripts = document.querySelectorAll('script:not([src])');
-            for (let i = 0; i < Math.min(scripts.length, 10); i++) {
-              const text = scripts[i]?.textContent ?? '';
-              const versionMatch = text.match(/["']OAI-Client-Version["']\s*:\s*["']([^"']+)["']/);
-              if (versionMatch?.[1]) {
-                oaiClientVersion = versionMatch[1];
-                break;
-              }
-              const buildMatch = text.match(/buildNumber\s*[:=]\s*["'](\d+)["']/);
-              if (buildMatch?.[1]) {
-                oaiBuildNumber = buildMatch[1];
-              }
-            }
-          }
-        } catch {
-          /* extraction is best-effort — use fallbacks */
-        }
-
         const baseHeaders = (at: string | undefined, did: string): Record<string, string> => ({
           'Content-Type': 'application/json',
           Accept: 'text/event-stream',
           'oai-device-id': did,
           'oai-language': 'en-US',
-          'OAI-Client-Version': oaiClientVersion,
-          'OAI-Client-Build-Number': oaiBuildNumber,
+          // These rotate with each OpenAI deploy. Not exposed as page globals — baked
+          // into the bundled JS on cdn.oaistatic.com. Optional but reduce 403 risk.
+          // Update if ChatGPT requests start returning 403 after sentinel passes.
+          'OAI-Client-Version': 'prod-80cda9c7df3122f53ffea02ee38084601d19d627',
+          'OAI-Client-Build-Number': '5623993',
           Referer: window.location.href || 'https://chatgpt.com/',
           Origin: 'https://chatgpt.com',
           'sec-ch-ua': (
@@ -2380,16 +2320,6 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
           }
         }
 
-        // ── 403 still? Request tab refresh from bridge and bail ──
-        // The bridge will refresh the provider tab (resetting server-side sentinel state)
-        // and re-inject the MAIN world script from scratch. Only attempt once.
-        if (!cgResponse.ok && cgResponse.status === 403 && (retryAttempt ?? 0) < 1) {
-          diag.push('retry=tab-refresh-requested');
-          const diagStr = diag.length > 0 ? ` [diag: ${diag.join('; ')}]` : '';
-          window.postMessage({ type: 'WEB_LLM_RETRY_REFRESH', requestId, diag: diagStr }, origin);
-          return;
-        }
-
         if (!cgResponse.ok) {
           let errorBody = '';
           try {
@@ -2616,7 +2546,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       const CACHE_KEY = '__chromeclaw_rakuten_creds';
       const CACHE_TTL = 50 * 60 * 1000; // 50 minutes
       const cached = (window as unknown as Record<string, RakutenCache | undefined>)[CACHE_KEY];
-      const cacheValid = cached && Date.now() - cached.ts < CACHE_TTL;
+      const cacheValid = cached && (Date.now() - cached.ts) < CACHE_TTL;
 
       let bearer = cacheValid ? cached.bearer : '';
       let deviceId = cacheValid ? cached.deviceId : '';
@@ -2633,259 +2563,214 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
 
       // Skip token acquisition if we already have cached credentials
       if (!bearer) {
-        // ── Strategy 1: Intercept paired token + device-id from SPA's XHR ──
-        // The Rakuten SPA uses Axios (which uses XMLHttpRequest).  We hook
-        // XHR.setRequestHeader to capture both Authorization and Device-Id
-        // headers from the same request, guaranteeing they are paired.
-        try {
-          const intercepted = await new Promise<{ token: string; did: string } | null>(resolve => {
-            let capturedToken = '';
-            let capturedDeviceId = '';
-            let resolved = false;
 
-            const done = (result: { token: string; did: string } | null) => {
-              if (resolved) return;
-              resolved = true;
-              clearTimeout(timeout);
-              // Restore hooks
-              try {
-                XMLHttpRequest.prototype.setRequestHeader = origSetReqHeader;
-              } catch {
-                /* ignore */
-              }
-              try {
-                window.fetch = origFetch;
-              } catch {
-                /* ignore */
-              }
-              resolve(result);
-            };
+      // ── Strategy 1: Intercept paired token + device-id from SPA's XHR ──
+      // The Rakuten SPA uses Axios (which uses XMLHttpRequest).  We hook
+      // XHR.setRequestHeader to capture both Authorization and Device-Id
+      // headers from the same request, guaranteeing they are paired.
+      try {
+        const intercepted = await new Promise<{ token: string; did: string } | null>(resolve => {
+          let capturedToken = '';
+          let capturedDeviceId = '';
+          let resolved = false;
 
-            const timeout = setTimeout(() => done(null), 5000);
+          const done = (result: { token: string; did: string } | null) => {
+            if (resolved) return;
+            resolved = true;
+            clearTimeout(timeout);
+            // Restore hooks
+            try { XMLHttpRequest.prototype.setRequestHeader = origSetReqHeader; } catch { /* ignore */ }
+            try { window.fetch = origFetch; } catch { /* ignore */ }
+            resolve(result);
+          };
 
-            // Hook XHR setRequestHeader (Axios path)
-            const origSetReqHeader = XMLHttpRequest.prototype.setRequestHeader;
-            XMLHttpRequest.prototype.setRequestHeader = function (name: string, value: string) {
-              if (name === 'Authorization' && typeof value === 'string' && value.length > 20) {
-                capturedToken = value.startsWith('Bearer ') ? value.slice(7) : value;
+          const timeout = setTimeout(() => done(null), 5000);
+
+          // Hook XHR setRequestHeader (Axios path)
+          const origSetReqHeader = XMLHttpRequest.prototype.setRequestHeader;
+          XMLHttpRequest.prototype.setRequestHeader = function (name: string, value: string) {
+            if (name === 'Authorization' && typeof value === 'string' && value.length > 20) {
+              capturedToken = value.startsWith('Bearer ') ? value.slice(7) : value;
+            }
+            if (name === 'Device-Id' && typeof value === 'string' && value.length > 10) {
+              capturedDeviceId = value;
+            }
+            if (capturedToken && capturedDeviceId) {
+              done({ token: capturedToken, did: capturedDeviceId });
+            }
+            return origSetReqHeader.call(this, name, value);
+          };
+
+          // Hook fetch (some SPA paths may use fetch instead of XHR)
+          const origFetch = window.fetch;
+          window.fetch = function (input: RequestInfo | URL, initArg?: RequestInit) {
+            try {
+              const headers = initArg?.headers;
+              let authH = '';
+              let didH = '';
+              if (headers && typeof headers === 'object' && !Array.isArray(headers) && !(headers instanceof Headers)) {
+                const h = headers as Record<string, string>;
+                authH = h.Authorization ?? h.authorization ?? '';
+                didH = h['Device-Id'] ?? h['device-id'] ?? '';
+              } else if (headers instanceof Headers) {
+                authH = headers.get('Authorization') ?? '';
+                didH = headers.get('Device-Id') ?? '';
               }
-              if (name === 'Device-Id' && typeof value === 'string' && value.length > 10) {
-                capturedDeviceId = value;
+              if (authH.length > 20 && !capturedToken) {
+                capturedToken = authH.startsWith('Bearer ') ? authH.slice(7) : authH;
+              }
+              if (didH.length > 10 && !capturedDeviceId) {
+                capturedDeviceId = didH;
               }
               if (capturedToken && capturedDeviceId) {
                 done({ token: capturedToken, did: capturedDeviceId });
               }
-              return origSetReqHeader.call(this, name, value);
-            };
+            } catch { /* ignore header extraction errors */ }
+            return origFetch.call(window, input, initArg);
+          } as typeof window.fetch;
 
-            // Hook fetch (some SPA paths may use fetch instead of XHR)
-            const origFetch = window.fetch;
-            window.fetch = function (input: RequestInfo | URL, initArg?: RequestInit) {
-              try {
-                const headers = initArg?.headers;
-                let authH = '';
-                let didH = '';
-                if (
-                  headers &&
-                  typeof headers === 'object' &&
-                  !Array.isArray(headers) &&
-                  !(headers instanceof Headers)
-                ) {
-                  const h = headers as Record<string, string>;
-                  authH = h.Authorization ?? h.authorization ?? '';
-                  didH = h['Device-Id'] ?? h['device-id'] ?? '';
-                } else if (headers instanceof Headers) {
-                  authH = headers.get('Authorization') ?? '';
-                  didH = headers.get('Device-Id') ?? '';
-                }
-                if (authH.length > 20 && !capturedToken) {
-                  capturedToken = authH.startsWith('Bearer ') ? authH.slice(7) : authH;
-                }
-                if (didH.length > 10 && !capturedDeviceId) {
-                  capturedDeviceId = didH;
-                }
-                if (capturedToken && capturedDeviceId) {
-                  done({ token: capturedToken, did: capturedDeviceId });
-                }
-              } catch {
-                /* ignore header extraction errors */
-              }
-              return origFetch.call(window, input, initArg);
-            } as typeof window.fetch;
-
-            // Trigger the SPA to make an API call so our hooks can capture headers.
-            // The SPA refreshes thread list on focus/visibility events.
-            try {
-              window.dispatchEvent(new Event('focus'));
-            } catch {
-              /* ignore */
-            }
-            try {
-              window.dispatchEvent(new Event('online'));
-            } catch {
-              /* ignore */
-            }
-            try {
-              Object.defineProperty(document, 'hidden', { value: false, configurable: true });
-              document.dispatchEvent(new Event('visibilitychange'));
-            } catch {
-              /* ignore */
-            }
-          });
-
-          if (intercepted) {
-            bearer = intercepted.token;
-            deviceId = intercepted.did;
-            bearerSource = 'intercepted';
-            dbg('Intercepted paired token + device-id from SPA', {
-              tokenPrefix: bearer.slice(0, 20) + '...',
-              deviceId,
-            });
-          }
-        } catch {
-          /* ignore intercept errors */
-        }
-
-        // ── Strategy 2: Read from localStorage ──
-        // The token may be stale, but if we can also find the matching device-id,
-        // the pair might still work.
-        if (!bearer) {
+          // Trigger the SPA to make an API call so our hooks can capture headers.
+          // The SPA refreshes thread list on focus/visibility events.
+          try { window.dispatchEvent(new Event('focus')); } catch { /* ignore */ }
+          try { window.dispatchEvent(new Event('online')); } catch { /* ignore */ }
           try {
-            const at = localStorage.getItem('accessToken');
-            if (at && at.length > 10) {
-              bearer = at;
-              bearerSource = 'accessToken';
-            }
-          } catch {
-            /* ignore */
-          }
+            Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+            document.dispatchEvent(new Event('visibilitychange'));
+          } catch { /* ignore */ }
+        });
+
+        if (intercepted) {
+          bearer = intercepted.token;
+          deviceId = intercepted.did;
+          bearerSource = 'intercepted';
+          dbg('Intercepted paired token + device-id from SPA', {
+            tokenPrefix: bearer.slice(0, 20) + '...',
+            deviceId,
+          });
         }
-        if (!bearer) {
+      } catch {
+        /* ignore intercept errors */
+      }
+
+      // ── Strategy 2: Read from localStorage ──
+      // The token may be stale, but if we can also find the matching device-id,
+      // the pair might still work.
+      if (!bearer) {
+        try {
+          const at = localStorage.getItem('accessToken');
+          if (at && at.length > 10) {
+            bearer = at;
+            bearerSource = 'accessToken';
+          }
+        } catch { /* ignore */ }
+      }
+      if (!bearer) {
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key || key === 'accessToken') continue;
+            const val = localStorage.getItem(key);
+            if (val && val.startsWith('@St.')) {
+              bearer = val;
+              bearerSource = key;
+              break;
+            }
+          }
+        } catch { /* localStorage not accessible */ }
+      }
+
+      // If we have a localStorage token but NO device-id yet, we CANNOT safely
+      // use that token — the server will reject the mismatched pair.
+      // Try to find the SPA's device-id from ninja-global Zustand store.
+      if (bearer && !deviceId) {
+        try {
+          const ninjaGlobal = localStorage.getItem('ninja-global');
+          if (ninjaGlobal) {
+            const ng = JSON.parse(ninjaGlobal) as Record<string, unknown>;
+            const state = (ng.state ?? ng) as Record<string, unknown>;
+            const did = (state.tempUserId ?? state.deviceId) as string | undefined;
+            if (did && did.length > 10) deviceId = did;
+          }
+        } catch { /* not JSON */ }
+
+        // Scan for keys containing "device" and "id"
+        if (!deviceId) {
           try {
             for (let i = 0; i < localStorage.length; i++) {
               const key = localStorage.key(i);
-              if (!key || key === 'accessToken') continue;
-              const val = localStorage.getItem(key);
-              if (val && val.startsWith('@St.')) {
-                bearer = val;
-                bearerSource = key;
-                break;
-              }
-            }
-          } catch {
-            /* localStorage not accessible */
-          }
-        }
-
-        // If we have a localStorage token but NO device-id yet, we CANNOT safely
-        // use that token — the server will reject the mismatched pair.
-        // Try to find the SPA's device-id from ninja-global Zustand store.
-        if (bearer && !deviceId) {
-          try {
-            const ninjaGlobal = localStorage.getItem('ninja-global');
-            if (ninjaGlobal) {
-              const ng = JSON.parse(ninjaGlobal) as Record<string, unknown>;
-              const state = (ng.state ?? ng) as Record<string, unknown>;
-              const did = (state.tempUserId ?? state.deviceId) as string | undefined;
-              if (did && did.length > 10) deviceId = did;
-            }
-          } catch {
-            /* not JSON */
-          }
-
-          // Scan for keys containing "device" and "id"
-          if (!deviceId) {
-            try {
-              for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (!key) continue;
-                const lk = key.toLowerCase();
-                if (lk.includes('device') && lk.includes('id')) {
-                  const val = localStorage.getItem(key);
-                  if (val && val.length > 10) {
-                    deviceId = val.replace(/^"|"$/g, '');
-                    break;
-                  }
+              if (!key) continue;
+              const lk = key.toLowerCase();
+              if (lk.includes('device') && lk.includes('id')) {
+                const val = localStorage.getItem(key);
+                if (val && val.length > 10) {
+                  deviceId = val.replace(/^"|"$/g, '');
+                  break;
                 }
               }
-            } catch {
-              /* ignore */
             }
-          }
-
-          // If we STILL have no device-id, the localStorage token is unusable —
-          // discard it and fall through to anonymous auth with a fresh device-id.
-          if (!deviceId) {
-            dbg('localStorage token found but no matching device-id — discarding', {
-              tokenPrefix: bearer.slice(0, 20) + '...',
-            });
-            bearer = '';
-            bearerSource = '';
-          }
+          } catch { /* ignore */ }
         }
 
-        dbg('Token search', {
-          found: !!bearer,
-          source: bearerSource,
-          tokenPrefix: bearer ? bearer.slice(0, 20) + '...' : 'none',
-          deviceId: deviceId || 'none',
-          localStorageKeys: (() => {
+        // If we STILL have no device-id, the localStorage token is unusable —
+        // discard it and fall through to anonymous auth with a fresh device-id.
+        if (!deviceId) {
+          dbg('localStorage token found but no matching device-id — discarding', {
+            tokenPrefix: bearer.slice(0, 20) + '...',
+          });
+          bearer = '';
+          bearerSource = '';
+        }
+      }
+
+      dbg('Token search', {
+        found: !!bearer,
+        source: bearerSource,
+        tokenPrefix: bearer ? bearer.slice(0, 20) + '...' : 'none',
+        deviceId: deviceId || 'none',
+        localStorageKeys: (() => {
+          try { const keys: string[] = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k) keys.push(k); } return keys; } catch { return []; }
+        })(),
+      });
+
+      // ── Strategy 3: Anonymous auth (creates fresh paired token + device-id) ──
+      if (!bearer) {
+        if (!deviceId) {
+          deviceId = `${crypto.randomUUID()}-${Math.random().toString(36).slice(2, 8)}`;
+        }
+        dbg('No usable token, trying anonymous auth...', { deviceId });
+        try {
+          const anonUrl = 'https://ai.rakuten.co.jp/api/v2/auth/anonymous';
+          const anonSig = await signRestHeaders('GET', anonUrl);
+          const anonRes = await fetch(anonUrl, {
+            headers: {
+              Accept: 'application/json, text/plain, */*',
+              'X-Platform': 'WEB',
+              'X-Country-Code': 'US',
+              'Device-Id': deviceId,
+              'Accept-Language': 'en',
+              ...anonSig,
+            },
+            credentials: 'include',
+          });
+          const anonText = await anonRes.text();
+          dbg('Anonymous auth response', { status: anonRes.status, body: anonText.slice(0, 400) });
+          if (anonRes.ok) {
             try {
-              const keys: string[] = [];
-              for (let i = 0; i < localStorage.length; i++) {
-                const k = localStorage.key(i);
-                if (k) keys.push(k);
-              }
-              return keys;
-            } catch {
-              return [];
-            }
-          })(),
-        });
-
-        // ── Strategy 3: Anonymous auth (creates fresh paired token + device-id) ──
-        if (!bearer) {
-          if (!deviceId) {
-            deviceId = `${crypto.randomUUID()}-${Math.random().toString(36).slice(2, 8)}`;
-          }
-          dbg('No usable token, trying anonymous auth...', { deviceId });
-          try {
-            const anonUrl = 'https://ai.rakuten.co.jp/api/v2/auth/anonymous';
-            const anonSig = await signRestHeaders('GET', anonUrl);
-            const anonRes = await fetch(anonUrl, {
-              headers: {
-                Accept: 'application/json, text/plain, */*',
-                'X-Platform': 'WEB',
-                'X-Country-Code': 'US',
-                'Device-Id': deviceId,
-                'Accept-Language': 'en',
-                ...anonSig,
-              },
-              credentials: 'include',
-            });
-            const anonText = await anonRes.text();
-            dbg('Anonymous auth response', {
-              status: anonRes.status,
-              body: anonText.slice(0, 400),
-            });
-            if (anonRes.ok) {
-              try {
-                const anonData = JSON.parse(anonText) as Record<string, unknown>;
-                if (anonData.code === '0') {
-                  const anonInner = anonData.data as Record<string, string> | undefined;
-                  if (anonInner?.accessToken) {
-                    bearer = anonInner.accessToken;
-                    bearerSource = 'anonymous';
-                  }
+              const anonData = JSON.parse(anonText) as Record<string, unknown>;
+              if (anonData.code === '0') {
+                const anonInner = anonData.data as Record<string, string> | undefined;
+                if (anonInner?.accessToken) {
+                  bearer = anonInner.accessToken;
+                  bearerSource = 'anonymous';
                 }
-              } catch {
-                /* parse error */
               }
-            }
-          } catch (e) {
-            dbg('Anonymous auth failed', e);
+            } catch { /* parse error */ }
           }
+        } catch (e) {
+          dbg('Anonymous auth failed', e);
         }
+      }
+
       } // end: if (!bearer) — skip token acquisition when cached
 
       if (!bearer) {
@@ -2910,10 +2795,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
 
       // Cache credentials for reuse on subsequent turns (same tab)
       (window as unknown as Record<string, RakutenCache>)[CACHE_KEY] = {
-        bearer,
-        deviceId,
-        source: bearerSource,
-        ts: Date.now(),
+        bearer, deviceId, source: bearerSource, ts: Date.now(),
       };
 
       // ── Common REST headers ──
@@ -3078,13 +2960,9 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
           //    using an iframe that loads the page (shares localStorage + cookies).
           dbg('Trying iframe-based re-auth...');
           try {
-            const freshToken = await new Promise<string | null>(resolve => {
+            const freshToken = await new Promise<string | null>((resolve) => {
               const timeout = setTimeout(() => {
-                try {
-                  document.body.removeChild(iframe);
-                } catch {
-                  /* ignore */
-                }
+                try { document.body.removeChild(iframe); } catch { /* ignore */ }
                 resolve(null);
               }, 8000);
 
@@ -3103,26 +2981,15 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
                   if (at && at.length > 10 && at !== originalToken) {
                     clearInterval(poll);
                     clearTimeout(timeout);
-                    try {
-                      document.body.removeChild(iframe);
-                    } catch {
-                      /* ignore */
-                    }
+                    try { document.body.removeChild(iframe); } catch { /* ignore */ }
                     resolve(at);
                     return;
                   }
-                } catch {
-                  /* ignore */
-                }
-                if (checks > 40) {
-                  // 40 * 200ms = 8s
+                } catch { /* ignore */ }
+                if (checks > 40) { // 40 * 200ms = 8s
                   clearInterval(poll);
                   clearTimeout(timeout);
-                  try {
-                    document.body.removeChild(iframe);
-                  } catch {
-                    /* ignore */
-                  }
+                  try { document.body.removeChild(iframe); } catch { /* ignore */ }
                   resolve(null);
                 }
               }, 200);
@@ -3198,10 +3065,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
             bearer = newToken;
             // Update cache so subsequent turns use the refreshed token
             (window as unknown as Record<string, RakutenCache>)[CACHE_KEY] = {
-              bearer,
-              deviceId,
-              source: bearerSource,
-              ts: Date.now(),
+              bearer, deviceId, source: bearerSource, ts: Date.now(),
             };
             dbg('Token refreshed successfully', { prefix: newToken.slice(0, 20) + '...' });
           } else {
@@ -3224,10 +3088,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
               bearer = newToken;
               // Update cache so subsequent turns use the refreshed token
               (window as unknown as Record<string, RakutenCache>)[CACHE_KEY] = {
-                bearer,
-                deviceId,
-                source: bearerSource,
-                ts: Date.now(),
+                bearer, deviceId, source: bearerSource, ts: Date.now(),
               };
               // baseHeaders closure captures `bearer` by reference, so updating it works
               const result2 = await tryCreateThread();
@@ -3281,11 +3142,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
 
       dbg('WebSocket token decision', {
         tokenPrefix: wsToken.slice(0, 20) + '...',
-        tokenType: wsToken.startsWith('@St.')
-          ? 'SSO'
-          : wsToken.startsWith('at_')
-            ? 'API'
-            : 'unknown',
+        tokenType: wsToken.startsWith('@St.') ? 'SSO' : wsToken.startsWith('at_') ? 'API' : 'unknown',
         tokenLength: wsToken.length,
         deviceId,
         threadId,
@@ -3326,11 +3183,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
           host: wsUrl.host,
           path: wsUrl.pathname,
           tokenPrefix: wsToken.slice(0, 20) + '...',
-          tokenType: wsToken.startsWith('@St.')
-            ? 'SSO'
-            : wsToken.startsWith('at_')
-              ? 'API'
-              : 'unknown',
+          tokenType: wsToken.startsWith('@St.') ? 'SSO' : wsToken.startsWith('at_') ? 'API' : 'unknown',
           wsTs,
           wsNonce,
           wsSig,
@@ -3359,9 +3212,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
 
       await new Promise<void>(resolve => {
         ws.onopen = () => {
-          dbg('WebSocket opened, sending message', {
-            chatRequestType: thinkingLevel === 'thinking' ? 'DEEP_THINK' : 'USER_INPUT',
-          });
+          dbg('WebSocket opened, sending message', { chatRequestType: thinkingLevel === 'thinking' ? 'DEEP_THINK' : 'USER_INPUT' });
           // Send the chat message
           const chatRequestType = thinkingLevel === 'thinking' ? 'DEEP_THINK' : 'USER_INPUT';
           const nowMs = Date.now();
@@ -3473,12 +3324,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
             );
 
             // Rakuten terminal statuses — signal stream completion
-            if (
-              status === 'DONE' ||
-              status === 'COMPLETED' ||
-              status === 'FAILED' ||
-              status === 'CANCELLED'
-            ) {
+            if (status === 'DONE' || status === 'COMPLETED' || status === 'FAILED' || status === 'CANCELLED') {
               dbg('Stream terminal status', { status });
               streamDone = true;
               ws.close();
@@ -3493,7 +3339,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
         };
 
         // onerror always fires before onclose — just log it, let onclose handle the resolution
-        ws.onerror = ev => {
+        ws.onerror = (ev) => {
           dbg('WebSocket error event (onclose will follow)', {
             readyState: ws.readyState,
             url: ws.url?.slice(0, 80),
@@ -3508,11 +3354,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
             reason: ev.reason,
             wasClean: ev.wasClean,
             readyState: ws.readyState,
-            tokenType: wsToken.startsWith('@St.')
-              ? 'SSO'
-              : wsToken.startsWith('at_')
-                ? 'API'
-                : 'unknown',
+            tokenType: wsToken.startsWith('@St.') ? 'SSO' : wsToken.startsWith('at_') ? 'API' : 'unknown',
           });
           if (ev.code !== 1000) {
             // Abnormal close — report as error

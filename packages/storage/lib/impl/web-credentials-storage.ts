@@ -7,10 +7,6 @@ interface WebProviderCredential {
   token?: string;
   expiresAt?: number;
   capturedAt: number;
-  /** Timestamp of the last successful request (used by chatgpt-web for stale-session detection). */
-  lastRequestAt?: number;
-  /** Provider-specific metadata (e.g., chatgpt-web stores deviceId here for cross-request stability). */
-  metadata?: Record<string, string>;
 }
 
 const webCredentialsStorage = createStorage<Record<string, WebProviderCredential>>(

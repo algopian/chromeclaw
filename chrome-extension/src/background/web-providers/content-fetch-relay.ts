@@ -27,9 +27,7 @@ export const installRelay = (
     if (
       data.type === 'WEB_LLM_CHUNK' ||
       data.type === 'WEB_LLM_DONE' ||
-      data.type === 'WEB_LLM_ERROR' ||
-      data.type === 'WEB_LLM_METADATA' ||
-      data.type === 'WEB_LLM_RETRY_REFRESH'
+      data.type === 'WEB_LLM_ERROR'
     ) {
       chrome.runtime.sendMessage(data);
     }
