@@ -13,7 +13,7 @@
 import type { ContentFetchRequest } from './content-fetch-main';
 
 export const glmIntlMainWorldFetch = async (request: ContentFetchRequest): Promise<void> => {
-  const { requestId, url: _url, init } = request;
+  const { requestId, init } = request;
   const origin = window.location.origin;
 
   // Parse the prompt and optional chatId from the lightweight stub body

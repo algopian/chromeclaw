@@ -55,8 +55,8 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
     urlTemplate,
     binaryProtocol,
     binaryEncodeBody,
-    providerMetadata,
-    retryAttempt,
+    providerMetadata: _providerMetadata,
+    retryAttempt: _retryAttempt,
   } = request;
   let { url, init } = request;
   const origin = window.location.origin;
@@ -199,7 +199,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
       // The first chunk is inspected to detect plain-JSON error responses (byte 0 > 0x03).
       let buffer = new Uint8Array(0);
       let isFirstChunk = true;
-      let frameCount = 0;
+      let _frameCount = 0;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -290,7 +290,7 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
           buffer = buffer.slice(frameLen);
 
           const jsonString = new TextDecoder().decode(payloadBytes);
-          frameCount++;
+          _frameCount++;
           // Convert to SSE format so downstream pipeline works unchanged
           const sseChunk = `data: ${jsonString}\n\n`;
           window.postMessage({ type: 'WEB_LLM_CHUNK', requestId, chunk: sseChunk }, origin);

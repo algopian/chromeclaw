@@ -132,7 +132,7 @@ export const doubaoMainWorldFetch = async (request: ContentFetchRequest): Promis
   let capturedConversationId: string | undefined;
 
   /** Parse a Samantha outer wrapper and post the inner event_data as SSE. */
-  function processSamanthaJson(jsonStr: string): void {
+  const processSamanthaJson = (jsonStr: string): void => {
     try {
       const raw = JSON.parse(jsonStr) as {
         event_type?: number;
@@ -171,10 +171,10 @@ export const doubaoMainWorldFetch = async (request: ContentFetchRequest): Promis
     } catch {
       // Not valid JSON — ignore
     }
-  }
+  };
 
   /** Process a single trimmed, non-empty line from the Samantha stream. */
-  function processDoubaoLine(line: string): void {
+  const processDoubaoLine = (line: string): void => {
     // Format 1: Standard SSE `data: {...}` lines — unwrap Samantha wrapper
     if (line.startsWith('data: ')) {
       const dataContent = line.slice(6).trim();
@@ -203,7 +203,7 @@ export const doubaoMainWorldFetch = async (request: ContentFetchRequest): Promis
     if (line.startsWith('{')) {
       processSamanthaJson(line);
     }
-  }
+  };
 
   while (true) {
     const { done, value } = await doubaoReader.read();

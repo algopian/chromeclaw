@@ -3,6 +3,7 @@ import { chatgptWeb } from './chatgpt-web';
 import { createChatGPTStreamAdapter } from './chatgpt-stream-adapter';
 import { chatgptToolStrategy } from '../tool-strategy';
 import { chatgptMainWorldFetch } from '../content-fetch-chatgpt';
+import { storeWebCredential, getWebCredential } from '../auth';
 
 export const chatgptWebPlugin: WebProviderPlugin = {
   definition: chatgptWeb,
@@ -11,30 +12,25 @@ export const chatgptWebPlugin: WebProviderPlugin = {
   contentFetchHandler: chatgptMainWorldFetch,
   hooks: {
     onStreamDone: ({ credential }) => {
-      // Dynamic import to avoid pulling chrome.storage into test environments
-      import('../auth').then(({ storeWebCredential }) => {
-        storeWebCredential({ ...credential, lastRequestAt: Date.now() }).catch(() => {
-          /* non-critical — stale detection degrades gracefully */
-        });
+      storeWebCredential({ ...credential, lastRequestAt: Date.now() }).catch(() => {
+        /* non-critical — stale detection degrades gracefully */
       });
     },
 
     onMetadata: ({ providerId, metadata }) => {
       const meta = metadata as Record<string, string>;
-      import('../auth').then(({ getWebCredential, storeWebCredential }) => {
-        getWebCredential(providerId)
-          .then(cred => {
-            if (cred) {
-              const merged = { ...cred.metadata, ...meta };
-              storeWebCredential({ ...cred, metadata: merged }).catch(() => {
-                /* non-critical */
-              });
-            }
-          })
-          .catch(() => {
-            /* ignore */
-          });
-      });
+      getWebCredential(providerId)
+        .then(cred => {
+          if (cred) {
+            const merged = { ...cred.metadata, ...meta };
+            storeWebCredential({ ...cred, metadata: merged }).catch(() => {
+              /* non-critical */
+            });
+          }
+        })
+        .catch(() => {
+          /* ignore */
+        });
     },
 
     shouldReloadTab: ({ credential }) => {

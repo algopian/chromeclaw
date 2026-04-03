@@ -780,11 +780,7 @@ export const rakutenMainWorldFetch = async (request: ContentFetchRequest): Promi
 
   dbg('WebSocket token decision', {
     tokenPrefix: wsToken.slice(0, 20) + '...',
-    tokenType: wsToken.startsWith('@St.')
-      ? 'SSO'
-      : wsToken.startsWith('at_')
-        ? 'API'
-        : 'unknown',
+    tokenType: wsToken.startsWith('@St.') ? 'SSO' : wsToken.startsWith('at_') ? 'API' : 'unknown',
     tokenLength: wsToken.length,
     deviceId,
     threadId,
@@ -825,11 +821,7 @@ export const rakutenMainWorldFetch = async (request: ContentFetchRequest): Promi
       host: wsUrl.host,
       path: wsUrl.pathname,
       tokenPrefix: wsToken.slice(0, 20) + '...',
-      tokenType: wsToken.startsWith('@St.')
-        ? 'SSO'
-        : wsToken.startsWith('at_')
-          ? 'API'
-          : 'unknown',
+      tokenType: wsToken.startsWith('@St.') ? 'SSO' : wsToken.startsWith('at_') ? 'API' : 'unknown',
       wsTs,
       wsNonce,
       wsSig,
@@ -878,8 +870,7 @@ export const rakutenMainWorldFetch = async (request: ContentFetchRequest): Promi
         contents: [{ contentType: 'TEXT', textData: { text: prompt } }],
         retry: false,
         debug: false,
-        timezoneString:
-          Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles',
+        timezoneString: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles',
         explicitSearch: 'AUTO',
         countryCode: 'US',
         skipContextSave: false,
@@ -992,7 +983,7 @@ export const rakutenMainWorldFetch = async (request: ContentFetchRequest): Promi
     };
 
     // onerror always fires before onclose — just log it, let onclose handle the resolution
-    ws.onerror = ev => {
+    ws.onerror = _ev => {
       dbg('WebSocket error event (onclose will follow)', {
         readyState: ws.readyState,
         url: ws.url?.slice(0, 80),
