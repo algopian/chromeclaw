@@ -1589,6 +1589,9 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
           deviceId = crypto.randomUUID();
         }
 
+        // Persist deviceId back to the bridge for cross-request stability
+        window.postMessage({ type: 'WEB_LLM_METADATA', requestId, metadata: { deviceId } }, origin);
+
         if (!accessToken) {
           window.postMessage(
             {
@@ -1601,9 +1604,6 @@ export const mainWorldFetch = async (request: ContentFetchRequest): Promise<void
           );
           return;
         }
-
-        // Persist deviceId back to the bridge for cross-request stability
-        window.postMessage({ type: 'WEB_LLM_METADATA', requestId, metadata: { deviceId } }, origin);
 
         // ── Step 2: Base headers ──
         // Try to extract OAI-Client-Version and OAI-Client-Build-Number from the page.
