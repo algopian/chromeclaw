@@ -771,7 +771,14 @@ describe('requestWebGeneration — chatgpt-web inactivity handling', () => {
       expect(fetchRequest?.providerMetadata).toEqual({ deviceId: 'stored-device-456' });
     });
 
-    it('does NOT pass providerMetadata for non-chatgpt-web providers', async () => {
+    it('does NOT pass providerMetadata when credential has no metadata', async () => {
+      // Explicitly reset credential mock to one without metadata
+      vi.mocked(getWebCredential).mockResolvedValue({
+        providerId: 'qwen-web',
+        cookies: { token: 'test-token' },
+        capturedAt: Date.now(),
+      });
+
       requestWebGeneration(defaultOpts); // qwen-web
 
       await vi.waitFor(() => {

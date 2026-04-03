@@ -13,9 +13,10 @@
  * 7. Parse SSE → extract delta via provider's parseSseDelta → feed XML parser → emit stream events
  */
 
-import { getWebCredential, storeWebCredential } from './auth';
+import { getWebCredential } from './auth';
 import { mainWorldFetch } from './content-fetch-main';
 import { installRelay } from './content-fetch-relay';
+import { getPlugin } from './plugin-registry';
 import { getWebProvider } from './registry';
 import { getSseStreamAdapter } from './sse-stream-adapter';
 import { createSseParser } from './sse-parser';
@@ -38,13 +39,6 @@ const bridgeLog = createLogger('web-llm');
 
 /** Default timeout for web generation (5 minutes). */
 const WEB_LLM_TIMEOUT_MS = 300_000;
-
-/**
- * ChatGPT-web only: if the last successful request was more than this many ms ago,
- * refresh the provider tab before injecting the MAIN world script to reset
- * server-side sentinel state and avoid 403 "unusual activity" errors.
- */
-const CHATGPT_STALE_SESSION_MS = 10 * 60_000; // 10 minutes
 
 /** Timeout when waiting for a tab to finish loading. */
 const TAB_LOAD_TIMEOUT_MS = 30_000;
@@ -395,19 +389,18 @@ export const requestWebGeneration = (opts: {
         finishStream(hasToolCalls ? 'toolUse' : 'stop');
         bridgeLog.debug('Web generation complete', { requestId, hasToolCalls });
 
-        // ChatGPT-web only: record successful request time for stale-session detection
-        if (cachedProviderId === 'chatgpt-web') {
-          getWebCredential(cachedProviderId)
-            .then(cred => {
-              if (cred) {
-                storeWebCredential({ ...cred, lastRequestAt: Date.now() }).catch(() => {
-                  /* non-critical — stale detection degrades gracefully */
-                });
-              }
-            })
-            .catch(() => {
-              /* ignore */
-            });
+        // Plugin hook: post-stream actions (e.g., record lastRequestAt for stale-session detection)
+        if (cachedProviderId) {
+          const plugin = getPlugin(cachedProviderId);
+          if (plugin?.hooks?.onStreamDone) {
+            getWebCredential(cachedProviderId)
+              .then(cred => {
+                if (cred) plugin.hooks!.onStreamDone!({ providerId: cachedProviderId, credential: cred });
+              })
+              .catch(() => {
+                /* ignore */
+              });
+          }
         }
         break;
       }
@@ -421,37 +414,31 @@ export const requestWebGeneration = (opts: {
         break;
       }
 
-      // ChatGPT-web only: persist provider metadata (e.g., deviceId) for cross-request stability
+      // Plugin hook: persist provider metadata (e.g., deviceId) for cross-request stability
       case 'WEB_LLM_METADATA': {
-        if (cachedProviderId === 'chatgpt-web' && message.metadata) {
-          const meta = message.metadata as Record<string, string>;
-          getWebCredential(cachedProviderId)
-            .then(cred => {
-              if (cred) {
-                const merged = { ...cred.metadata, ...meta };
-                storeWebCredential({ ...cred, metadata: merged }).catch(() => {
-                  /* non-critical */
-                });
-              }
-            })
-            .catch(() => {
-              /* ignore */
-            });
+        if (cachedProviderId && message.metadata) {
+          const plugin = getPlugin(cachedProviderId);
+          plugin?.hooks?.onMetadata?.({
+            providerId: cachedProviderId,
+            metadata: message.metadata as Record<string, unknown>,
+          });
         }
         break;
       }
 
-      // ChatGPT-web only: MAIN world 403 retry exhausted — refresh tab and re-inject from scratch
+      // Plugin hook: MAIN world retry exhausted — refresh tab and re-inject from scratch
       case 'WEB_LLM_RETRY_REFRESH': {
+        const retryPlugin = cachedProviderId ? getPlugin(cachedProviderId) : undefined;
         if (
-          cachedProviderId !== 'chatgpt-web' ||
+          !retryPlugin?.hooks?.supportsRetryRefresh ||
           !activeTabId ||
           !activeProvider ||
           !activeFetchRequest
         )
           break;
-        bridgeLog.info('ChatGPT 403 retry — refreshing tab and re-injecting', {
+        bridgeLog.info('403 retry — refreshing tab and re-injecting', {
           requestId,
+          providerId: cachedProviderId,
           diag: message.diag,
         });
         (async () => {
@@ -577,32 +564,31 @@ export const requestWebGeneration = (opts: {
       if (tabs.length > 0 && tabs[0].id) {
         tabId = tabs[0].id;
 
-        // ChatGPT-web only: refresh the tab if the session is stale to reset
-        // server-side sentinel state and prevent 403 "unusual activity" errors.
-        // The tab must be brought to the foreground before reloading — ChatGPT's
-        // SPA (Turnstile, Cloudflare challenges, telemetry heartbeats) does not
-        // fully hydrate in a background tab, causing warmup:finalize=500 and
-        // chat-requirements timeouts. The tab must stay foregrounded until the
-        // MAIN world script completes its sentinel challenge flow.
-        if (providerId === 'chatgpt-web') {
-          const lastReq = storedCredential.lastRequestAt ?? 0;
-          if (Date.now() - lastReq > CHATGPT_STALE_SESSION_MS) {
-            bridgeLog.info('ChatGPT session stale — foregrounding and reloading tab', {
-              requestId,
-              lastRequestAt: lastReq,
-              staleSec: Math.round((Date.now() - lastReq) / 1000),
-            });
-            // Bring to foreground so SPA hydrates with full Turnstile/CF support
-            await chrome.tabs.update(tabId, { active: true });
-            // Start listening for load completion BEFORE triggering reload
-            // to avoid a race where the tab completes before the listener registers.
-            const tabLoaded = waitForTabLoad(tabId, 5000);
-            await chrome.tabs.reload(tabId);
-            await tabLoaded;
-            // Do NOT restore previous tab here — the MAIN world script needs
-            // the tab foregrounded for Turnstile/CF sentinel challenge to succeed.
-            // The tab will naturally lose focus when the user interacts elsewhere.
-          }
+        // Plugin hook: refresh the tab if the provider detects a stale session.
+        // The tab must be brought to the foreground before reloading — some providers'
+        // SPA (Turnstile, Cloudflare challenges, telemetry heartbeats) do not
+        // fully hydrate in a background tab, causing challenge timeouts.
+        // The tab must stay foregrounded until the MAIN world script completes.
+        const sessionPlugin = getPlugin(providerId);
+        if (sessionPlugin?.hooks?.shouldReloadTab?.({ providerId, credential: storedCredential })) {
+          bridgeLog.info('Session stale — foregrounding and reloading tab', {
+            requestId,
+            providerId,
+            lastRequestAt: storedCredential.lastRequestAt,
+            staleSec: storedCredential.lastRequestAt
+              ? Math.round((Date.now() - storedCredential.lastRequestAt) / 1000)
+              : 'never',
+          });
+          // Bring to foreground so SPA hydrates with full challenge support
+          await chrome.tabs.update(tabId, { active: true });
+          // Start listening for load completion BEFORE triggering reload
+          // to avoid a race where the tab completes before the listener registers.
+          const tabLoaded = waitForTabLoad(tabId, 5000);
+          await chrome.tabs.reload(tabId);
+          await tabLoaded;
+          // Do NOT restore previous tab here — the MAIN world script needs
+          // the tab foregrounded for challenge flow to succeed.
+          // The tab will naturally lose focus when the user interacts elsewhere.
         }
       } else {
         const newTab = await chrome.tabs.create({
@@ -635,10 +621,8 @@ export const requestWebGeneration = (opts: {
         urlTemplate,
         binaryProtocol,
         binaryEncodeBody,
-        // ChatGPT-web only: pass stored metadata (e.g., deviceId) for cross-request stability
-        ...(providerId === 'chatgpt-web' && credential.metadata
-          ? { providerMetadata: credential.metadata }
-          : {}),
+        // Pass stored metadata (e.g., deviceId) for providers that need cross-request stability
+        ...(credential.metadata ? { providerMetadata: credential.metadata } : {}),
       };
 
       if (binaryProtocol) {
@@ -652,7 +636,7 @@ export const requestWebGeneration = (opts: {
       stream.push({ type: 'start', partial });
       stream.push({ type: 'text_start', contentIndex: 0, partial });
 
-      // Expose state for the WEB_LLM_RETRY_REFRESH handler (chatgpt-web only)
+      // Expose state for the WEB_LLM_RETRY_REFRESH handler
       activeTabId = tabId;
       activeProvider = provider;
       activeFetchRequest = fetchRequest;

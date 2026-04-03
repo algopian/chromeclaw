@@ -500,6 +500,9 @@ const chatgptToolStrategy: WebProviderToolStrategy = {
 };
 
 // ── Factory ──────────────────────────────────────
+// NOTE: getToolStrategy is kept here for backward compatibility with tests and
+// any callers outside the bridge. The bridge itself uses getPlugin(id)?.toolStrategy.
+// This avoids a circular dependency (tool-strategy ↔ plugin-registry ↔ tool-strategy).
 
 const getToolStrategy = (providerId: WebProviderId): WebProviderToolStrategy => {
   switch (providerId) {
