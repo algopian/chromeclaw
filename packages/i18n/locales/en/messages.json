@@ -41,6 +41,9 @@
   "firstRun_saveFailed": {
     "message": "Failed to save model"
   },
+  "firstRun_restoreFailed": {
+    "message": "Failed to restore agent from backup"
+  },
   "firstRun_provider": {
     "message": "Provider"
   },
@@ -862,6 +865,30 @@
   },
   "agents_importZip": {
     "message": "Import ZIP"
+  },
+  "agents_backupAgent": {
+    "message": "Backup"
+  },
+  "agents_restoreAgent": {
+    "message": "Restore"
+  },
+  "agents_restoreConfirm": {
+    "message": "This will overwrite agent '$1' with backup '$2'. All workspace files and config will be replaced. Continue?"
+  },
+  "agents_backupSuccess": {
+    "message": "Agent backed up successfully"
+  },
+  "agents_restoreSuccess": {
+    "message": "Agent restored successfully"
+  },
+  "agents_restoreFailed": {
+    "message": "Failed to restore agent"
+  },
+  "agents_backupFailed": {
+    "message": "Failed to backup agent"
+  },
+  "agents_invalidBackup": {
+    "message": "Invalid backup file"
   },
   "optionsPage_title": {
     "message": "ChromeClaw Settings"

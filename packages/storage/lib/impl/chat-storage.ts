@@ -39,7 +39,7 @@ const listAgents = async (): Promise<AgentConfig[]> => chatDb.agents.toArray();
 
 const updateAgent = async (
   id: string,
-  updates: Partial<Pick<AgentConfig, 'name' | 'identity' | 'model' | 'toolConfig' | 'customTools'>>,
+  updates: Partial<Pick<AgentConfig, 'name' | 'identity' | 'model' | 'toolConfig' | 'customTools' | 'compactionConfig'>>,
 ): Promise<void> => {
   await chatDb.agents.update(id, { ...updates, updatedAt: Date.now() });
 };
