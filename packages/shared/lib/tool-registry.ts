@@ -35,6 +35,23 @@ interface ToolGroupMeta {
 
 const toolRegistryMeta: readonly ToolGroupMeta[] = [
   {
+    groupKey: 'debugger',
+    label: 'Debugger',
+    iconName: 'BugIcon',
+    promptHint:
+      'You have access to a debugger tool that sends Chrome DevTools Protocol (CDP) commands to browser tabs. ' +
+      'Use "list_targets" to discover debuggable targets, "attach"/"detach" to manage sessions, and "send" with a CDP method and params to execute protocol commands.',
+    tools: [
+      {
+        name: 'debugger',
+        label: 'Debugger',
+        description: 'Send Chrome DevTools Protocol commands to browser tabs',
+        defaultEnabled: false,
+        chromeOnly: true,
+      },
+    ],
+  },
+  {
     groupKey: 'webSearch',
     label: 'Web Search',
     iconName: 'SearchIcon',
@@ -413,23 +430,6 @@ Use spawn_subagent to run tasks in the background when the user requests multipl
         label: 'Create File',
         description: 'Create a new file in Google Drive',
         defaultEnabled: false,
-      },
-    ],
-  },
-  {
-    groupKey: 'debugger',
-    label: 'Debugger',
-    iconName: 'BugIcon',
-    promptHint:
-      'You have access to a debugger tool that sends Chrome DevTools Protocol (CDP) commands to browser tabs. ' +
-      'Use "list_targets" to discover debuggable targets, "attach"/"detach" to manage sessions, and "send" with a CDP method and params to execute protocol commands.',
-    tools: [
-      {
-        name: 'debugger',
-        label: 'Debugger',
-        description: 'Send Chrome DevTools Protocol commands to browser tabs',
-        defaultEnabled: false,
-        chromeOnly: true,
       },
     ],
   },
