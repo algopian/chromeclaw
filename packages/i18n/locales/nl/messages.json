@@ -41,6 +41,9 @@
   "firstRun_saveFailed": {
     "message": "Opslaan van model mislukt"
   },
+  "firstRun_restoreFailed": {
+    "message": "Herstel van agent uit back-up mislukt"
+  },
   "firstRun_provider": {
     "message": "Provider"
   },
@@ -160,6 +163,57 @@
   },
   "firstRun_advancedSetup": {
     "message": "Geavanceerde installatie"
+  },
+  "firstRun_defaultAgentName": {
+    "message": "Hoofdagent"
+  },
+  "firstRun_webProviderRequired": {
+    "message": "Selecteer een webprovider"
+  },
+  "firstRun_webLoginRequired": {
+    "message": "Je moet inloggen bij de webprovider voordat je verder kunt."
+  },
+  "firstRun_webProvider": {
+    "message": "Webprovider"
+  },
+  "firstRun_webProviderHint": {
+    "message": "(Gebruikt je browsersessie — geen API-sleutel nodig)"
+  },
+  "firstRun_selectWebProvider": {
+    "message": "Selecteer een webprovider"
+  },
+  "firstRun_webChecking": {
+    "message": "Controleren..."
+  },
+  "firstRun_webLoggedIn": {
+    "message": "Ingelogd"
+  },
+  "firstRun_webNotLoggedIn": {
+    "message": "Klik op Inloggen om de status te controleren"
+  },
+  "firstRun_webLogout": {
+    "message": "Uitloggen"
+  },
+  "firstRun_webWaiting": {
+    "message": "Wachten op inloggen..."
+  },
+  "firstRun_webLogin": {
+    "message": "Inloggen"
+  },
+  "firstRun_webLoginInstruction": {
+    "message": "Log in op de geopende pagina. De sessie wordt automatisch vastgelegd."
+  },
+  "firstRun_optional": {
+    "message": "(optioneel)"
+  },
+  "firstRun_autoDetected": {
+    "message": "Automatisch gedetecteerd"
+  },
+  "firstRun_autoDetectedHint": {
+    "message": "Automatisch gedetecteerd via de webprovider. Wijzig alleen indien nodig."
+  },
+  "firstRun_tools": {
+    "message": "hulpmiddelen"
   },
   "chat_placeholder": {
     "message": "Wat wil je weten?"
@@ -329,6 +383,21 @@
   "slash_conversationCleared": {
     "message": "Gesprek gewist"
   },
+  "slash_copied": {
+    "message": "Gekopieerd naar klembord"
+  },
+  "slash_noAssistantMessage": {
+    "message": "Geen assistentbericht om te kopiëren"
+  },
+  "slash_invalidCopyArg": {
+    "message": "Ongeldig argument — gebruik /copy of /copy N (bijv. /copy 2)"
+  },
+  "slash_exported": {
+    "message": "Gesprek geëxporteerd"
+  },
+  "slash_exportEmpty": {
+    "message": "Geen berichten om te exporteren"
+  },
   "slash_availableCommands": {
     "message": "Beschikbare opdrachten:"
   },
@@ -461,6 +530,9 @@
   },
   "model_supportsReasoning": {
     "message": "Ondersteunt redenering"
+  },
+  "model_advanced": {
+    "message": "Geavanceerd"
   },
   "model_toolTimeout": {
     "message": "Hulpmiddel-timeout (seconden)"
@@ -785,6 +857,30 @@
   },
   "agents_importZip": {
     "message": "ZIP importeren"
+  },
+  "agents_backupAgent": {
+    "message": "Back-up"
+  },
+  "agents_restoreAgent": {
+    "message": "Herstellen"
+  },
+  "agents_restoreConfirm": {
+    "message": "Agent '$1' wordt overschreven met back-up '$2'. Alle werkruimtebestanden en instellingen worden vervangen. Doorgaan?"
+  },
+  "agents_backupSuccess": {
+    "message": "Back-up van agent gelukt"
+  },
+  "agents_restoreSuccess": {
+    "message": "Agent succesvol hersteld"
+  },
+  "agents_restoreFailed": {
+    "message": "Herstellen van agent mislukt"
+  },
+  "agents_backupFailed": {
+    "message": "Back-up van agent mislukt"
+  },
+  "agents_invalidBackup": {
+    "message": "Ongeldig back-upbestand"
   },
   "optionsPage_title": {
     "message": "ChromeClaw Instellingen"

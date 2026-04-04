@@ -1,8 +1,11 @@
+import { t, useT } from '@extension/i18n';
 import {
   extractPdfText,
   toolRegistryMeta,
+  backupAgent,
+  backupFilename,
+  parseAgentBackup,
 } from '@extension/shared';
-import { t, useT } from '@extension/i18n';
 import {
   listSkillFiles,
   listWorkspaceFiles,
@@ -63,6 +66,7 @@ import {
   FilePlusIcon,
   FolderPlusIcon,
   HardDriveDownloadIcon,
+  HardDriveUploadIcon,
   HardDriveIcon,
   LinkIcon,
   MailIcon,
@@ -205,11 +209,15 @@ const AgentCard = ({
   selected,
   onSelect,
   onDelete,
+  onBackup,
+  onRestore,
 }: {
   agent: AgentInfo;
   selected: boolean;
   onSelect: () => void;
   onDelete?: () => void;
+  onBackup?: () => void;
+  onRestore?: () => void;
 }) => (
   <div
     className={cn(
@@ -230,24 +238,36 @@ const AgentCard = ({
         DEFAULT
       </Badge>
     )}
-    {onDelete && (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            className="text-muted-foreground hover:bg-accent shrink-0 rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
-            onClick={e => e.stopPropagation()}
-            type="button">
-            <EllipsisVertical size={14} />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" sideOffset={4}>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className="text-muted-foreground hover:bg-accent shrink-0 rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
+          onClick={e => e.stopPropagation()}
+          type="button">
+          <EllipsisVertical size={14} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={4}>
+        {onBackup && (
+          <DropdownMenuItem onClick={onBackup}>
+            <HardDriveDownloadIcon className="size-3.5" />
+            <span className="ml-2">{t('agents_backupAgent')}</span>
+          </DropdownMenuItem>
+        )}
+        {onRestore && (
+          <DropdownMenuItem onClick={onRestore}>
+            <HardDriveUploadIcon className="size-3.5" />
+            <span className="ml-2">{t('agents_restoreAgent')}</span>
+          </DropdownMenuItem>
+        )}
+        {onDelete && (
           <DropdownMenuItem onClick={onDelete}>
             <TrashIcon className="size-3.5" />
             <span className="ml-2">{t('common_delete')}</span>
           </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    )}
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   </div>
 );
 
@@ -257,12 +277,16 @@ const AgentListPanel = ({
   onSelect,
   onDelete,
   onCreate,
+  onBackup,
+  onRestore,
 }: {
   agents: AgentInfo[];
   selectedId: string;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onCreate: () => void;
+  onBackup: (id: string) => void;
+  onRestore: (id: string) => void;
 }) => (
   <div className="flex w-60 shrink-0 flex-col border-r">
     <div className="flex items-center justify-between border-b px-4 py-3">
@@ -277,6 +301,8 @@ const AgentListPanel = ({
           <AgentCard
             agent={agent}
             key={agent.id}
+            onBackup={() => onBackup(agent.id)}
+            onRestore={() => onRestore(agent.id)}
             onDelete={!agent.isDefault ? () => onDelete(agent.id) : undefined}
             onSelect={() => onSelect(agent.id)}
             selected={agent.id === selectedId}
@@ -291,10 +317,14 @@ const AgentDetailHeader = ({
   agent,
   onNameChange,
   onEmojiChange,
+  onBackup,
+  onRestore,
 }: {
   agent: AgentInfo;
   onNameChange: (name: string) => void;
   onEmojiChange: (emoji: string) => void;
+  onBackup: () => void;
+  onRestore: () => void;
 }) => {
   const [editingName, setEditingName] = useState(false);
   const [editingEmoji, setEditingEmoji] = useState(false);
@@ -363,11 +393,28 @@ const AgentDetailHeader = ({
         )}
         <p className="text-muted-foreground text-sm">{agent.id}</p>
       </div>
-      {agent.isDefault && (
-        <Badge className="ml-auto" variant="secondary">
-          DEFAULT
-        </Badge>
-      )}
+      <TooltipProvider delayDuration={300}>
+        <div className="ml-auto flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button onClick={onBackup} size="sm" variant="outline">
+                <HardDriveDownloadIcon className="mr-1 size-3.5" />
+                {t('agents_backupAgent')}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{t('agents_backupAgent')}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button onClick={onRestore} size="sm" variant="outline">
+                <HardDriveUploadIcon className="mr-1 size-3.5" />
+                {t('agents_restoreAgent')}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{t('agents_restoreAgent')}</TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
     </div>
   );
 };
@@ -406,9 +453,7 @@ const AgentOverview = ({ identityContent }: { identityContent: string }) => {
             </div>
           ))}
         </div>
-        <p className="text-muted-foreground mt-4 text-xs">
-          {t('agents_identityHint')}
-        </p>
+        <p className="text-muted-foreground mt-4 text-xs">{t('agents_identityHint')}</p>
       </CardContent>
     </Card>
   );
@@ -764,7 +809,10 @@ const AgentFilesTab = ({
       setConfirmDialog({
         open: true,
         title: t('agents_deleteFolder'),
-        description: t('agents_deleteFolderConfirm', [selectedNode.name, String(childFiles.length)]),
+        description: t('agents_deleteFolderConfirm', [
+          selectedNode.name,
+          String(childFiles.length),
+        ]),
         destructive: true,
         onConfirm: async () => {
           await Promise.all(
@@ -1003,7 +1051,6 @@ const AgentFilesTab = ({
             </TooltipTrigger>
             <TooltipContent side="bottom">{t('agents_refresh')}</TooltipContent>
           </Tooltip>
-
         </div>
       </TooltipProvider>
 
@@ -1379,6 +1426,8 @@ const AgentsConfig = () => {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('overview');
   const [loading, setLoading] = useState(true);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>(emptyConfirm);
+  const restoreInputRef = useRef<HTMLInputElement>(null);
+  const restoreTargetRef = useRef<string | null>(null);
 
   const loadAgents = useCallback(async () => {
     let agentList = await listAgents();
@@ -1515,6 +1564,118 @@ const AgentsConfig = () => {
     [selectedAgentId, selectedAgent, loadAgents],
   );
 
+  const handleBackupAgent = useCallback(
+    async (agentId: string) => {
+      try {
+        const agent = await getAgent(agentId);
+        if (!agent) return;
+        const files = await listWorkspaceFiles(agentId);
+        const blob = await backupAgent(agent, files);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = backupFilename(agent.name);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast.success(t('agents_backupSuccess'));
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : t('agents_backupFailed'));
+      }
+    },
+    [t],
+  );
+
+  const handleRestoreAgent = useCallback((agentId: string) => {
+    restoreTargetRef.current = agentId;
+    restoreInputRef.current?.click();
+  }, []);
+
+  const handleRestoreFileSelected = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = '';
+      if (!file) return;
+
+      const agentId = restoreTargetRef.current;
+      restoreTargetRef.current = null;
+      if (!agentId) return;
+
+      let backup;
+      try {
+        backup = await parseAgentBackup(file);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : t('agents_invalidBackup'));
+        return;
+      }
+
+      const agent = await getAgent(agentId);
+      if (!agent) return;
+
+      setConfirmDialog({
+        open: true,
+        title: t('agents_restoreAgent'),
+        description: t('agents_restoreConfirm', [agent.name, backup.meta.name]),
+        destructive: true,
+        onConfirm: async () => {
+          try {
+            // 1. Update agent config
+            await updateAgent(agentId, {
+              name: backup.meta.name,
+              identity: backup.meta.identity,
+              model: backup.meta.model,
+              toolConfig: backup.meta.toolConfig,
+              customTools: backup.meta.customTools,
+              compactionConfig: backup.meta.compactionConfig,
+            });
+
+            // 2. Get existing workspace files for this agent
+            const existingFiles = await listWorkspaceFiles(agentId);
+
+            // 3. Delete all non-predefined workspace files
+            for (const f of existingFiles) {
+              if (!f.predefined) {
+                await deleteWorkspaceFile(f.id);
+              }
+            }
+
+            // 4. Apply backup files
+            const predefinedFiles = existingFiles.filter(f => f.predefined);
+            for (const backupFile of backup.files) {
+              const existing = predefinedFiles.find(f => f.name === backupFile.name);
+              if (existing) {
+                // Update predefined file content
+                await updateWorkspaceFile(existing.id, { content: backupFile.content });
+              } else {
+                // Create new file
+                const now = Date.now();
+                await createWorkspaceFile({
+                  id: nanoid(),
+                  name: backupFile.name,
+                  content: backupFile.content,
+                  enabled: true,
+                  owner: 'user',
+                  predefined: false,
+                  createdAt: now,
+                  updatedAt: now,
+                  agentId,
+                });
+              }
+            }
+
+            await loadAgents();
+            await loadFiles();
+            toast.success(t('agents_restoreSuccess'));
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : t('agents_restoreFailed'));
+          }
+        },
+      });
+    },
+    [loadAgents, loadFiles, t],
+  );
+
   if (loading) {
     return (
       <Card>
@@ -1532,8 +1693,10 @@ const AgentsConfig = () => {
           {/* Agent list panel */}
           <AgentListPanel
             agents={agentInfoList}
+            onBackup={handleBackupAgent}
             onCreate={handleCreateAgent}
             onDelete={handleDeleteAgent}
+            onRestore={handleRestoreAgent}
             onSelect={id => {
               setSelectedAgentId(id);
               setActiveSubTab('overview');
@@ -1545,8 +1708,10 @@ const AgentsConfig = () => {
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <AgentDetailHeader
               agent={agentInfo}
+              onBackup={() => handleBackupAgent(selectedAgentId)}
               onEmojiChange={handleEmojiChange}
               onNameChange={handleNameChange}
+              onRestore={() => handleRestoreAgent(selectedAgentId)}
             />
 
             {/* Sub-tab buttons */}
@@ -1618,11 +1783,7 @@ const AgentsConfig = () => {
               </ScrollArea>
             )}
             {activeSubTab === 'files' && (
-              <AgentFilesTab
-                files={allFiles}
-                agentId={selectedAgentId}
-                onReload={loadFiles}
-              />
+              <AgentFilesTab files={allFiles} agentId={selectedAgentId} onReload={loadFiles} />
             )}
             {activeSubTab === 'tools' && (
               <AgentToolsTab agentId={selectedAgentId} onReload={loadAgents} />
@@ -1635,6 +1796,14 @@ const AgentsConfig = () => {
       </Card>
 
       <ConfirmDialog state={confirmDialog} onClose={() => setConfirmDialog(emptyConfirm)} />
+
+      <input
+        accept=".zip"
+        className="hidden"
+        ref={restoreInputRef}
+        onChange={handleRestoreFileSelected}
+        type="file"
+      />
     </>
   );
 };

@@ -63,19 +63,19 @@
     "message": "Commencer à discuter"
   },
   "firstRun_stepModel": {
-    "message": "Model"
+    "message": "Modèle"
   },
   "firstRun_stepChannels": {
-    "message": "Channels"
+    "message": "Canaux"
   },
   "firstRun_stepAgent": {
     "message": "Agent"
   },
   "firstRun_stepTools": {
-    "message": "Tools"
+    "message": "Outils"
   },
   "firstRun_stepPermissions": {
-    "message": "Permissions"
+    "message": "Autorisations"
   },
   "firstRun_permissionsTitle": {
     "message": "Permissions d'hôte"
@@ -93,73 +93,127 @@
     "message": "La permission a été refusée. Les outils qui interagissent avec les pages web peuvent ne pas fonctionner. Vous pouvez accorder cette permission plus tard dans les paramètres de permissions de l'extension."
   },
   "firstRun_step2Title": {
-    "message": "Connect Channels"
+    "message": "Connecter des canaux"
   },
   "firstRun_step2Description": {
-    "message": "Optionally connect a Telegram bot to chat from your phone."
+    "message": "Connectez éventuellement un bot Telegram pour discuter depuis votre téléphone."
   },
   "firstRun_step3Title": {
-    "message": "Customize Your Agent"
+    "message": "Personnalisez votre agent"
   },
   "firstRun_step3Description": {
-    "message": "Give your AI assistant a name and personality."
+    "message": "Donnez un nom et une personnalité à votre assistant IA."
   },
   "firstRun_step4Title": {
-    "message": "Enable Tools"
+    "message": "Activer les outils"
   },
   "firstRun_step4Description": {
-    "message": "Choose which tools your AI assistant can use."
+    "message": "Choisissez les outils que votre assistant IA peut utiliser."
   },
   "firstRun_next": {
-    "message": "Next"
+    "message": "Suivant"
   },
   "firstRun_skip": {
-    "message": "Skip"
+    "message": "Passer"
   },
   "firstRun_back": {
-    "message": "Back"
+    "message": "Retour"
   },
   "firstRun_skipSetup": {
-    "message": "Skip setup \u2192"
+    "message": "Passer la configuration \u2192"
   },
   "firstRun_getStarted": {
-    "message": "Get Started"
+    "message": "Commencer"
   },
   "firstRun_telegramBotToken": {
-    "message": "Telegram Bot Token"
+    "message": "Token du bot Telegram"
   },
   "firstRun_telegramValidate": {
-    "message": "Validate"
+    "message": "Valider"
   },
   "firstRun_telegramValidated": {
-    "message": "Token valid"
+    "message": "Token valide"
   },
   "firstRun_telegramAllowedUsers": {
-    "message": "Allowed User IDs (comma-separated)"
+    "message": "ID utilisateurs autorisés (séparés par des virgules)"
   },
   "firstRun_whatsappNote": {
-    "message": "WhatsApp can be connected later via Settings > Channels (requires QR code scan)."
+    "message": "WhatsApp peut être connecté plus tard via Paramètres > Canaux (scan du code QR requis)."
   },
   "firstRun_agentName": {
-    "message": "Agent Name"
+    "message": "Nom de l'agent"
   },
   "firstRun_agentEmoji": {
-    "message": "Agent Emoji"
+    "message": "Émoji de l'agent"
   },
   "firstRun_stepSkills": {
-    "message": "Skills"
+    "message": "Compétences"
   },
   "firstRun_step5Title": {
-    "message": "Enable Skills"
+    "message": "Activer les compétences"
   },
   "firstRun_step5Description": {
-    "message": "Skills are reusable prompt templates that extend your assistant's capabilities."
+    "message": "Les compétences sont des modèles de prompts réutilisables qui étendent les capacités de votre assistant."
   },
   "firstRun_noSkills": {
-    "message": "No skills available yet. You can add skills later in Settings."
+    "message": "Aucune compétence disponible pour le moment. Vous pouvez en ajouter plus tard dans les Paramètres."
   },
   "firstRun_advancedSetup": {
     "message": "Configuration avancée"
+  },
+  "firstRun_defaultAgentName": {
+    "message": "Agent principal"
+  },
+  "firstRun_webProviderRequired": {
+    "message": "Veuillez sélectionner un fournisseur web"
+  },
+  "firstRun_webLoginRequired": {
+    "message": "Vous devez vous connecter au fournisseur web avant de continuer."
+  },
+  "firstRun_webProvider": {
+    "message": "Fournisseur web"
+  },
+  "firstRun_webProviderHint": {
+    "message": "(Utilise votre session de navigateur — aucune clé API nécessaire)"
+  },
+  "firstRun_selectWebProvider": {
+    "message": "Sélectionnez un fournisseur web"
+  },
+  "firstRun_webChecking": {
+    "message": "Vérification..."
+  },
+  "firstRun_webLoggedIn": {
+    "message": "Connecté"
+  },
+  "firstRun_webNotLoggedIn": {
+    "message": "Cliquez sur Connexion pour vérifier le statut"
+  },
+  "firstRun_webLogout": {
+    "message": "Déconnexion"
+  },
+  "firstRun_webWaiting": {
+    "message": "En attente de la connexion..."
+  },
+  "firstRun_webLogin": {
+    "message": "Connexion"
+  },
+  "firstRun_webLoginInstruction": {
+    "message": "Connectez-vous sur la page ouverte. La session sera capturée automatiquement."
+  },
+  "firstRun_optional": {
+    "message": "(facultatif)"
+  },
+  "firstRun_autoDetected": {
+    "message": "Détecté automatiquement"
+  },
+  "firstRun_autoDetectedHint": {
+    "message": "Détecté automatiquement depuis le fournisseur web. Ne modifiez que si nécessaire."
+  },
+  "firstRun_tools": {
+    "message": "outils"
+  },
+  "firstRun_restoreFailed": {
+    "message": "Échec de la restauration de l'agent depuis la sauvegarde"
   },
   "chat_placeholder": {
     "message": "Que souhaitez-vous savoir ?"
@@ -329,6 +383,21 @@
   "slash_conversationCleared": {
     "message": "Conversation effacée"
   },
+  "slash_copied": {
+    "message": "Copié dans le presse-papiers"
+  },
+  "slash_noAssistantMessage": {
+    "message": "Aucun message de l'assistant à copier"
+  },
+  "slash_invalidCopyArg": {
+    "message": "Argument invalide — utilisez /copy ou /copy N (ex. /copy 2)"
+  },
+  "slash_exported": {
+    "message": "Conversation exportée"
+  },
+  "slash_exportEmpty": {
+    "message": "Aucun message à exporter"
+  },
   "slash_availableCommands": {
     "message": "Commandes disponibles :"
   },
@@ -461,6 +530,9 @@
   },
   "model_supportsReasoning": {
     "message": "Supporte le raisonnement"
+  },
+  "model_advanced": {
+    "message": "Avancé"
   },
   "model_toolTimeout": {
     "message": "Délai d'expiration des outils (secondes)"
@@ -785,6 +857,30 @@
   },
   "agents_importZip": {
     "message": "Importer un ZIP"
+  },
+  "agents_backupAgent": {
+    "message": "Sauvegarde"
+  },
+  "agents_restoreAgent": {
+    "message": "Restaurer"
+  },
+  "agents_restoreConfirm": {
+    "message": "L'agent « $1 » sera écrasé avec la sauvegarde « $2 ». Tous les fichiers de l'espace de travail et la configuration seront remplacés. Continuer ?"
+  },
+  "agents_backupSuccess": {
+    "message": "Agent sauvegardé avec succès"
+  },
+  "agents_restoreSuccess": {
+    "message": "Agent restauré avec succès"
+  },
+  "agents_restoreFailed": {
+    "message": "Échec de la restauration de l'agent"
+  },
+  "agents_backupFailed": {
+    "message": "Échec de la sauvegarde de l'agent"
+  },
+  "agents_invalidBackup": {
+    "message": "Fichier de sauvegarde invalide"
   },
   "optionsPage_title": {
     "message": "Paramètres de ChromeClaw"
@@ -1252,7 +1348,7 @@
   "community_leaveReview": { "message": "Laisser un avis" },
   "greeting_hello": { "message": "Bonjour !" },
   "greeting_help": { "message": "Comment puis-je vous aider aujourd'hui ?" },
-  "firstRun_agentTemplate": { "message": "Choisir un profil" },
+  "firstRun_agentTemplate": { "message": "Choisissez une personnalité" },
   "agent_tpl_claw_creature": { "message": "Agent de tâches résident du navigateur" },
   "agent_tpl_claw_vibe": { "message": "Ingénieux, prudent, compétent" },
   "agent_tpl_claw_bestFor": { "message": "Usage général" },
@@ -1268,8 +1364,8 @@
   "agent_tpl_slate_bestFor": { "message": "Programmation, implémentation, tâches CLI" },
   "agent_tpl_slate_strengths": { "message": "Verbosité minimale, exécution ciblée" },
   "agent_tpl_slate_boundaries": { "message": "N'élargit pas le périmètre sauf demande" },
-  "firstRun_agentCreature": { "message": "Type" },
-  "firstRun_agentVibe": { "message": "Style" },
+  "firstRun_agentCreature": { "message": "Créature" },
+  "firstRun_agentVibe": { "message": "Ambiance" },
   "firstRun_agentStrengths": { "message": "Points forts" },
   "firstRun_agentBoundaries": { "message": "Limites" }
 }

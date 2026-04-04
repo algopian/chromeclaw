@@ -63,16 +63,16 @@
     "message": "开始聊天"
   },
   "firstRun_stepModel": {
-    "message": "Model"
+    "message": "模型"
   },
   "firstRun_stepChannels": {
-    "message": "Channels"
+    "message": "频道"
   },
   "firstRun_stepAgent": {
-    "message": "Agent"
+    "message": "智能体"
   },
   "firstRun_stepTools": {
-    "message": "Tools"
+    "message": "工具"
   },
   "firstRun_stepPermissions": {
     "message": "权限"
@@ -93,73 +93,127 @@
     "message": "权限被拒绝。与网页交互的工具可能无法正常工作。您可以稍后在扩展程序的权限设置中授予此权限。"
   },
   "firstRun_step2Title": {
-    "message": "Connect Channels"
+    "message": "连接频道"
   },
   "firstRun_step2Description": {
-    "message": "Optionally connect a Telegram bot to chat from your phone."
+    "message": "可选择连接 Telegram 机器人，从手机进行聊天。"
   },
   "firstRun_step3Title": {
-    "message": "Customize Your Agent"
+    "message": "自定义你的智能体"
   },
   "firstRun_step3Description": {
-    "message": "Give your AI assistant a name and personality."
+    "message": "为你的 AI 助手设置名称和个性。"
   },
   "firstRun_step4Title": {
-    "message": "Enable Tools"
+    "message": "启用工具"
   },
   "firstRun_step4Description": {
-    "message": "Choose which tools your AI assistant can use."
+    "message": "选择你的 AI 助手可以使用的工具。"
   },
   "firstRun_next": {
-    "message": "Next"
+    "message": "下一步"
   },
   "firstRun_skip": {
-    "message": "Skip"
+    "message": "跳过"
   },
   "firstRun_back": {
-    "message": "Back"
+    "message": "返回"
   },
   "firstRun_skipSetup": {
-    "message": "Skip setup \u2192"
+    "message": "跳过设置 →"
   },
   "firstRun_getStarted": {
-    "message": "Get Started"
+    "message": "开始使用"
   },
   "firstRun_telegramBotToken": {
-    "message": "Telegram Bot Token"
+    "message": "Telegram 机器人令牌"
   },
   "firstRun_telegramValidate": {
-    "message": "Validate"
+    "message": "验证"
   },
   "firstRun_telegramValidated": {
-    "message": "Token valid"
+    "message": "令牌有效"
   },
   "firstRun_telegramAllowedUsers": {
-    "message": "Allowed User IDs (comma-separated)"
+    "message": "允许的用户 ID（逗号分隔）"
   },
   "firstRun_whatsappNote": {
-    "message": "WhatsApp can be connected later via Settings > Channels (requires QR code scan)."
+    "message": "WhatsApp 可以稍后通过设置 > 频道连接（需要扫描二维码）。"
   },
   "firstRun_agentName": {
-    "message": "Agent Name"
+    "message": "智能体名称"
   },
   "firstRun_agentEmoji": {
-    "message": "Agent Emoji"
+    "message": "智能体表情"
   },
   "firstRun_stepSkills": {
-    "message": "Skills"
+    "message": "技能"
   },
   "firstRun_step5Title": {
-    "message": "Enable Skills"
+    "message": "启用技能"
   },
   "firstRun_step5Description": {
-    "message": "Skills are reusable prompt templates that extend your assistant's capabilities."
+    "message": "技能是可重复使用的提示模板，可以扩展助手的能力。"
   },
   "firstRun_noSkills": {
-    "message": "No skills available yet. You can add skills later in Settings."
+    "message": "暂无可用技能。你可以稍后在设置中添加技能。"
   },
   "firstRun_advancedSetup": {
     "message": "高级设置"
+  },
+  "firstRun_defaultAgentName": {
+    "message": "主智能体"
+  },
+  "firstRun_webProviderRequired": {
+    "message": "请选择一个网页提供商"
+  },
+  "firstRun_webLoginRequired": {
+    "message": "继续之前请先登录网页提供商。"
+  },
+  "firstRun_webProvider": {
+    "message": "网页提供商"
+  },
+  "firstRun_webProviderHint": {
+    "message": "（使用浏览器会话 — 无需 API 密钥）"
+  },
+  "firstRun_selectWebProvider": {
+    "message": "选择网页提供商"
+  },
+  "firstRun_webChecking": {
+    "message": "检查中..."
+  },
+  "firstRun_webLoggedIn": {
+    "message": "已登录"
+  },
+  "firstRun_webNotLoggedIn": {
+    "message": "点击登录以检查状态"
+  },
+  "firstRun_webLogout": {
+    "message": "退出登录"
+  },
+  "firstRun_webWaiting": {
+    "message": "等待登录..."
+  },
+  "firstRun_webLogin": {
+    "message": "登录"
+  },
+  "firstRun_webLoginInstruction": {
+    "message": "在打开的页面上登录。会话将自动捕获。"
+  },
+  "firstRun_optional": {
+    "message": "（可选）"
+  },
+  "firstRun_autoDetected": {
+    "message": "自动检测"
+  },
+  "firstRun_autoDetectedHint": {
+    "message": "从网页提供商自动检测。仅在需要时覆盖。"
+  },
+  "firstRun_tools": {
+    "message": "工具"
+  },
+  "firstRun_restoreFailed": {
+    "message": "从备份恢复智能体失败"
   },
   "chat_placeholder": {
     "message": "你想了解什么？"
@@ -329,6 +383,21 @@
   "slash_conversationCleared": {
     "message": "对话已清除"
   },
+  "slash_copied": {
+    "message": "已复制到剪贴板"
+  },
+  "slash_noAssistantMessage": {
+    "message": "没有可复制的助手消息"
+  },
+  "slash_invalidCopyArg": {
+    "message": "无效参数 — 使用 /copy 或 /copy N（例如 /copy 2）"
+  },
+  "slash_exported": {
+    "message": "对话已导出"
+  },
+  "slash_exportEmpty": {
+    "message": "没有可导出的消息"
+  },
   "slash_availableCommands": {
     "message": "可用命令："
   },
@@ -461,6 +530,9 @@
   },
   "model_supportsReasoning": {
     "message": "支持推理"
+  },
+  "model_advanced": {
+    "message": "高级"
   },
   "model_toolTimeout": {
     "message": "工具超时（秒）"
@@ -785,6 +857,30 @@
   },
   "agents_importZip": {
     "message": "导入 ZIP"
+  },
+  "agents_backupAgent": {
+    "message": "备份"
+  },
+  "agents_restoreAgent": {
+    "message": "恢复"
+  },
+  "agents_restoreConfirm": {
+    "message": "这将使用备份「$2」覆盖智能体「$1」。所有工作区文件和配置将被替换。是否继续？"
+  },
+  "agents_backupSuccess": {
+    "message": "智能体备份成功"
+  },
+  "agents_restoreSuccess": {
+    "message": "智能体恢复成功"
+  },
+  "agents_restoreFailed": {
+    "message": "智能体恢复失败"
+  },
+  "agents_backupFailed": {
+    "message": "智能体备份失败"
+  },
+  "agents_invalidBackup": {
+    "message": "无效的备份文件"
   },
   "optionsPage_title": {
     "message": "ChromeClaw 设置"
@@ -1252,7 +1348,7 @@
   "community_leaveReview": { "message": "去评价" },
   "greeting_hello": { "message": "你好！" },
   "greeting_help": { "message": "今天我能帮你什么？" },
-  "firstRun_agentTemplate": { "message": "选择一个角色" },
+  "firstRun_agentTemplate": { "message": "选择角色" },
   "agent_tpl_claw_creature": { "message": "浏览器驻留任务代理" },
   "agent_tpl_claw_vibe": { "message": "足智多谋、谨慎、能干" },
   "agent_tpl_claw_bestFor": { "message": "通用场景" },
@@ -1268,8 +1364,8 @@
   "agent_tpl_slate_bestFor": { "message": "编程、实现、命令行任务" },
   "agent_tpl_slate_strengths": { "message": "言简意赅、范围明确" },
   "agent_tpl_slate_boundaries": { "message": "除非被要求，否则不扩大范围" },
-  "firstRun_agentCreature": { "message": "角色类型" },
+  "firstRun_agentCreature": { "message": "类型" },
   "firstRun_agentVibe": { "message": "风格" },
-  "firstRun_agentStrengths": { "message": "擅长" },
+  "firstRun_agentStrengths": { "message": "优势" },
   "firstRun_agentBoundaries": { "message": "边界" }
 }
