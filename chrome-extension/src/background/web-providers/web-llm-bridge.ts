@@ -16,6 +16,7 @@
 import { getWebCredential } from './auth';
 import { mainWorldFetch } from './content-fetch-main';
 import { installRelay } from './content-fetch-relay';
+import { getPlugin } from './plugin-registry';
 import { getWebProvider } from './registry';
 import { getSseStreamAdapter } from './sse-stream-adapter';
 import { createSseParser } from './sse-parser';
@@ -38,6 +39,32 @@ const bridgeLog = createLogger('web-llm');
 
 /** Default timeout for web generation (5 minutes). */
 const WEB_LLM_TIMEOUT_MS = 300_000;
+
+/** Timeout when waiting for a tab to finish loading. */
+const TAB_LOAD_TIMEOUT_MS = 30_000;
+
+/** Wait for a tab to finish loading (status === 'complete') + SPA hydration settle time. */
+const waitForTabLoad = (tabId: number, hydrationMs = 0): Promise<void> =>
+  new Promise<void>((resolve, reject) => {
+    const loadTimeout = setTimeout(() => {
+      chrome.tabs.onUpdated.removeListener(onUpdated);
+      reject(
+        new Error(`Provider tab did not finish loading within ${TAB_LOAD_TIMEOUT_MS / 1000}s`),
+      );
+    }, TAB_LOAD_TIMEOUT_MS);
+    const onUpdated = (id: number, info: chrome.tabs.TabChangeInfo) => {
+      if (id === tabId && info.status === 'complete') {
+        clearTimeout(loadTimeout);
+        chrome.tabs.onUpdated.removeListener(onUpdated);
+        if (hydrationMs > 0) {
+          setTimeout(resolve, hydrationMs);
+        } else {
+          resolve();
+        }
+      }
+    };
+    chrome.tabs.onUpdated.addListener(onUpdated);
+  });
 
 export const requestWebGeneration = (opts: {
   modelConfig: ChatModel;
@@ -92,6 +119,12 @@ export const requestWebGeneration = (opts: {
   }
 
   let settled = false;
+
+  // Mutable state populated by the async setup block — used by WEB_LLM_RETRY_REFRESH handler
+  let activeTabId: number | undefined;
+  let activeProvider: ReturnType<typeof getWebProvider>;
+  let activeFetchRequest: ContentFetchRequest | undefined;
+
   const cleanup = () => {
     if (settled) return;
     settled = true;
@@ -112,9 +145,8 @@ export const requestWebGeneration = (opts: {
       const result = adapter.onFinish({
         hasToolCalls,
         fullText,
-        thinkingContent: thinkingPart && thinkingPart.type === 'thinking'
-          ? thinkingPart.thinking
-          : undefined,
+        thinkingContent:
+          thinkingPart && thinkingPart.type === 'thinking' ? thinkingPart.thinking : undefined,
       });
       if (result && 'error' in result) {
         emitError(result.error);
@@ -356,6 +388,20 @@ export const requestWebGeneration = (opts: {
 
         finishStream(hasToolCalls ? 'toolUse' : 'stop');
         bridgeLog.debug('Web generation complete', { requestId, hasToolCalls });
+
+        // Plugin hook: post-stream actions (e.g., record lastRequestAt for stale-session detection)
+        if (cachedProviderId) {
+          const plugin = getPlugin(cachedProviderId);
+          if (plugin?.hooks?.onStreamDone) {
+            getWebCredential(cachedProviderId)
+              .then(cred => {
+                if (cred) plugin.hooks!.onStreamDone!({ providerId: cachedProviderId, credential: cred });
+              })
+              .catch(() => {
+                /* ignore */
+              });
+          }
+        }
         break;
       }
 
@@ -365,6 +411,76 @@ export const requestWebGeneration = (opts: {
             ? message.error
             : String(message.error ?? 'Unknown error');
         emitError(errorMsg);
+        break;
+      }
+
+      // Plugin hook: persist provider metadata (e.g., deviceId) for cross-request stability
+      case 'WEB_LLM_METADATA': {
+        if (cachedProviderId && message.metadata) {
+          const plugin = getPlugin(cachedProviderId);
+          plugin?.hooks?.onMetadata?.({
+            providerId: cachedProviderId,
+            metadata: message.metadata as Record<string, unknown>,
+          });
+        }
+        break;
+      }
+
+      // Plugin hook: MAIN world retry exhausted — refresh tab and re-inject from scratch
+      case 'WEB_LLM_RETRY_REFRESH': {
+        const retryPlugin = cachedProviderId ? getPlugin(cachedProviderId) : undefined;
+        if (
+          !retryPlugin?.hooks?.supportsRetryRefresh ||
+          !activeTabId ||
+          !activeProvider ||
+          !activeFetchRequest
+        )
+          break;
+        bridgeLog.info('403 retry — refreshing tab and re-injecting', {
+          requestId,
+          providerId: cachedProviderId,
+          diag: message.diag,
+        });
+        (async () => {
+          try {
+            const tid = activeTabId!;
+            const prov = activeProvider!;
+            const req = activeFetchRequest!;
+            await chrome.tabs.update(tid, { active: true });
+            // Start listening for load completion BEFORE triggering reload
+            // to avoid a race where the tab completes before the listener registers.
+            const tabLoaded = waitForTabLoad(tid, 5000);
+            await chrome.tabs.reload(tid);
+            await tabLoaded;
+            // Do NOT restore previous tab here — the MAIN world script needs
+            // the tab foregrounded for Turnstile/CF sentinel challenge to succeed.
+            const providerOrigin = new URL(prov.loginUrl).origin;
+            await chrome.scripting.executeScript({
+              target: { tabId: tid },
+              world: 'ISOLATED',
+              func: installRelay,
+              args: [requestId, providerOrigin, WEB_LLM_TIMEOUT_MS + 30_000],
+            });
+            // Re-inject with retryAttempt incremented to prevent infinite loops
+            const retryRequest: ContentFetchRequest = {
+              ...req,
+              retryAttempt: (req.retryAttempt ?? 0) + 1,
+            };
+            const retryFetchFunc =
+              (cachedProviderId ? getPlugin(cachedProviderId)?.contentFetchHandler : undefined) ??
+              mainWorldFetch;
+            await chrome.scripting.executeScript({
+              target: { tabId: tid },
+              world: 'MAIN',
+              func: retryFetchFunc,
+              args: [retryRequest],
+            });
+          } catch (err) {
+            emitError(
+              `Tab refresh retry failed: ${err instanceof Error ? err.message : String(err)}`,
+            );
+          }
+        })();
         break;
       }
     }
@@ -450,6 +566,33 @@ export const requestWebGeneration = (opts: {
       let tabId: number;
       if (tabs.length > 0 && tabs[0].id) {
         tabId = tabs[0].id;
+
+        // Plugin hook: refresh the tab if the provider detects a stale session.
+        // The tab must be brought to the foreground before reloading — some providers'
+        // SPA (Turnstile, Cloudflare challenges, telemetry heartbeats) do not
+        // fully hydrate in a background tab, causing challenge timeouts.
+        // The tab must stay foregrounded until the MAIN world script completes.
+        const sessionPlugin = getPlugin(providerId);
+        if (sessionPlugin?.hooks?.shouldReloadTab?.({ providerId, credential: storedCredential })) {
+          bridgeLog.info('Session stale — foregrounding and reloading tab', {
+            requestId,
+            providerId,
+            lastRequestAt: storedCredential.lastRequestAt,
+            staleSec: storedCredential.lastRequestAt
+              ? Math.round((Date.now() - storedCredential.lastRequestAt) / 1000)
+              : 'never',
+          });
+          // Bring to foreground so SPA hydrates with full challenge support
+          await chrome.tabs.update(tabId, { active: true });
+          // Start listening for load completion BEFORE triggering reload
+          // to avoid a race where the tab completes before the listener registers.
+          const tabLoaded = waitForTabLoad(tabId, 5000);
+          await chrome.tabs.reload(tabId);
+          await tabLoaded;
+          // Do NOT restore previous tab here — the MAIN world script needs
+          // the tab foregrounded for challenge flow to succeed.
+          // The tab will naturally lose focus when the user interacts elsewhere.
+        }
       } else {
         const newTab = await chrome.tabs.create({
           url: provider.loginUrl,
@@ -460,26 +603,7 @@ export const requestWebGeneration = (opts: {
           return;
         }
         tabId = newTab.id;
-        // Wait for tab to load (with 30s timeout to avoid hanging)
-        const TAB_LOAD_TIMEOUT_MS = 30_000;
-        await new Promise<void>((resolve, reject) => {
-          const loadTimeout = setTimeout(() => {
-            chrome.tabs.onUpdated.removeListener(onUpdated);
-            reject(
-              new Error(
-                `Provider tab did not finish loading within ${TAB_LOAD_TIMEOUT_MS / 1000}s`,
-              ),
-            );
-          }, TAB_LOAD_TIMEOUT_MS);
-          const onUpdated = (id: number, info: chrome.tabs.TabChangeInfo) => {
-            if (id === tabId && info.status === 'complete') {
-              clearTimeout(loadTimeout);
-              chrome.tabs.onUpdated.removeListener(onUpdated);
-              resolve();
-            }
-          };
-          chrome.tabs.onUpdated.addListener(onUpdated);
-        });
+        await waitForTabLoad(tabId);
       }
 
       // Inject relay script (ISOLATED world) first — pass origin for validation and timeout
@@ -500,6 +624,8 @@ export const requestWebGeneration = (opts: {
         urlTemplate,
         binaryProtocol,
         binaryEncodeBody,
+        // Pass stored metadata (e.g., deviceId) for providers that need cross-request stability
+        ...(credential.metadata ? { providerMetadata: credential.metadata } : {}),
       };
 
       if (binaryProtocol) {
@@ -513,10 +639,17 @@ export const requestWebGeneration = (opts: {
       stream.push({ type: 'start', partial });
       stream.push({ type: 'text_start', contentIndex: 0, partial });
 
+      // Expose state for the WEB_LLM_RETRY_REFRESH handler
+      activeTabId = tabId;
+      activeProvider = provider;
+      activeFetchRequest = fetchRequest;
+
+      // Use per-provider MAIN world handler if available, else shared mainWorldFetch
+      const fetchFunc = getPlugin(providerId)?.contentFetchHandler ?? mainWorldFetch;
       await chrome.scripting.executeScript({
         target: { tabId },
         world: 'MAIN',
-        func: mainWorldFetch,
+        func: fetchFunc,
         args: [fetchRequest],
       });
 

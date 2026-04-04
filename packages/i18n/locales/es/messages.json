@@ -63,16 +63,16 @@
     "message": "Comenzar a chatear"
   },
   "firstRun_stepModel": {
-    "message": "Model"
+    "message": "Modelo"
   },
   "firstRun_stepChannels": {
-    "message": "Channels"
+    "message": "Canales"
   },
   "firstRun_stepAgent": {
-    "message": "Agent"
+    "message": "Agente"
   },
   "firstRun_stepTools": {
-    "message": "Tools"
+    "message": "Herramientas"
   },
   "firstRun_stepPermissions": {
     "message": "Permisos"
@@ -93,73 +93,127 @@
     "message": "El permiso fue denegado. Las herramientas que interactúan con páginas web pueden no funcionar. Puedes otorgar este permiso más tarde en la configuración de permisos de la extensión."
   },
   "firstRun_step2Title": {
-    "message": "Connect Channels"
+    "message": "Conectar canales"
   },
   "firstRun_step2Description": {
-    "message": "Optionally connect a Telegram bot to chat from your phone."
+    "message": "Conecta opcionalmente un bot de Telegram para chatear desde tu teléfono."
   },
   "firstRun_step3Title": {
-    "message": "Customize Your Agent"
+    "message": "Personaliza tu agente"
   },
   "firstRun_step3Description": {
-    "message": "Give your AI assistant a name and personality."
+    "message": "Dale a tu asistente de IA un nombre y una personalidad."
   },
   "firstRun_step4Title": {
-    "message": "Enable Tools"
+    "message": "Activar herramientas"
   },
   "firstRun_step4Description": {
-    "message": "Choose which tools your AI assistant can use."
+    "message": "Elige qué herramientas puede usar tu asistente de IA."
   },
   "firstRun_next": {
-    "message": "Next"
+    "message": "Siguiente"
   },
   "firstRun_skip": {
-    "message": "Skip"
+    "message": "Omitir"
   },
   "firstRun_back": {
-    "message": "Back"
+    "message": "Atrás"
   },
   "firstRun_skipSetup": {
-    "message": "Skip setup \u2192"
+    "message": "Omitir configuración \u2192"
   },
   "firstRun_getStarted": {
-    "message": "Get Started"
+    "message": "Comenzar"
   },
   "firstRun_telegramBotToken": {
-    "message": "Telegram Bot Token"
+    "message": "Token del bot de Telegram"
   },
   "firstRun_telegramValidate": {
-    "message": "Validate"
+    "message": "Validar"
   },
   "firstRun_telegramValidated": {
-    "message": "Token valid"
+    "message": "Token válido"
   },
   "firstRun_telegramAllowedUsers": {
-    "message": "Allowed User IDs (comma-separated)"
+    "message": "IDs de usuario permitidos (separados por comas)"
   },
   "firstRun_whatsappNote": {
-    "message": "WhatsApp can be connected later via Settings > Channels (requires QR code scan)."
+    "message": "WhatsApp se puede conectar más tarde en Ajustes > Canales (requiere escanear código QR)."
   },
   "firstRun_agentName": {
-    "message": "Agent Name"
+    "message": "Nombre del agente"
   },
   "firstRun_agentEmoji": {
-    "message": "Agent Emoji"
+    "message": "Emoji del agente"
   },
   "firstRun_stepSkills": {
-    "message": "Skills"
+    "message": "Habilidades"
   },
   "firstRun_step5Title": {
-    "message": "Enable Skills"
+    "message": "Activar habilidades"
   },
   "firstRun_step5Description": {
-    "message": "Skills are reusable prompt templates that extend your assistant's capabilities."
+    "message": "Las habilidades son plantillas de prompts reutilizables que amplían las capacidades de tu asistente."
   },
   "firstRun_noSkills": {
-    "message": "No skills available yet. You can add skills later in Settings."
+    "message": "Aún no hay habilidades disponibles. Puedes añadir habilidades más tarde en Ajustes."
   },
   "firstRun_advancedSetup": {
     "message": "Configuración avanzada"
+  },
+  "firstRun_defaultAgentName": {
+    "message": "Agente principal"
+  },
+  "firstRun_webProviderRequired": {
+    "message": "Por favor, selecciona un proveedor web"
+  },
+  "firstRun_webLoginRequired": {
+    "message": "Debes iniciar sesión en el proveedor web antes de continuar."
+  },
+  "firstRun_webProvider": {
+    "message": "Proveedor web"
+  },
+  "firstRun_webProviderHint": {
+    "message": "(Usa tu sesión del navegador — no se necesita clave API)"
+  },
+  "firstRun_selectWebProvider": {
+    "message": "Selecciona un proveedor web"
+  },
+  "firstRun_webChecking": {
+    "message": "Verificando..."
+  },
+  "firstRun_webLoggedIn": {
+    "message": "Sesión iniciada"
+  },
+  "firstRun_webNotLoggedIn": {
+    "message": "Haz clic en Iniciar sesión para verificar el estado"
+  },
+  "firstRun_webLogout": {
+    "message": "Cerrar sesión"
+  },
+  "firstRun_webWaiting": {
+    "message": "Esperando inicio de sesión..."
+  },
+  "firstRun_webLogin": {
+    "message": "Iniciar sesión"
+  },
+  "firstRun_webLoginInstruction": {
+    "message": "Inicia sesión en la página abierta. La sesión se capturará automáticamente."
+  },
+  "firstRun_optional": {
+    "message": "(opcional)"
+  },
+  "firstRun_autoDetected": {
+    "message": "Detectado automáticamente"
+  },
+  "firstRun_autoDetectedHint": {
+    "message": "Detectado automáticamente del proveedor web. Cambia solo si es necesario."
+  },
+  "firstRun_tools": {
+    "message": "herramientas"
+  },
+  "firstRun_restoreFailed": {
+    "message": "Error al restaurar el agente desde la copia de seguridad"
   },
   "chat_placeholder": {
     "message": "¿Qué te gustaría saber?"
@@ -329,6 +383,21 @@
   "slash_conversationCleared": {
     "message": "Conversación borrada"
   },
+  "slash_copied": {
+    "message": "Copiado al portapapeles"
+  },
+  "slash_noAssistantMessage": {
+    "message": "No hay mensaje del asistente para copiar"
+  },
+  "slash_invalidCopyArg": {
+    "message": "Argumento no válido — usa /copy o /copy N (p. ej. /copy 2)"
+  },
+  "slash_exported": {
+    "message": "Conversación exportada"
+  },
+  "slash_exportEmpty": {
+    "message": "No hay mensajes para exportar"
+  },
   "slash_availableCommands": {
     "message": "Comandos disponibles:"
   },
@@ -461,6 +530,9 @@
   },
   "model_supportsReasoning": {
     "message": "Compatible con razonamiento"
+  },
+  "model_advanced": {
+    "message": "Avanzado"
   },
   "model_toolTimeout": {
     "message": "Tiempo de espera de herramientas (segundos)"
@@ -785,6 +857,30 @@
   },
   "agents_importZip": {
     "message": "Importar ZIP"
+  },
+  "agents_backupAgent": {
+    "message": "Copia de seguridad"
+  },
+  "agents_restoreAgent": {
+    "message": "Restaurar"
+  },
+  "agents_restoreConfirm": {
+    "message": "Esto sobrescribirá el agente «$1» con la copia de seguridad «$2». Todos los archivos del espacio de trabajo y la configuración serán reemplazados. ¿Continuar?"
+  },
+  "agents_backupSuccess": {
+    "message": "Copia de seguridad del agente realizada correctamente"
+  },
+  "agents_restoreSuccess": {
+    "message": "Agente restaurado correctamente"
+  },
+  "agents_restoreFailed": {
+    "message": "Error al restaurar el agente"
+  },
+  "agents_backupFailed": {
+    "message": "Error al realizar la copia de seguridad del agente"
+  },
+  "agents_invalidBackup": {
+    "message": "Archivo de copia de seguridad no válido"
   },
   "optionsPage_title": {
     "message": "Configuración de ChromeClaw"
@@ -1252,7 +1348,7 @@
   "community_leaveReview": { "message": "Dejar una reseña" },
   "greeting_hello": { "message": "¡Hola!" },
   "greeting_help": { "message": "¿En qué puedo ayudarte hoy?" },
-  "firstRun_agentTemplate": { "message": "Elige un perfil" },
+  "firstRun_agentTemplate": { "message": "Elige una personalidad" },
   "agent_tpl_claw_creature": { "message": "Agente de tareas del navegador" },
   "agent_tpl_claw_vibe": { "message": "Ingenioso, cuidadoso, capaz" },
   "agent_tpl_claw_bestFor": { "message": "Uso general" },
@@ -1268,7 +1364,7 @@
   "agent_tpl_slate_bestFor": { "message": "Programación, implementación, tareas CLI" },
   "agent_tpl_slate_strengths": { "message": "Mínima verbosidad, ejecución acotada" },
   "agent_tpl_slate_boundaries": { "message": "No amplía el alcance a menos que se le pida" },
-  "firstRun_agentCreature": { "message": "Tipo" },
+  "firstRun_agentCreature": { "message": "Criatura" },
   "firstRun_agentVibe": { "message": "Estilo" },
   "firstRun_agentStrengths": { "message": "Fortalezas" },
   "firstRun_agentBoundaries": { "message": "Límites" }

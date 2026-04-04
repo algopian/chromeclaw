@@ -7,6 +7,7 @@ export * from './lib/prompts.js';
 export * from './const.js';
 export * from './lib/skill-parser.js';
 export * from './lib/skill-zip-import.js';
+export * from './lib/agent-zip.js';
 export * from './lib/logger.js';
 export * from './lib/tool-registry.js';
 export * from './lib/pdf-extract.js';

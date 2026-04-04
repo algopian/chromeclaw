@@ -25,7 +25,7 @@ const rakutenWeb: WebProviderDefinition = {
   loginUrl: 'https://ai.rakuten.co.jp',
   cookieDomain: '.rakuten.co.jp',
   sessionIndicators: ['Rp', 'Rz'],
-  defaultModelId: 'rakuten-ai',
+  defaultModelId: 'Rakuten-AI-3.0',
   defaultModelName: 'Rakuten AI',
   supportsTools: false, // Rakuten's model doesn't follow external tool-call XML; uses built-in native tools (e.g. web search)
   supportsReasoning: true,
@@ -121,7 +121,8 @@ const rakutenWeb: WebProviderDefinition = {
                     bearer = inner.accessToken;
                     try {
                       localStorage.setItem('accessToken', bearer);
-                      if (inner.refreshToken) localStorage.setItem('refreshToken', inner.refreshToken);
+                      if (inner.refreshToken)
+                        localStorage.setItem('refreshToken', inner.refreshToken);
                     } catch {
                       /* ignore */
                     }

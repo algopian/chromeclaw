@@ -63,16 +63,16 @@
     "message": "チャットを始める"
   },
   "firstRun_stepModel": {
-    "message": "Model"
+    "message": "モデル"
   },
   "firstRun_stepChannels": {
-    "message": "Channels"
+    "message": "チャンネル"
   },
   "firstRun_stepAgent": {
-    "message": "Agent"
+    "message": "エージェント"
   },
   "firstRun_stepTools": {
-    "message": "Tools"
+    "message": "ツール"
   },
   "firstRun_stepPermissions": {
     "message": "権限"
@@ -93,73 +93,127 @@
     "message": "権限が拒否されました。Webページと連携するツールが動作しない場合があります。拡張機能の権限設定から後で付与できます。"
   },
   "firstRun_step2Title": {
-    "message": "Connect Channels"
+    "message": "チャンネルを接続"
   },
   "firstRun_step2Description": {
-    "message": "Optionally connect a Telegram bot to chat from your phone."
+    "message": "オプションでTelegramボットを接続して、スマートフォンからチャットできます。"
   },
   "firstRun_step3Title": {
-    "message": "Customize Your Agent"
+    "message": "エージェントをカスタマイズ"
   },
   "firstRun_step3Description": {
-    "message": "Give your AI assistant a name and personality."
+    "message": "AIアシスタントに名前と性格を設定しましょう。"
   },
   "firstRun_step4Title": {
-    "message": "Enable Tools"
+    "message": "ツールを有効化"
   },
   "firstRun_step4Description": {
-    "message": "Choose which tools your AI assistant can use."
+    "message": "AIアシスタントが使用できるツールを選択してください。"
   },
   "firstRun_next": {
-    "message": "Next"
+    "message": "次へ"
   },
   "firstRun_skip": {
-    "message": "Skip"
+    "message": "スキップ"
   },
   "firstRun_back": {
-    "message": "Back"
+    "message": "戻る"
   },
   "firstRun_skipSetup": {
-    "message": "Skip setup \u2192"
+    "message": "セットアップをスキップ →"
   },
   "firstRun_getStarted": {
-    "message": "Get Started"
+    "message": "始める"
   },
   "firstRun_telegramBotToken": {
-    "message": "Telegram Bot Token"
+    "message": "Telegramボットトークン"
   },
   "firstRun_telegramValidate": {
-    "message": "Validate"
+    "message": "検証"
   },
   "firstRun_telegramValidated": {
-    "message": "Token valid"
+    "message": "トークン有効"
   },
   "firstRun_telegramAllowedUsers": {
-    "message": "Allowed User IDs (comma-separated)"
+    "message": "許可するユーザーID（カンマ区切り）"
   },
   "firstRun_whatsappNote": {
-    "message": "WhatsApp can be connected later via Settings > Channels (requires QR code scan)."
+    "message": "WhatsAppは後から設定 > チャンネルで接続できます（QRコードスキャンが必要）。"
   },
   "firstRun_agentName": {
-    "message": "Agent Name"
+    "message": "エージェント名"
   },
   "firstRun_agentEmoji": {
-    "message": "Agent Emoji"
+    "message": "エージェント絵文字"
   },
   "firstRun_stepSkills": {
-    "message": "Skills"
+    "message": "スキル"
   },
   "firstRun_step5Title": {
-    "message": "Enable Skills"
+    "message": "スキルを有効化"
   },
   "firstRun_step5Description": {
-    "message": "Skills are reusable prompt templates that extend your assistant's capabilities."
+    "message": "スキルはアシスタントの機能を拡張する再利用可能なプロンプトテンプレートです。"
   },
   "firstRun_noSkills": {
-    "message": "No skills available yet. You can add skills later in Settings."
+    "message": "まだスキルがありません。後から設定でスキルを追加できます。"
   },
   "firstRun_advancedSetup": {
     "message": "詳細設定"
+  },
+  "firstRun_defaultAgentName": {
+    "message": "メインエージェント"
+  },
+  "firstRun_webProviderRequired": {
+    "message": "ウェブプロバイダーを選択してください"
+  },
+  "firstRun_webLoginRequired": {
+    "message": "続行する前にウェブプロバイダーにログインしてください。"
+  },
+  "firstRun_webProvider": {
+    "message": "ウェブプロバイダー"
+  },
+  "firstRun_webProviderHint": {
+    "message": "（ブラウザセッションを使用 — APIキー不要）"
+  },
+  "firstRun_selectWebProvider": {
+    "message": "ウェブプロバイダーを選択"
+  },
+  "firstRun_webChecking": {
+    "message": "確認中..."
+  },
+  "firstRun_webLoggedIn": {
+    "message": "ログイン済み"
+  },
+  "firstRun_webNotLoggedIn": {
+    "message": "ログインをクリックしてステータスを確認"
+  },
+  "firstRun_webLogout": {
+    "message": "ログアウト"
+  },
+  "firstRun_webWaiting": {
+    "message": "ログイン待機中..."
+  },
+  "firstRun_webLogin": {
+    "message": "ログイン"
+  },
+  "firstRun_webLoginInstruction": {
+    "message": "開いたページでログインしてください。セッションは自動的に取得されます。"
+  },
+  "firstRun_optional": {
+    "message": "（任意）"
+  },
+  "firstRun_autoDetected": {
+    "message": "自動検出"
+  },
+  "firstRun_autoDetectedHint": {
+    "message": "ウェブプロバイダーから自動検出されました。必要な場合のみ変更してください。"
+  },
+  "firstRun_tools": {
+    "message": "ツール"
+  },
+  "firstRun_restoreFailed": {
+    "message": "バックアップからのエージェントの復元に失敗しました"
   },
   "chat_placeholder": {
     "message": "何について知りたいですか？"
@@ -329,6 +383,21 @@
   "slash_conversationCleared": {
     "message": "会話をクリアしました"
   },
+  "slash_copied": {
+    "message": "クリップボードにコピーしました"
+  },
+  "slash_noAssistantMessage": {
+    "message": "コピーするアシスタントのメッセージがありません"
+  },
+  "slash_invalidCopyArg": {
+    "message": "無効な引数 — /copy または /copy N を使用してください（例: /copy 2）"
+  },
+  "slash_exported": {
+    "message": "会話をエクスポートしました"
+  },
+  "slash_exportEmpty": {
+    "message": "エクスポートするメッセージがありません"
+  },
   "slash_availableCommands": {
     "message": "利用可能なコマンド："
   },
@@ -461,6 +530,9 @@
   },
   "model_supportsReasoning": {
     "message": "推論対応"
+  },
+  "model_advanced": {
+    "message": "詳細設定"
   },
   "model_toolTimeout": {
     "message": "ツールタイムアウト（秒）"
@@ -785,6 +857,30 @@
   },
   "agents_importZip": {
     "message": "ZIP をインポート"
+  },
+  "agents_backupAgent": {
+    "message": "バックアップ"
+  },
+  "agents_restoreAgent": {
+    "message": "復元"
+  },
+  "agents_restoreConfirm": {
+    "message": "エージェント「$1」をバックアップ「$2」で上書きします。すべてのワークスペースファイルと設定が置き換えられます。続行しますか？"
+  },
+  "agents_backupSuccess": {
+    "message": "エージェントのバックアップが完了しました"
+  },
+  "agents_restoreSuccess": {
+    "message": "エージェントの復元が完了しました"
+  },
+  "agents_restoreFailed": {
+    "message": "エージェントの復元に失敗しました"
+  },
+  "agents_backupFailed": {
+    "message": "エージェントのバックアップに失敗しました"
+  },
+  "agents_invalidBackup": {
+    "message": "無効なバックアップファイル"
   },
   "optionsPage_title": {
     "message": "ChromeClaw 設定"

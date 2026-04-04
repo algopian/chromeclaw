@@ -41,6 +41,9 @@
   "firstRun_saveFailed": {
     "message": "Не удалось сохранить модель"
   },
+  "firstRun_restoreFailed": {
+    "message": "Не удалось восстановить агента из резервной копии"
+  },
   "firstRun_provider": {
     "message": "Провайдер"
   },
@@ -160,6 +163,57 @@
   },
   "firstRun_advancedSetup": {
     "message": "Расширенная настройка"
+  },
+  "firstRun_defaultAgentName": {
+    "message": "Основной агент"
+  },
+  "firstRun_webProviderRequired": {
+    "message": "Пожалуйста, выберите веб-провайдера"
+  },
+  "firstRun_webLoginRequired": {
+    "message": "Необходимо войти в веб-провайдер перед продолжением."
+  },
+  "firstRun_webProvider": {
+    "message": "Веб-провайдер"
+  },
+  "firstRun_webProviderHint": {
+    "message": "(Использует сессию браузера — API-ключ не нужен)"
+  },
+  "firstRun_selectWebProvider": {
+    "message": "Выберите веб-провайдера"
+  },
+  "firstRun_webChecking": {
+    "message": "Проверка..."
+  },
+  "firstRun_webLoggedIn": {
+    "message": "Вход выполнен"
+  },
+  "firstRun_webNotLoggedIn": {
+    "message": "Нажмите «Войти» для проверки статуса"
+  },
+  "firstRun_webLogout": {
+    "message": "Выйти"
+  },
+  "firstRun_webWaiting": {
+    "message": "Ожидание входа..."
+  },
+  "firstRun_webLogin": {
+    "message": "Войти"
+  },
+  "firstRun_webLoginInstruction": {
+    "message": "Войдите на открывшейся странице. Сессия будет автоматически сохранена."
+  },
+  "firstRun_optional": {
+    "message": "(необязательно)"
+  },
+  "firstRun_autoDetected": {
+    "message": "Определено автоматически"
+  },
+  "firstRun_autoDetectedHint": {
+    "message": "Определено автоматически от веб-провайдера. Изменяйте только при необходимости."
+  },
+  "firstRun_tools": {
+    "message": "инструменты"
   },
   "chat_placeholder": {
     "message": "Что бы вы хотели узнать?"
@@ -329,6 +383,21 @@
   "slash_conversationCleared": {
     "message": "Разговор очищен"
   },
+  "slash_copied": {
+    "message": "Скопировано в буфер обмена"
+  },
+  "slash_noAssistantMessage": {
+    "message": "Нет сообщения ассистента для копирования"
+  },
+  "slash_invalidCopyArg": {
+    "message": "Неверный аргумент — используйте /copy или /copy N (например, /copy 2)"
+  },
+  "slash_exported": {
+    "message": "Разговор экспортирован"
+  },
+  "slash_exportEmpty": {
+    "message": "Нет сообщений для экспорта"
+  },
   "slash_availableCommands": {
     "message": "Доступные команды:"
   },
@@ -461,6 +530,9 @@
   },
   "model_supportsReasoning": {
     "message": "Поддержка рассуждений"
+  },
+  "model_advanced": {
+    "message": "Дополнительно"
   },
   "model_toolTimeout": {
     "message": "Тайм-аут инструментов (секунды)"
@@ -785,6 +857,30 @@
   },
   "agents_importZip": {
     "message": "Импорт ZIP"
+  },
+  "agents_backupAgent": {
+    "message": "Резервная копия"
+  },
+  "agents_restoreAgent": {
+    "message": "Восстановить"
+  },
+  "agents_restoreConfirm": {
+    "message": "Агент «$1» будет перезаписан резервной копией «$2». Все файлы рабочего пространства и настройки будут заменены. Продолжить?"
+  },
+  "agents_backupSuccess": {
+    "message": "Резервная копия агента успешно создана"
+  },
+  "agents_restoreSuccess": {
+    "message": "Агент успешно восстановлен"
+  },
+  "agents_restoreFailed": {
+    "message": "Не удалось восстановить агента"
+  },
+  "agents_backupFailed": {
+    "message": "Не удалось создать резервную копию агента"
+  },
+  "agents_invalidBackup": {
+    "message": "Недопустимый файл резервной копии"
   },
   "optionsPage_title": {
     "message": "Настройки ChromeClaw"

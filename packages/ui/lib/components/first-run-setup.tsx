@@ -15,7 +15,13 @@ import {
   SelectValue,
 } from './ui';
 import { useT } from '@extension/i18n';
-import { toolRegistryMeta, parseSkillFrontmatter, WEB_PROVIDER_OPTIONS, useWebProviderAuth } from '@extension/shared';
+import {
+  toolRegistryMeta,
+  parseSkillFrontmatter,
+  WEB_PROVIDER_OPTIONS,
+  useWebProviderAuth,
+  parseAgentBackup,
+} from '@extension/shared';
 import {
   customModelsStorage,
   toolConfigStorage,
@@ -27,8 +33,11 @@ import {
   copyGlobalSkillsToAgent,
   listSkillFiles,
   updateWorkspaceFile,
+  deleteWorkspaceFile,
+  createWorkspaceFile,
   listWorkspaceFiles,
 } from '@extension/storage';
+import type { DbWorkspaceFile } from '@extension/storage';
 import {
   CheckCircleIcon,
   CheckIcon,
@@ -54,6 +63,7 @@ import {
   CodeIcon,
   BugIcon,
   HardDriveDownloadIcon,
+  HardDriveUploadIcon,
   MailIcon,
   CalendarIcon,
   XCircleIcon,
@@ -61,7 +71,7 @@ import {
 } from 'lucide-react';
 import { IS_FIREFOX } from '@extension/env';
 import { nanoid } from 'nanoid';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TFunction } from '@extension/i18n';
 import type { ReactNode } from 'react';
 
@@ -90,8 +100,21 @@ const providers = [
 
 const TOTAL_STEPS = IS_FIREFOX ? 6 : 5;
 const STEP_LABELS = IS_FIREFOX
-  ? (['firstRun_stepModel', 'firstRun_stepPermissions', 'firstRun_stepAgent', 'firstRun_stepChannels', 'firstRun_stepTools', 'firstRun_stepSkills'] as const)
-  : (['firstRun_stepModel', 'firstRun_stepAgent', 'firstRun_stepChannels', 'firstRun_stepTools', 'firstRun_stepSkills'] as const);
+  ? ([
+      'firstRun_stepModel',
+      'firstRun_stepPermissions',
+      'firstRun_stepAgent',
+      'firstRun_stepChannels',
+      'firstRun_stepTools',
+      'firstRun_stepSkills',
+    ] as const)
+  : ([
+      'firstRun_stepModel',
+      'firstRun_stepAgent',
+      'firstRun_stepChannels',
+      'firstRun_stepTools',
+      'firstRun_stepSkills',
+    ] as const);
 
 /** Groups to exclude from the onboarding tool picker (require OAuth or feature flags). */
 const EXCLUDED_TOOL_GROUPS = new Set(['gmail', 'calendar', 'drive']);
@@ -195,21 +218,24 @@ const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) =>
     if (webAuthError) setError(webAuthError);
   }, [webAuthError]);
 
-  const handleProviderChange = useCallback((value: string) => {
-    setProvider(value);
-    const p = providers.find(p => p.value === value);
-    if (p) {
-      setModelId(p.defaultModel);
-      setBaseUrl(p.defaultBase);
-    }
-    // Auto-set default web provider when switching to web
-    if (value === 'web' && !webProviderId) {
-      setWebProviderId('gemini-web');
-      const wp = WEB_PROVIDER_OPTIONS.find(w => w.value === 'gemini-web');
-      if (wp) setModelId(wp.defaultModelId);
-    }
-    setError('');
-  }, [webProviderId]);
+  const handleProviderChange = useCallback(
+    (value: string) => {
+      setProvider(value);
+      const p = providers.find(p => p.value === value);
+      if (p) {
+        setModelId(p.defaultModel);
+        setBaseUrl(p.defaultBase);
+      }
+      // Auto-set default web provider when switching to web
+      if (value === 'web' && !webProviderId) {
+        setWebProviderId('gemini-web');
+        const wp = WEB_PROVIDER_OPTIONS.find(w => w.value === 'gemini-web');
+        if (wp) setModelId(wp.defaultModelId);
+      }
+      setError('');
+    },
+    [webProviderId],
+  );
 
   const handleNext = useCallback(async () => {
     const isWeb = provider === 'web';
@@ -324,7 +350,9 @@ const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) =>
           <div className="grid gap-2">
             <Label htmlFor="setup-web-provider">
               {t('firstRun_webProvider')}
-              <span className="text-muted-foreground ml-1 font-normal">{t('firstRun_webProviderHint')}</span>
+              <span className="text-muted-foreground ml-1 font-normal">
+                {t('firstRun_webProviderHint')}
+              </span>
             </Label>
             <Select
               onValueChange={v => {
@@ -385,9 +413,7 @@ const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) =>
               )}
             </div>
             {webLoginLoading && (
-              <p className="text-muted-foreground text-xs">
-                {t('firstRun_webLoginInstruction')}
-              </p>
+              <p className="text-muted-foreground text-xs">{t('firstRun_webLoginInstruction')}</p>
             )}
           </div>
         ) : (
@@ -436,7 +462,11 @@ const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) =>
         <div className="grid gap-2">
           <Label htmlFor="setup-model">
             {t('firstRun_modelId')}
-            {provider === 'web' && <span className="text-muted-foreground ml-1 font-normal">{t('firstRun_optional')}</span>}
+            {provider === 'web' && (
+              <span className="text-muted-foreground ml-1 font-normal">
+                {t('firstRun_optional')}
+              </span>
+            )}
           </Label>
           <Input
             data-testid="setup-model-id"
@@ -448,15 +478,14 @@ const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) =>
             onKeyDown={handleKeyDown}
             placeholder={
               provider === 'web'
-                ? WEB_PROVIDER_OPTIONS.find(w => w.value === webProviderId)?.defaultModelId ?? t('firstRun_autoDetected')
+                ? (WEB_PROVIDER_OPTIONS.find(w => w.value === webProviderId)?.defaultModelId ??
+                  t('firstRun_autoDetected'))
                 : 'gpt-4o'
             }
             value={modelId}
           />
           {provider === 'web' && (
-            <p className="text-muted-foreground text-xs">
-              {t('firstRun_autoDetectedHint')}
-            </p>
+            <p className="text-muted-foreground text-xs">{t('firstRun_autoDetectedHint')}</p>
           )}
         </div>
 
@@ -553,10 +582,7 @@ const StepFirefoxPermissions = ({
           </div>
         ) : (
           <>
-            <Button
-              className="w-full"
-              disabled={requesting}
-              onClick={handleGrant}>
+            <Button className="w-full" disabled={requesting} onClick={handleGrant}>
               {requesting && <Loader2Icon className="mr-2 size-4 animate-spin" />}
               <ShieldCheckIcon className="mr-2 size-4" />
               {t('firstRun_permissionsGrant')}
@@ -570,16 +596,11 @@ const StepFirefoxPermissions = ({
         )}
 
         <div className="mt-auto flex items-center justify-between">
-          <Button
-            data-testid="setup-back-button"
-            onClick={onBack}
-            variant="link">
+          <Button data-testid="setup-back-button" onClick={onBack} variant="link">
             <ChevronLeftIcon className="mr-1 size-4" />
             {t('firstRun_back')}
           </Button>
-          <Button
-            data-testid="setup-next-button"
-            onClick={onNext}>
+          <Button data-testid="setup-next-button" onClick={onNext}>
             {t('firstRun_next')}
           </Button>
         </div>
@@ -776,12 +797,19 @@ const Step3AgentSetup = ({
   const [selectedTemplate, setSelectedTemplate] = useState<string>(AGENT_TEMPLATES[0].id);
   const [agentName, setAgentName] = useState<string>(AGENT_TEMPLATES[0].name);
   const [agentEmoji, setAgentEmoji] = useState<string>(AGENT_TEMPLATES[0].emoji);
-  const [creature, setCreature] = useState<string>(tplKey(AGENT_TEMPLATES[0].keyPrefix, 'creature'));
+  const [creature, setCreature] = useState<string>(
+    tplKey(AGENT_TEMPLATES[0].keyPrefix, 'creature'),
+  );
   const [vibe, setVibe] = useState<string>(tplKey(AGENT_TEMPLATES[0].keyPrefix, 'vibe'));
-  const [strengths, setStrengths] = useState<string>(tplKey(AGENT_TEMPLATES[0].keyPrefix, 'strengths'));
-  const [boundaries, setBoundaries] = useState<string>(tplKey(AGENT_TEMPLATES[0].keyPrefix, 'boundaries'));
+  const [strengths, setStrengths] = useState<string>(
+    tplKey(AGENT_TEMPLATES[0].keyPrefix, 'strengths'),
+  );
+  const [boundaries, setBoundaries] = useState<string>(
+    tplKey(AGENT_TEMPLATES[0].keyPrefix, 'boundaries'),
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const restoreInputRef = useRef<HTMLInputElement>(null);
 
   const selectTemplate = useCallback(
     (tpl: (typeof AGENT_TEMPLATES)[number]) => {
@@ -845,6 +873,95 @@ const Step3AgentSetup = ({
       setSaving(false);
     }
   }, [agentName, agentEmoji, creature, vibe, strengths, boundaries, onNext, t]);
+
+  const handleRestore = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = '';
+      if (!file) return;
+
+      setSaving(true);
+      setError('');
+      try {
+        const backup = await parseAgentBackup(file);
+
+        // Ensure default agent exists
+        let agent = await getDefaultAgent();
+        if (!agent) {
+          agent = {
+            id: 'main',
+            name: backup.meta.name,
+            identity: backup.meta.identity ?? { emoji: '\u{1F916}' },
+            isDefault: true,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          };
+          await createAgent(agent);
+          await seedPredefinedWorkspaceFiles('main');
+          await copyGlobalSkillsToAgent('main');
+        }
+
+        // Update agent config from backup
+        await updateAgent(agent.id, {
+          name: backup.meta.name,
+          identity: backup.meta.identity,
+          model: backup.meta.model,
+          toolConfig: backup.meta.toolConfig,
+          customTools: backup.meta.customTools,
+          compactionConfig: backup.meta.compactionConfig,
+        });
+
+        // Replace workspace files
+        const existingFiles = await listWorkspaceFiles(agent.id);
+        for (const f of existingFiles) {
+          if (!f.predefined) await deleteWorkspaceFile(f.id);
+        }
+        const predefinedFiles = existingFiles.filter(f => f.predefined);
+        for (const bf of backup.files) {
+          const existing = predefinedFiles.find(f => f.name === bf.name);
+          if (existing) {
+            await updateWorkspaceFile(existing.id, { content: bf.content });
+          } else {
+            const now = Date.now();
+            const wsFile: DbWorkspaceFile = {
+              id: nanoid(),
+              name: bf.name,
+              content: bf.content,
+              enabled: true,
+              owner: 'user',
+              predefined: false,
+              createdAt: now,
+              updatedAt: now,
+              agentId: agent.id,
+            };
+            await createWorkspaceFile(wsFile);
+          }
+        }
+
+        // Update form fields from backup
+        setAgentName(backup.meta.name);
+        setAgentEmoji(backup.meta.identity?.emoji ?? '\u{1F916}');
+        // Extract fields from IDENTITY.md if present
+        const identityFile = backup.files.find(f => f.name === 'IDENTITY.md');
+        if (identityFile) {
+          const extract = (field: string): string => {
+            const regex = new RegExp(`\\*\\*${field}:\\*\\*\\s*(.+)`, 'i');
+            const match = identityFile.content.match(regex);
+            return match?.[1]?.trim() ?? '';
+          };
+          setCreature(extract('Creature'));
+          setVibe(extract('Vibe'));
+          setStrengths(extract('Strengths'));
+          setBoundaries(extract('Boundaries'));
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t('firstRun_restoreFailed'));
+      } finally {
+        setSaving(false);
+      }
+    },
+    [t],
+  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -915,11 +1032,7 @@ const Step3AgentSetup = ({
           </div>
           <div className="grid gap-1">
             <Label htmlFor="setup-agent-vibe">{t('firstRun_agentVibe')}</Label>
-            <Input
-              id="setup-agent-vibe"
-              onChange={e => setVibe(e.target.value)}
-              value={vibe}
-            />
+            <Input id="setup-agent-vibe" onChange={e => setVibe(e.target.value)} value={vibe} />
           </div>
         </div>
 
@@ -947,11 +1060,28 @@ const Step3AgentSetup = ({
             <ChevronLeftIcon className="mr-1 size-4" />
             {t('firstRun_back')}
           </Button>
-          <Button data-testid="setup-next-button" disabled={saving} onClick={handleNext}>
-            {saving && <Loader2Icon className="mr-2 size-4 animate-spin" />}
-            {t('firstRun_next')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              disabled={saving}
+              onClick={() => restoreInputRef.current?.click()}
+              variant="outline">
+              <HardDriveUploadIcon className="mr-1 size-4" />
+              {t('agents_restoreAgent')}
+            </Button>
+            <Button data-testid="setup-next-button" disabled={saving} onClick={handleNext}>
+              {saving && <Loader2Icon className="mr-2 size-4 animate-spin" />}
+              {t('firstRun_next')}
+            </Button>
+          </div>
         </div>
+
+        <input
+          accept=".zip"
+          className="hidden"
+          ref={restoreInputRef}
+          onChange={handleRestore}
+          type="file"
+        />
       </CardContent>
     </div>
   );
@@ -1224,15 +1354,29 @@ const FirstRunSetup = ({ onComplete }: FirstRunSetupProps) => {
             <StepFirefoxPermissions onBack={() => setStep(1)} onNext={() => setStep(3)} t={t} />
           )}
           {step === 2 + offset && (
-            <Step3AgentSetup onBack={() => setStep(1 + offset)} onNext={() => setStep(3 + offset)} t={t} />
+            <Step3AgentSetup
+              onBack={() => setStep(1 + offset)}
+              onNext={() => setStep(3 + offset)}
+              t={t}
+            />
           )}
           {step === 3 + offset && (
-            <Step2ChannelSetup onBack={() => setStep(2 + offset)} onNext={() => setStep(4 + offset)} t={t} />
+            <Step2ChannelSetup
+              onBack={() => setStep(2 + offset)}
+              onNext={() => setStep(4 + offset)}
+              t={t}
+            />
           )}
           {step === 4 + offset && (
-            <Step4ToolsSetup onBack={() => setStep(3 + offset)} onNext={() => setStep(5 + offset)} t={t} />
+            <Step4ToolsSetup
+              onBack={() => setStep(3 + offset)}
+              onNext={() => setStep(5 + offset)}
+              t={t}
+            />
           )}
-          {step === 5 + offset && <Step5SkillsSetup onBack={() => setStep(4 + offset)} onComplete={onComplete} t={t} />}
+          {step === 5 + offset && (
+            <Step5SkillsSetup onBack={() => setStep(4 + offset)} onComplete={onComplete} t={t} />
+          )}
         </div>
 
         <div className="flex items-center justify-between px-6 pb-6 pt-2">

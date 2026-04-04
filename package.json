@@ -1,6 +1,6 @@
 {
   "name": "chromeclaw-extension",
-  "version": "1.9.5",
+  "version": "2.0.0",
   "description": "ChromeClaw Chrome Extension",
   "license": "MIT",
   "private": true,

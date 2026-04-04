@@ -23,7 +23,7 @@ const useSubagentProgress = (chatId: string, opts?: UseSubagentProgressOpts): Su
   const onOtherRef = useRef(opts?.onOtherChatComplete);
   onOtherRef.current = opts?.onOtherChatComplete;
 
-  const [subagents, setSubagents] = useState<Map<string, SubagentProgressInfo>>(new Map);
+  const [subagents, setSubagents] = useState<Map<string, SubagentProgressInfo>>(new Map());
 
   // Clear entries that belong to a different chat when the user switches
   const prevChatIdRef = useRef(chatId);
