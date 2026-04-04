@@ -851,20 +851,6 @@ const ModelConfig = () => {
                 </>
               )}
 
-              <div className="grid gap-2">
-                <Label htmlFor="model-description">{t('model_descriptionOptional')}</Label>
-                <Input
-                  id="model-description"
-                  onChange={e => handleFormChange('description', e.target.value)}
-                  placeholder={
-                    isLocal
-                      ? 'Small on-device model for private chat'
-                      : 'Fast and capable general-purpose model'
-                  }
-                  value={editForm.description ?? ''}
-                />
-              </div>
-
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 text-sm" htmlFor="supports-tools">
                   <input
