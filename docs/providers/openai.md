@@ -59,7 +59,7 @@ ChromeClaw auto-detects Azure OpenAI endpoints from the URL pattern and injects 
    https://your-resource.openai.azure.com/openai/deployments/your-deployment
    ```
 3. Enter your Azure API key
-4. ChromeClaw automatically adds `api-version=2024-12-01-preview` (or configured version)
+4. ChromeClaw automatically adds `api-version=2025-04-01-preview` (or configured version)
 
 ### Azure-specific settings
 

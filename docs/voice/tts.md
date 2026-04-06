@@ -29,7 +29,7 @@ On-device speech synthesis using the Kokoro-82M ONNX model. No API key or intern
 | Setting | Default |
 |---------|---------|
 | Model | `kokoro-82m` |
-| Voice | `af_bella` |
+| Voice | `af_heart` |
 | Speed | 1.0 |
 
 ### Streaming modes
@@ -57,8 +57,8 @@ Cloud-based synthesis via the OpenAI TTS API. Requires an OpenAI API key.
 
 | Setting | Default |
 |---------|---------|
-| Model | `tts-1-hd` |
-| Voice | `shimmer` |
+| Model | `tts-1` |
+| Voice | `nova` |
 
 ### Custom endpoints
 
@@ -70,9 +70,10 @@ You can point the OpenAI TTS engine at any compatible endpoint by configuring th
 
 TTS synthesis has adaptive timeouts:
 
-- **Base**: 10 seconds
-- **Scale**: +1 second per 1,000 characters of input
-- Example: A 5,000-character response has a 15-second timeout
+- **Base**: 60 seconds
+- **Scale**: +30 seconds per 500 characters of input
+- **Maximum**: 5 minutes (300 seconds)
+- Example: A 2,500-character response has a 210-second timeout (60 + 5 × 30)
 
 ## Text preprocessing
 

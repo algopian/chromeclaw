@@ -107,6 +107,13 @@ Turborepo orchestrates builds across packages:
 | `packages/baileys` | WhatsApp client library |
 | `packages/i18n` | Internationalization |
 | `packages/env` | Build-time environment variables |
+| `packages/dev-utils` | Development utilities |
+| `packages/hmr` | Hot module reload for extension dev |
+| `packages/module-manager` | Module dependency management CLI |
+| `packages/tailwindcss-config` | Tailwind configuration |
+| `packages/tsconfig` | Base TypeScript configs |
+| `packages/vite-config` | Shared Vite configuration |
+| `packages/zipper` | Extension ZIP packaging |
 
 ## Code conventions
 

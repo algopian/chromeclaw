@@ -32,4 +32,4 @@ ChromeClaw connects to external services only when you configure them:
 
 ChromeClaw is licensed under the MIT License. The full source code is available at [github.com/algopian/chromeclaw](https://github.com/algopian/chromeclaw).
 
-For the complete terms and privacy policy, see the [full document](/docs/terms-and-privacy.md).
+For the complete terms and privacy policy, see the [full document](/terms-and-privacy).

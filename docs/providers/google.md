@@ -20,8 +20,10 @@ ChromeClaw supports Google's Gemini models via the Google AI API.
 
 ## Supported models
 
-- **Gemini 2.5 Pro / Flash** — Latest with thinking support
-- **Gemini 2.0 Flash** — Fast multimodal model
+- **Gemini 3.1 Pro** — Latest generation with 1M context
+- **Gemini 3 Pro / Flash** — Current generation
+- **Gemini 2.5 Pro / Flash** — With thinking support
+- **Gemini 2.0 Flash / Flash Lite** — Fast multimodal models
 - **Gemini 1.5 Pro / Flash** — Previous generation with large context windows
 
 ## Features

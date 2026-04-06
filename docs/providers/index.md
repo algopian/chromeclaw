@@ -17,7 +17,7 @@ ChromeClaw supports multiple LLM providers. Add your API key on the Options page
 |----------|:---:|:---:|:---:|-------|
 | [OpenAI](/providers/openai) | Yes | Yes | Yes (o-series) | GPT-4o, o-series, GPT-4, GPT-3.5 |
 | [Anthropic](/providers/anthropic) | Yes | Yes | Yes | Claude 4, Claude 3.5, Claude 3 |
-| [Google](/providers/google) | Yes | Yes | Yes | Gemini 2.5, Gemini 2.0, Gemini 1.5 |
+| [Google](/providers/google) | Yes | Yes | Yes | Gemini 3.1, Gemini 3, Gemini 2.5, Gemini 2.0, Gemini 1.5 |
 | [OpenRouter](/providers/openrouter) | Yes | Yes | Varies | Access 100+ models via single API key |
 | [Custom endpoint](/providers/custom) | Yes | Varies | Varies | Any OpenAI-compatible API |
 | [Local (Transformers.js)](/providers/local-llm) | No | No | No | On-device inference via WebGPU/WASM |

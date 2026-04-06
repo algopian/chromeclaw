@@ -23,14 +23,7 @@ ChromeClaw supports keyboard shortcuts in the chat interface for common actions.
 
 | Shortcut | Action |
 |----------|--------|
-| `Ctrl/Cmd + N` | New chat |
-| `Ctrl/Cmd + H` | Toggle chat history |
-
-## General
-
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl/Cmd + ,` | Open settings |
+| `Ctrl/Cmd + B` | Toggle sidebar |
 
 <Note>
 Keyboard shortcuts may vary slightly between the side panel and full-page chat modes. Some shortcuts depend on browser-level bindings and may conflict with browser defaults.

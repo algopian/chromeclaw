@@ -16,7 +16,7 @@ ChromeClaw is a Manifest V3 Chrome extension built with React, TypeScript, Vite,
 ```
 Side Panel / Full-Page Chat
   → useLLMStream hook (chrome.runtime.Port)
-  → Background Service Worker (llm-stream.ts)
+  → Background Service Worker (stream-handler.ts)
   → Model Adapter (chatModelToPiModel) → pi-mono streamSimple()
   → LLM Provider (OpenAI / Anthropic / Google / OpenRouter / Custom / Local)
   → SSE stream back through Port → UI updates

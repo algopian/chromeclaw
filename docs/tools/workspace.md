@@ -21,7 +21,7 @@ Create or update a workspace file.
 |-----------|------|-------------|
 | `path` | string | (required) File path |
 | `content` | string | (required) File content |
-| `mode` | string | `overwrite` (default) or `append` |
+| `mode` | string | (required) `overwrite` or `append` |
 
 ### read
 

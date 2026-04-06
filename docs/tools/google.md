@@ -86,7 +86,7 @@ Create a new event.
 | `endTime` | string | (required) End time (ISO 8601) |
 | `description` | string | Event description |
 | `location` | string | Event location |
-| `attendees` | string | Comma-separated email addresses |
+| `attendees` | string[] | List of attendee email addresses |
 
 ### calendar_update
 
@@ -101,7 +101,7 @@ Update an existing event.
 | `endTime` | string | Updated end time |
 | `description` | string | Updated description |
 | `location` | string | Updated location |
-| `attendees` | string | Updated attendees |
+| `attendees` | string[] | Updated attendees |
 
 ### calendar_delete
 
