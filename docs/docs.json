@@ -1,0 +1,214 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "ChromeClaw",
+  "description": "AI agent running entirely in the Chrome browser sandbox — with multi-provider LLM support, messaging channels, voice, memory, agents, and browser automation.",
+  "theme": "mint",
+  "icons": {
+    "library": "lucide"
+  },
+  "logo": {
+    "light": "/assets/chromeclaw-logo.svg",
+    "dark": "/assets/chromeclaw-logo.svg"
+  },
+  "favicon": "/assets/chromeclaw-logo.svg",
+  "colors": {
+    "primary": "#FF5A36",
+    "dark": "#FF5A36",
+    "light": "#FF8A6B"
+  },
+  "styling": {
+    "codeblocks": {
+      "theme": {
+        "dark": "min-dark",
+        "light": "min-light"
+      }
+    }
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/algopian/chromeclaw",
+        "icon": "github"
+      },
+      {
+        "label": "Chrome Web Store",
+        "href": "https://chromewebstore.google.com/detail/chromeclaw-your-own-perso/lnahopfgnfhcfchffbckmbbkopcmojme",
+        "icon": "chrome"
+      },
+      {
+        "label": "Firefox Add-ons",
+        "href": "https://addons.mozilla.org/addon/chromeclaw/",
+        "icon": "firefox"
+      }
+    ]
+  },
+  "tabs": [
+    {
+      "tab": "Get Started",
+      "groups": [
+        {
+          "group": "Home",
+          "pages": ["index"]
+        },
+        {
+          "group": "First steps",
+          "pages": [
+            "start/getting-started",
+            "start/installation"
+          ]
+        }
+      ]
+    },
+    {
+      "tab": "Concepts",
+      "groups": [
+        {
+          "group": "Architecture",
+          "pages": [
+            "concepts/architecture",
+            "concepts/workspace-files"
+          ]
+        },
+        {
+          "group": "Sessions and memory",
+          "pages": [
+            "concepts/session",
+            "concepts/context",
+            "concepts/memory"
+          ]
+        }
+      ]
+    },
+    {
+      "tab": "Channels",
+      "groups": [
+        {
+          "group": "Overview",
+          "pages": ["channels/index"]
+        },
+        {
+          "group": "Messaging platforms",
+          "pages": [
+            "channels/whatsapp",
+            "channels/telegram"
+          ]
+        }
+      ]
+    },
+    {
+      "tab": "Tools",
+      "groups": [
+        {
+          "group": "Overview",
+          "pages": ["tools/index"]
+        },
+        {
+          "group": "Built-in tools",
+          "pages": [
+            "tools/web-search",
+            "tools/browser",
+            "tools/google",
+            "tools/documents",
+            "tools/deep-research",
+            "tools/execute-js",
+            "tools/memory",
+            "tools/workspace"
+          ]
+        },
+        {
+          "group": "Custom tools",
+          "pages": ["tools/custom-tools"]
+        }
+      ]
+    },
+    {
+      "tab": "Providers",
+      "groups": [
+        {
+          "group": "Overview",
+          "pages": ["providers/index"]
+        },
+        {
+          "group": "Cloud providers",
+          "pages": [
+            "providers/openai",
+            "providers/anthropic",
+            "providers/google",
+            "providers/openrouter",
+            "providers/custom"
+          ]
+        },
+        {
+          "group": "Local inference",
+          "pages": ["providers/local-llm"]
+        }
+      ]
+    },
+    {
+      "tab": "Voice",
+      "groups": [
+        {
+          "group": "Overview",
+          "pages": ["voice/index"]
+        },
+        {
+          "group": "Engines",
+          "pages": [
+            "voice/tts",
+            "voice/stt"
+          ]
+        }
+      ]
+    },
+    {
+      "tab": "Agents",
+      "groups": [
+        {
+          "group": "Multi-agent system",
+          "pages": [
+            "agents/index",
+            "agents/custom-tools"
+          ]
+        }
+      ]
+    },
+    {
+      "tab": "Automation",
+      "groups": [
+        {
+          "group": "Automation",
+          "pages": [
+            "automation/scheduler",
+            "automation/skills"
+          ]
+        }
+      ]
+    },
+    {
+      "tab": "Development",
+      "groups": [
+        {
+          "group": "Development",
+          "pages": [
+            "development/index",
+            "development/firefox"
+          ]
+        }
+      ]
+    },
+    {
+      "tab": "Reference",
+      "groups": [
+        {
+          "group": "Reference",
+          "pages": [
+            "reference/keyboard-shortcuts",
+            "reference/release-notes",
+            "reference/terms-and-privacy"
+          ]
+        }
+      ]
+    }
+  ]
+}
