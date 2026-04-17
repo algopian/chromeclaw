@@ -15,9 +15,7 @@
 // The implementation is intentionally self-contained: the caller (the service
 // orchestrator) owns lock acquisition, alarm scheduling, and retry.
 
-import { chatDb } from '@extension/storage';
 import { runHeadlessLLM, resolveDefaultModel, dbModelToChatModel } from '../../agents/agent-setup';
-import { customModelsStorage } from '@extension/storage';
 import { isWithinActiveHours } from '../active-hours';
 import { loadHeartbeatConfig } from '../config';
 import { emitHeartbeatEvent } from '../events';
@@ -28,7 +26,8 @@ import {
   DEFAULT_HEARTBEAT_ACK_MAX_CHARS,
 } from '../prompt';
 import { classifyReason, isActionLikeReason } from '../reason';
-import { pruneMessagesAbove, snapshotMaxMessageId } from '../transcript-prune';
+import { pruneMessagesAbove } from '../transcript-prune';
+import { customModelsStorage, chatDb } from '@extension/storage';
 import type { HeartbeatRunResult } from '../types';
 import type { HeartbeatLogger, RunOutcome } from './state';
 
@@ -65,10 +64,7 @@ const isInFlight = async (agentId: string, nowMs: number): Promise<boolean> => {
 
 const loadHeartbeatMdContent = async (agentId: string): Promise<string | undefined> => {
   try {
-    const files = await chatDb.workspaceFiles
-      .where('agentId')
-      .equals(agentId)
-      .toArray();
+    const files = await chatDb.workspaceFiles.where('agentId').equals(agentId).toArray();
     const match = files.find(f => f.name === 'HEARTBEAT.md');
     return match?.content;
   } catch {
@@ -129,9 +125,7 @@ const shouldSuppressByDedup = async (
  * Execute one heartbeat tick for the given agent. Safe to call concurrently
  * across agents; the caller must serialize per-agent calls via the Dexie lock.
  */
-const runHeartbeatOnce = async (
-  opts: RunHeartbeatOnceOptions,
-): Promise<HeartbeatRunResult> => {
+const runHeartbeatOnce = async (opts: RunHeartbeatOnceOptions): Promise<HeartbeatRunResult> => {
   const { agentId } = opts;
   const nowMs = opts.nowMs ?? (() => Date.now());
   const log = opts.log;

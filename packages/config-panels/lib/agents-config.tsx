@@ -1,3 +1,5 @@
+import { ConfirmDialog, emptyConfirm } from './confirm-dialog.js';
+import { SkillConfig } from './skill-config.js';
 import { t, useT } from '@extension/i18n';
 import {
   extractPdfText,
@@ -23,7 +25,6 @@ import {
   activeAgentStorage,
   toolConfigStorage,
   chatDb,
-  type DbHeartbeatState,
 } from '@extension/storage';
 import {
   Badge,
@@ -55,6 +56,7 @@ import {
   buildFileTree,
   cn,
 } from '@extension/ui';
+import JSZip from 'jszip';
 import {
   BrainIcon,
   CalendarClockIcon,
@@ -86,20 +88,18 @@ import {
   UsersIcon,
   WrenchIcon,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import JSZip from 'jszip';
 import { toast } from 'sonner';
+import type { ConfirmDialogState } from './confirm-dialog.js';
 import type {
+  DbHeartbeatState,
   DbWorkspaceFile,
   AgentConfig,
   ToolConfig as ToolConfigData,
 } from '@extension/storage';
 import type { FileTreeNode } from '@extension/ui';
-import { ConfirmDialog, emptyConfirm } from './confirm-dialog.js';
-import type { ConfirmDialogState } from './confirm-dialog.js';
-import { SkillConfig } from './skill-config.js';
+import type { LucideIcon } from 'lucide-react';
 
 const MAX_CONTENT_LENGTH = 20_000;
 

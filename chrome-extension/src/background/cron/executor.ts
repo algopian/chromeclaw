@@ -1,12 +1,12 @@
 // ── Task executor ───────────────────────────
 // Executes scheduled tasks via headless LLM
 
-import { getChannelAdapter } from '../channels/registry';
-import { getChannelConfigs } from '../channels/config';
 import { runHeadlessLLM, resolveDefaultModel, dbModelToChatModel } from '../agents/agent-setup';
+import { getChannelConfigs } from '../channels/config';
+import { getChannelAdapter } from '../channels/registry';
+import { getHeartbeatServiceRef } from '../heartbeat';
 import { createLogger } from '../logging/logger-buffer';
 import { createKeepAliveManager } from '../utils/keep-alive';
-import { getHeartbeatServiceRef } from '../heartbeat';
 import {
   addMessage,
   getChat,

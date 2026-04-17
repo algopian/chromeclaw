@@ -28,10 +28,7 @@ const snapshotMaxMessageId = async (chatId: string): Promise<string | null> => {
  *
  * A null snapshot means "chat was empty at snapshot time" — prune everything.
  */
-const pruneMessagesAbove = async (
-  chatId: string,
-  snapshotId: string | null,
-): Promise<number> => {
+const pruneMessagesAbove = async (chatId: string, snapshotId: string | null): Promise<number> => {
   const all = await chatDb.messages.where('chatId').equals(chatId).toArray();
   const toDelete = snapshotId === null ? all : all.filter(m => m.id > snapshotId);
   if (toDelete.length === 0) return 0;

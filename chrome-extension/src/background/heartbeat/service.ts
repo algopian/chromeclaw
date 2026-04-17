@@ -13,7 +13,6 @@
 // delivery / channel dispatch (see `AgentsPanel` + channel bridges),
 // config persistence (see `config.ts`).
 
-import { chatDb, listAgents } from '@extension/storage';
 import { loadHeartbeatConfig } from './config';
 import { runHeartbeatOnce } from './service/run-once';
 import { createInitialState } from './service/state';
@@ -26,6 +25,7 @@ import {
   scheduleTick,
 } from './service/timer';
 import { createWakeQueue } from './service/wake';
+import { chatDb, listAgents } from '@extension/storage';
 import type { HeartbeatDeps, HeartbeatServiceState, AgentState } from './service/state';
 import type { HeartbeatRunResult } from './types';
 
@@ -39,19 +39,19 @@ const parseEveryToMs = (every: string | undefined): number => {
   const n = Number(m[1]);
   const unit = (m[2] ?? 'm').toLowerCase();
   const mult =
-    unit === 'ms' ? 1 :
-    unit === 's' ? 1_000 :
-    unit === 'm' ? 60_000 :
-    unit === 'h' ? 3_600_000 :
-    86_400_000;
+    unit === 'ms'
+      ? 1
+      : unit === 's'
+        ? 1_000
+        : unit === 'm'
+          ? 60_000
+          : unit === 'h'
+            ? 3_600_000
+            : 86_400_000;
   return Math.max(MIN_INTERVAL_MS, n * mult);
 };
 
-const acquireLock = async (
-  agentId: string,
-  nowMs: number,
-  reason?: string,
-): Promise<boolean> => {
+const acquireLock = async (agentId: string, nowMs: number, reason?: string): Promise<boolean> => {
   try {
     return await chatDb.transaction('rw', chatDb.heartbeatLocks, async () => {
       const existing = await chatDb.heartbeatLocks.get(agentId);
@@ -244,10 +244,4 @@ class HeartbeatService {
   }
 }
 
-export {
-  HeartbeatService,
-  LOCK_TTL_MS,
-  parseEveryToMs,
-  acquireLock,
-  releaseLock,
-};
+export { HeartbeatService, LOCK_TTL_MS, parseEveryToMs, acquireLock, releaseLock };

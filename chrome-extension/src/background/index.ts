@@ -379,7 +379,10 @@ const messageHandlers: Record<string, MessageHandler> = {
       const { getProviderTokenLimit } = await import('./context/provider-limit-cache');
 
       const [messages, chat] = await Promise.all([getMessagesByChatId(chatId), getChat(chatId)]);
-      slashCmdLog.debug('Loaded messages for compaction', { chatId, messageCount: messages.length });
+      slashCmdLog.debug('Loaded messages for compaction', {
+        chatId,
+        messageCount: messages.length,
+      });
       if (messages.length <= 2) return { error: 'Not enough messages to compact' };
 
       // Build system prompt to get accurate token count (same as stream-handler.ts)

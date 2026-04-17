@@ -1,5 +1,4 @@
 import { chatDb } from './chat-db.js';
-import { isSkillFile, parseSkillFrontmatter, DAILY_JOURNAL_SKILL, SKILL_CREATOR_SKILL, TOOL_CREATOR_SKILL } from '@extension/skills';
 import {
   AGENTS_DEFAULT,
   SOUL_DEFAULT,
@@ -8,6 +7,13 @@ import {
   TOOLS_DEFAULT,
   HEARTBEAT_DEFAULT,
 } from './workspace-defaults.js';
+import {
+  isSkillFile,
+  parseSkillFrontmatter,
+  DAILY_JOURNAL_SKILL,
+  SKILL_CREATOR_SKILL,
+  TOOL_CREATOR_SKILL,
+} from '@extension/skills';
 import { nanoid } from 'nanoid';
 import type {
   DbChat,
@@ -40,7 +46,12 @@ const listAgents = async (): Promise<AgentConfig[]> => chatDb.agents.toArray();
 
 const updateAgent = async (
   id: string,
-  updates: Partial<Pick<AgentConfig, 'name' | 'identity' | 'model' | 'toolConfig' | 'customTools' | 'compactionConfig'>>,
+  updates: Partial<
+    Pick<
+      AgentConfig,
+      'name' | 'identity' | 'model' | 'toolConfig' | 'customTools' | 'compactionConfig'
+    >
+  >,
 ): Promise<void> => {
   await chatDb.agents.update(id, { ...updates, updatedAt: Date.now() });
 };
@@ -368,10 +379,10 @@ const seedPredefinedWorkspaceFiles = async (agentId = 'main'): Promise<void> => 
 
   // Migrate existing global skill files to agent-scoped
   const allFiles = await chatDb.workspaceFiles.toArray();
-  const globalSkills = allFiles.filter(f => f.predefined && isSkillFile(f.name) && (!f.agentId || f.agentId === ''));
-  const agentExistingNames = new Set(
-    allFiles.filter(f => f.agentId === agentId).map(f => f.name),
+  const globalSkills = allFiles.filter(
+    f => f.predefined && isSkillFile(f.name) && (!f.agentId || f.agentId === ''),
   );
+  const agentExistingNames = new Set(allFiles.filter(f => f.agentId === agentId).map(f => f.name));
   const migratedSkills = globalSkills
     .filter(f => !agentExistingNames.has(f.name))
     .map(f => ({
@@ -388,22 +399,24 @@ const seedPredefinedWorkspaceFiles = async (agentId = 'main'): Promise<void> => 
 
   // Seed agent-scoped predefined workspace files (including skills)
   const agentExisting = allFiles.filter(f => f.agentId === agentId);
-  const agentExistingPredefinedNames = new Set(agentExisting.filter(f => f.predefined).map(f => f.name));
+  const agentExistingPredefinedNames = new Set(
+    agentExisting.filter(f => f.predefined).map(f => f.name),
+  );
   // Also exclude names we're about to migrate
   const migratedNames = new Set(migratedSkills.map(f => f.name));
-  const agentFiles = PREDEFINED_FILES
-    .filter(f => !agentExistingPredefinedNames.has(f.name) && !migratedNames.has(f.name))
-    .map(f => ({
-      id: nanoid(),
-      name: f.name,
-      content: f.content,
-      enabled: 'enabled' in f ? f.enabled : true,
-      owner: 'user' as const,
-      predefined: true,
-      createdAt: now,
-      updatedAt: now,
-      agentId,
-    }));
+  const agentFiles = PREDEFINED_FILES.filter(
+    f => !agentExistingPredefinedNames.has(f.name) && !migratedNames.has(f.name),
+  ).map(f => ({
+    id: nanoid(),
+    name: f.name,
+    content: f.content,
+    enabled: 'enabled' in f ? f.enabled : true,
+    owner: 'user' as const,
+    predefined: true,
+    createdAt: now,
+    updatedAt: now,
+    agentId,
+  }));
 
   const toCreate = [...migratedSkills, ...agentFiles];
   if (toCreate.length > 0) {

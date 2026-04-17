@@ -228,8 +228,7 @@ const createWakeQueue = (): WakeQueue => {
     };
   };
 
-  const hasPendingWake = (): boolean =>
-    pending.size > 0 || Boolean(timer) || scheduled;
+  const hasPendingWake = (): boolean => pending.size > 0 || Boolean(timer) || scheduled;
 
   const hydrate = async (): Promise<void> => {
     try {

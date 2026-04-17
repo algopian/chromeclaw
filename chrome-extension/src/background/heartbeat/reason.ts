@@ -28,9 +28,6 @@ const classifyReason = (trigger?: HeartbeatTrigger | string): HeartbeatReason =>
 
 /** True for reasons that bypass the "empty HEARTBEAT.md" short-circuit. */
 const isActionLikeReason = (reason: HeartbeatReason): boolean =>
-  reason === 'manual' ||
-  reason === 'exec-event' ||
-  reason === 'wake' ||
-  reason.startsWith('cron:');
+  reason === 'manual' || reason === 'exec-event' || reason === 'wake' || reason.startsWith('cron:');
 
 export { classifyReason, isActionLikeReason };
