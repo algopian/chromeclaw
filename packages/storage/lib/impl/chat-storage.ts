@@ -6,6 +6,7 @@ import {
   USER_DEFAULT,
   IDENTITY_DEFAULT,
   TOOLS_DEFAULT,
+  HEARTBEAT_DEFAULT,
 } from './workspace-defaults.js';
 import { nanoid } from 'nanoid';
 import type {
@@ -356,6 +357,7 @@ const PREDEFINED_FILES = [
   { name: 'IDENTITY.md', content: IDENTITY_DEFAULT },
   { name: 'TOOLS.md', content: TOOLS_DEFAULT },
   { name: 'MEMORY.md', content: '' },
+  { name: 'HEARTBEAT.md', content: HEARTBEAT_DEFAULT },
   { name: 'skills/daily-journal/SKILL.md', content: DAILY_JOURNAL_SKILL, enabled: false },
   { name: 'skills/skill-creator/SKILL.md', content: SKILL_CREATOR_SKILL, enabled: false },
   { name: 'skills/tool-creator/SKILL.md', content: TOOL_CREATOR_SKILL, enabled: false },
