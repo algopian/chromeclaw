@@ -123,17 +123,17 @@ describe('Workspace File CRUD', () => {
 });
 
 describe('Predefined File Seeding', () => {
-  it('seedPredefinedWorkspaceFiles creates 8 files on empty table', async () => {
+  it('seedPredefinedWorkspaceFiles creates 10 files on empty table', async () => {
     await seedPredefinedWorkspaceFiles();
     const files = await listWorkspaceFiles();
-    expect(files).toHaveLength(9);
+    expect(files).toHaveLength(10);
   });
 
   it('seedPredefinedWorkspaceFiles is idempotent (no duplicates)', async () => {
     await seedPredefinedWorkspaceFiles();
     await seedPredefinedWorkspaceFiles();
     const files = await listWorkspaceFiles();
-    expect(files).toHaveLength(9);
+    expect(files).toHaveLength(10);
   });
 
   it('predefined files have correct names and owner=user', async () => {
@@ -142,6 +142,7 @@ describe('Predefined File Seeding', () => {
     const names = files.map(f => f.name).sort();
     expect(names).toEqual([
       'AGENTS.md',
+      'HEARTBEAT.md',
       'IDENTITY.md',
       'MEMORY.md',
       'SOUL.md',

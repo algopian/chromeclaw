@@ -23,13 +23,14 @@ beforeEach(async () => {
 });
 
 describe('AgentsConfig — workspace file list', () => {
-  it('lists 6 predefined core files (excluding skills)', async () => {
+  it('lists 7 predefined core files (excluding skills)', async () => {
     const files = await listUserWorkspaceFiles();
     const nonSkill = files.filter(f => !isSkillFile(f.name));
-    expect(nonSkill.length).toBe(6);
+    expect(nonSkill.length).toBe(7);
     const names = nonSkill.map(f => f.name).sort();
     expect(names).toEqual([
       'AGENTS.md',
+      'HEARTBEAT.md',
       'IDENTITY.md',
       'MEMORY.md',
       'SOUL.md',
@@ -105,7 +106,7 @@ describe('AgentsConfig — workspace file list', () => {
 
     const files = await listUserWorkspaceFiles();
     const nonSkill = files.filter(f => !isSkillFile(f.name));
-    expect(nonSkill.length).toBe(7); // 6 predefined + 1 custom
+    expect(nonSkill.length).toBe(8); // 7 predefined + 1 custom
     const custom = nonSkill.find(f => f.id === 'custom-file-1');
     expect(custom).toBeDefined();
     expect(custom!.predefined).toBe(false);

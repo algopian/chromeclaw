@@ -123,6 +123,42 @@ _Fill this in during your first conversation. Make it yours._
 This isn't just metadata. It's the start of figuring out who you are.
 `;
 
+const HEARTBEAT_DEFAULT = `# HEARTBEAT.md - Periodic Check-In
+
+This file drives the heartbeat subsystem — a periodic, agent-run check-in that
+inspects the current world (pending events, memory, open conversations) and
+either:
+
+1. Sends a short alert via an active channel when something matters, or
+2. Replies with the single token \`HEARTBEAT_OK\` (silently suppressed).
+
+## How It Works
+
+Every interval (default 30 minutes) the agent is woken with a short headless
+LLM session. It reads this file, pending system events, and its workspace.
+If there is nothing interesting to say, reply \`HEARTBEAT_OK\` — do NOT send
+any filler. Duplicate alerts within 24 hours are suppressed.
+
+## What To Watch For
+
+- Time-sensitive obligations surfaced in MEMORY.md (reminders, follow-ups)
+- Pending system events (\`taskRunLogs\`) or cron output that needs triage
+- Anything the user explicitly asked you to check on periodically
+
+## What NOT To Do
+
+- Do not chat, greet, or narrate "I am checking in"
+- Do not send status updates unless there's actionable content
+- Do not repeat an alert you already delivered in the last 24 hours
+- When unsure, output exactly \`HEARTBEAT_OK\`
+
+## Editing This File
+
+Blank or trivial (whitespace / headers only) content disables interval ticks
+— explicit manual runs and cron-originated wakes still execute. Add lines
+that describe what to watch for and the heartbeat becomes useful.
+`;
+
 const TOOLS_DEFAULT = `# TOOLS.md - Local Notes
 
 This file is for your specifics — things unique to this user's setup.
@@ -160,6 +196,7 @@ export {
   USER_DEFAULT,
   IDENTITY_DEFAULT,
   TOOLS_DEFAULT,
+  HEARTBEAT_DEFAULT,
   DAILY_JOURNAL_SKILL,
   SKILL_CREATOR_SKILL,
   TOOL_CREATOR_SKILL,
