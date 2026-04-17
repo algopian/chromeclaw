@@ -6,11 +6,32 @@ export type TaskSchedule =
   | { kind: 'cron'; expr: string; tz?: string };
 
 export type TaskPayload =
-  | { kind: 'agentTurn'; message: string; model?: string; timeoutMs?: number }
+  | {
+      kind: 'agentTurn';
+      message: string;
+      model?: string;
+      timeoutMs?: number;
+      /**
+       * When 'heartbeat', the cron executor routes this tick through the
+       * heartbeat subsystem (skip/dedup/prune/deliver pipeline) instead of
+       * running a fresh headless LLM turn. `message` is ignored in that mode.
+       */
+      wakeMode?: 'heartbeat';
+      agentId?: string;
+      sessionKey?: string;
+    }
   | { kind: 'chatInject'; chatId: string; message: string };
 
 export type TaskPayloadPatch =
-  | { kind: 'agentTurn'; message?: string; model?: string; timeoutMs?: number }
+  | {
+      kind: 'agentTurn';
+      message?: string;
+      model?: string;
+      timeoutMs?: number;
+      wakeMode?: 'heartbeat';
+      agentId?: string;
+      sessionKey?: string;
+    }
   | { kind: 'chatInject'; chatId?: string; message?: string };
 
 export type TaskDelivery = {

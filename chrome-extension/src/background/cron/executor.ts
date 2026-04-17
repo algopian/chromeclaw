@@ -6,6 +6,7 @@ import { getChannelConfigs } from '../channels/config';
 import { runHeadlessLLM, resolveDefaultModel, dbModelToChatModel } from '../agents/agent-setup';
 import { createLogger } from '../logging/logger-buffer';
 import { createKeepAliveManager } from '../utils/keep-alive';
+import { getHeartbeatServiceRef } from '../heartbeat';
 import {
   addMessage,
   getChat,
@@ -77,6 +78,9 @@ const executeScheduledTask = async (task: ScheduledTask): Promise<TaskExecResult
 
   try {
     if (task.payload.kind === 'agentTurn') {
+      if (task.payload.wakeMode === 'heartbeat') {
+        return await executeHeartbeatBridge(task);
+      }
       return await executeAgentTurn(task, controller.signal);
     }
 
@@ -92,6 +96,28 @@ const executeScheduledTask = async (task: ScheduledTask): Promise<TaskExecResult
     clearTimeout(timer);
     cronKeepAlive.release();
   }
+};
+
+const executeHeartbeatBridge = async (task: ScheduledTask): Promise<TaskExecResult> => {
+  if (task.payload.kind !== 'agentTurn' || task.payload.wakeMode !== 'heartbeat') {
+    return { status: 'error', error: 'Expected heartbeat agentTurn payload' };
+  }
+  const svc = getHeartbeatServiceRef();
+  if (!svc) {
+    return { status: 'error', error: 'HeartbeatService not initialized' };
+  }
+  svc.requestHeartbeatNow({
+    reason: `cron:${task.id}`,
+    agentId: task.payload.agentId,
+    sessionKey: task.payload.sessionKey,
+  });
+  cronLog.info('Cron delegated to heartbeat service', {
+    taskId: task.id,
+    agentId: task.payload.agentId,
+  });
+  // Heartbeat runs async; cron fires-and-forgets. 'ok' surfaces success in
+  // the scheduler UI. Failures show up in heartbeat state telemetry.
+  return { status: 'ok' };
 };
 
 const executeAgentTurn = async (
