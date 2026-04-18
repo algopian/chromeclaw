@@ -17,6 +17,8 @@ export {
   type DbScheduledTask,
   type DbTaskRunLog,
   type DbEmbeddingCache,
+  type DbHeartbeatState,
+  type DbHeartbeatLock,
 } from './impl/chat-db.js';
 export {
   createAgent,

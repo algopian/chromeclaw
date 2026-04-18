@@ -19,7 +19,7 @@ SUMMARY_LOG="${LOG_DIR}/pipeline_summary.log"
 
 MAX_CYCLES="${MAX_CYCLES:-3}"
 AGENT_MAX_ITERATIONS="${AGENT_MAX_ITERATIONS:-10}"  # Budget guard: cap iterations per cycle
-REVIEW_MODEL="${REVIEW_MODEL:-claude-sonnet-4-6}"   # Cheaper model for review (Sonnet vs Opus)
+REVIEW_MODEL="${REVIEW_MODEL:-claude-opus-4-7}"     # Review model
 NOTIFY_WEBHOOK="${NOTIFY_WEBHOOK:-}"                # Optional: Slack/Discord webhook URL for notifications
 
 mkdir -p "$LOG_DIR"

@@ -291,24 +291,44 @@ const FullPageChat = () => {
     const handler = (message: Record<string, unknown>) => {
       const type = message.type as string;
       const injectChatId = message.chatId as string;
-      if (!injectChatId || type !== 'CRON_CHAT_INJECT') return;
+      if (!injectChatId) return;
 
-      setChatId(prev => {
-        if (prev === injectChatId) {
-          reloadMessages(injectChatId);
-        } else {
-          const taskName = message.taskName as string | undefined;
-          toast.info(taskName ? t('toast_scheduledTask', taskName) : t('toast_scheduledTaskFired'), {
-            duration: 10000,
-          });
-        }
-        return prev;
-      });
+      if (type === 'CRON_CHAT_INJECT') {
+        setChatId(prev => {
+          if (prev === injectChatId) {
+            reloadMessages(injectChatId);
+          } else {
+            const taskName = message.taskName as string | undefined;
+            toast.info(taskName ? t('toast_scheduledTask', taskName) : t('toast_scheduledTaskFired'), {
+              duration: 10000,
+            });
+          }
+          return prev;
+        });
+        return;
+      }
+
+      if (type === 'HEARTBEAT_CHAT_DELIVERED') {
+        setChatId(prev => {
+          if (prev === injectChatId) {
+            reloadMessages(injectChatId);
+          } else {
+            toast.info(t('toast_heartbeatDelivered') ?? 'Heartbeat alert', {
+              action: {
+                label: t('toast_view'),
+                onClick: () => handleOpenSession(injectChatId),
+              },
+              duration: 10000,
+            });
+          }
+          return prev;
+        });
+      }
     };
 
     chrome.runtime.onMessage.addListener(handler);
     return () => chrome.runtime.onMessage.removeListener(handler);
-  }, [reloadMessages]);
+  }, [reloadMessages, handleOpenSession]);
 
   const stopSubagent = useCallback((runId: string) => {
     chrome.runtime.sendMessage({ type: 'SUBAGENT_STOP', runId }).catch(() => {});

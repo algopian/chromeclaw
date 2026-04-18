@@ -206,6 +206,26 @@ interface DbTaskRunLog {
   chatId?: string;
 }
 
+/** DB-level heartbeat per-agent state (v14). */
+interface DbHeartbeatState {
+  agentId: string;
+  lastRunAtMs?: number;
+  lastStatus?: 'ran' | 'skipped' | 'failed';
+  lastReason?: string;
+  lastResultSummary?: string;
+  lastHeartbeatText?: string;
+  lastHeartbeatSentAt?: number;
+  lastChatId?: string;
+}
+
+/** DB-level TTL lock for an in-flight heartbeat run (v14). */
+interface DbHeartbeatLock {
+  agentId: string;
+  acquiredAt: number;
+  expiresAt: number;
+  reason?: string;
+}
+
 const chatDb = new Dexie('chromeclaw') as InstanceType<typeof Dexie> & {
   agents: EntityTable<AgentConfig, 'id'>;
   chats: EntityTable<DbChat, 'id'>;
@@ -216,6 +236,8 @@ const chatDb = new Dexie('chromeclaw') as InstanceType<typeof Dexie> & {
   scheduledTasks: EntityTable<DbScheduledTask, 'id'>;
   taskRunLogs: EntityTable<DbTaskRunLog, 'id'>;
   embeddingCache: EntityTable<DbEmbeddingCache, 'id'>;
+  heartbeatState: EntityTable<DbHeartbeatState, 'agentId'>;
+  heartbeatLocks: EntityTable<DbHeartbeatLock, 'agentId'>;
 };
 
 chatDb.version(1).stores({
@@ -405,6 +427,22 @@ chatDb.version(13).stores({
 });
 // No upgrade function needed — chatId is optional, existing chunks don't have it
 
+// v14: adds heartbeatState + heartbeatLocks for the heartbeat subsystem
+chatDb.version(14).stores({
+  agents: 'id, isDefault',
+  chats: 'id, updatedAt, source, agentId',
+  messages: 'id, chatId, createdAt',
+  artifacts: 'id, chatId',
+  workspaceFiles: 'id, owner, agentId',
+  memoryChunks: 'id, fileId, filePath, agentId, chatId',
+  scheduledTasks: 'id, enabled',
+  taskRunLogs: 'id, taskId, timestamp',
+  embeddingCache: 'id, contentHash, updatedAt',
+  heartbeatState: 'agentId, lastRunAtMs',
+  heartbeatLocks: 'agentId, expiresAt',
+});
+// No upgrade function needed — new tables start empty
+
 // Seed the default 'main' agent on fresh installs.
 // The v10 upgrade only runs when migrating from v9; a brand-new DB skips it.
 chatDb.on('populate', () => {
@@ -435,5 +473,7 @@ export type {
   DbScheduledTask,
   DbTaskRunLog,
   DbEmbeddingCache,
+  DbHeartbeatState,
+  DbHeartbeatLock,
 };
 export { chatDb };

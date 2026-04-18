@@ -486,6 +486,25 @@ const SidePanel = () => {
         return;
       }
 
+      // Heartbeat delivered a non-ack response — show in chat UI
+      if (type === 'HEARTBEAT_CHAT_DELIVERED') {
+        setChatId(prev => {
+          if (prev === msgChatId) {
+            reloadMessages(msgChatId);
+          } else {
+            toast.info(t('toast_heartbeatDelivered') ?? 'Heartbeat alert', {
+              action: {
+                label: t('toast_view'),
+                onClick: () => loadAndSwitchToChat(msgChatId),
+              },
+              duration: 10000,
+            });
+          }
+          return prev;
+        });
+        return;
+      }
+
       if (!type?.startsWith('CHANNEL_STREAM_')) return;
 
       if (type === 'CHANNEL_STREAM_START') {

@@ -30,6 +30,7 @@ type LogCategory =
   | 'media'
   | 'journal'
   | 'cron'
+  | 'heartbeat'
   | 'tts'
   | 'local-llm'
   | 'embedding'

@@ -1,3 +1,5 @@
+import { ConfirmDialog, emptyConfirm } from './confirm-dialog.js';
+import { SkillConfig } from './skill-config.js';
 import { t, useT } from '@extension/i18n';
 import {
   extractPdfText,
@@ -22,6 +24,7 @@ import {
   copyGlobalSkillsToAgent,
   activeAgentStorage,
   toolConfigStorage,
+  chatDb,
 } from '@extension/storage';
 import {
   Badge,
@@ -53,6 +56,7 @@ import {
   buildFileTree,
   cn,
 } from '@extension/ui';
+import JSZip from 'jszip';
 import {
   BrainIcon,
   CalendarClockIcon,
@@ -84,20 +88,18 @@ import {
   UsersIcon,
   WrenchIcon,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import JSZip from 'jszip';
 import { toast } from 'sonner';
+import type { ConfirmDialogState } from './confirm-dialog.js';
 import type {
+  DbHeartbeatState,
   DbWorkspaceFile,
   AgentConfig,
   ToolConfig as ToolConfigData,
 } from '@extension/storage';
 import type { FileTreeNode } from '@extension/ui';
-import { ConfirmDialog, emptyConfirm } from './confirm-dialog.js';
-import type { ConfirmDialogState } from './confirm-dialog.js';
-import { SkillConfig } from './skill-config.js';
+import type { LucideIcon } from 'lucide-react';
 
 const MAX_CONTENT_LENGTH = 20_000;
 
@@ -420,6 +422,76 @@ const AgentDetailHeader = ({
 };
 
 type OverviewField = { label: string; value: string };
+
+const HeartbeatStatusCard = ({ agentId }: { agentId: string }) => {
+  const [state, setState] = useState<DbHeartbeatState | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const row = await chatDb.heartbeatState.get(agentId);
+      setState(row ?? null);
+    } catch {
+      setState(null);
+    }
+  }, [agentId]);
+
+  useEffect(() => {
+    void load();
+    const listener = (msg: Record<string, unknown>) => {
+      if (msg?.type === 'HEARTBEAT_EVENT' && msg.agentId === agentId) {
+        void load();
+      }
+    };
+    try {
+      chrome.runtime.onMessage.addListener(listener);
+    } catch {
+      /* ignore */
+    }
+    return () => {
+      try {
+        chrome.runtime.onMessage.removeListener(listener);
+      } catch {
+        /* ignore */
+      }
+    };
+  }, [agentId, load]);
+
+  const runNow = useCallback(async () => {
+    setBusy(true);
+    try {
+      await chrome.runtime.sendMessage({ type: 'HEARTBEAT_RUN_NOW', agentId });
+    } catch {
+      /* ignore */
+    } finally {
+      setBusy(false);
+    }
+  }, [agentId]);
+
+  const formatTime = (ms?: number) =>
+    typeof ms === 'number' ? new Date(ms).toLocaleString() : '—';
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-sm">Heartbeat</CardTitle>
+        <Button size="sm" variant="outline" disabled={busy} onClick={runNow}>
+          {busy ? 'Running…' : 'Run now'}
+        </Button>
+      </CardHeader>
+      <CardContent className="text-muted-foreground space-y-1 text-sm">
+        <div>Last run: {formatTime(state?.lastRunAtMs)}</div>
+        <div>
+          Status: {state?.lastStatus ?? '—'}
+          {state?.lastReason ? ` (${state.lastReason})` : ''}
+        </div>
+        {state?.lastResultSummary && (
+          <div className="truncate">Summary: {state.lastResultSummary}</div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 const AgentOverview = ({ identityContent }: { identityContent: string }) => {
   const t = useT();
@@ -1767,6 +1839,7 @@ const AgentsConfig = () => {
               <ScrollArea className="flex-1">
                 <div className="space-y-4 p-6">
                   <AgentOverview identityContent={identityContent} />
+                  <HeartbeatStatusCard agentId={selectedAgentId} />
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-sm">{t('agents_workspaceFiles')}</CardTitle>

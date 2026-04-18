@@ -14,6 +14,7 @@ import {
 } from './channels/poller';
 import { CronService, readRunLogs } from './cron';
 import { executeScheduledTask } from './cron/executor';
+import { HeartbeatService, setHeartbeatServiceRef } from './heartbeat';
 import {
   createLogger,
   configReady,
@@ -45,6 +46,32 @@ const cronService = new CronService({
 });
 
 setCronServiceRef(cronService);
+
+// ── Heartbeat subsystem ─────────────────────────
+const heartbeatLog = createLogger('heartbeat');
+const heartbeatService = new HeartbeatService({
+  log: heartbeatLog,
+  onEvent: evt => {
+    chrome.runtime.sendMessage({ type: 'HEARTBEAT_EVENT', ...evt }).catch(() => {});
+  },
+});
+setHeartbeatServiceRef(heartbeatService);
+Promise.resolve().then(() =>
+  heartbeatService.start().catch(err => {
+    heartbeatLog.error('Failed to start heartbeat service', { error: String(err) });
+  }),
+);
+
+chrome.runtime.onInstalled.addListener(() => {
+  heartbeatService.start().catch(err => {
+    heartbeatLog.error('onInstalled heartbeat start failed', { error: String(err) });
+  });
+});
+chrome.runtime.onStartup.addListener(() => {
+  heartbeatService.start().catch(err => {
+    heartbeatLog.error('onStartup heartbeat start failed', { error: String(err) });
+  });
+});
 
 // Start cron — use microtask to avoid setTimeout race with Firefox event page suspension.
 // IndexedDB is available immediately; the 1-second delay was unnecessary and risky.
@@ -103,6 +130,13 @@ const messageHandlers: Record<string, MessageHandler> = {
 
   CLEAR_LOGS: async () => {
     clearLogEntries();
+    return { success: true };
+  },
+
+  HEARTBEAT_RUN_NOW: async request => {
+    const agentId = typeof request.agentId === 'string' ? request.agentId : undefined;
+    if (!agentId) return { success: false, error: 'agentId required' };
+    heartbeatService.requestHeartbeatNow({ reason: 'manual', agentId });
     return { success: true };
   },
 
@@ -345,7 +379,10 @@ const messageHandlers: Record<string, MessageHandler> = {
       const { getProviderTokenLimit } = await import('./context/provider-limit-cache');
 
       const [messages, chat] = await Promise.all([getMessagesByChatId(chatId), getChat(chatId)]);
-      slashCmdLog.debug('Loaded messages for compaction', { chatId, messageCount: messages.length });
+      slashCmdLog.debug('Loaded messages for compaction', {
+        chatId,
+        messageCount: messages.length,
+      });
       if (messages.length <= 2) return { error: 'Not enough messages to compact' };
 
       // Build system prompt to get accurate token count (same as stream-handler.ts)
@@ -478,7 +515,11 @@ chrome.runtime.onConnect.addListener(port => {
 // Handle alarms: keep-alive, channel passive polls, and watchdog.
 // Use waitUntil pattern (returning promise) to keep SW alive during async poll work.
 chrome.alarms.onAlarm.addListener(alarm => {
-  if (CronService.isSchedulerAlarm(alarm.name)) {
+  if (HeartbeatService.isSchedulerAlarm(alarm.name)) {
+    heartbeatService.handleAlarm(alarm).catch(err => {
+      heartbeatLog.error('Heartbeat alarm handler failed', { error: String(err) });
+    });
+  } else if (CronService.isSchedulerAlarm(alarm.name)) {
     cronService.handleAlarm().catch(err => {
       cronLog.error('Cron alarm handler failed', { error: String(err) });
     });

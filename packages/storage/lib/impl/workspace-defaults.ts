@@ -123,6 +123,12 @@ _Fill this in during your first conversation. Make it yours._
 This isn't just metadata. It's the start of figuring out who you are.
 `;
 
+const HEARTBEAT_DEFAULT = `# HEARTBEAT.md
+
+# Keep this file empty (or with only comments) to skip heartbeat API calls.
+# Add tasks below when you want the agent to check something periodically.
+`;
+
 const TOOLS_DEFAULT = `# TOOLS.md - Local Notes
 
 This file is for your specifics — things unique to this user's setup.
@@ -160,6 +166,7 @@ export {
   USER_DEFAULT,
   IDENTITY_DEFAULT,
   TOOLS_DEFAULT,
+  HEARTBEAT_DEFAULT,
   DAILY_JOURNAL_SKILL,
   SKILL_CREATOR_SKILL,
   TOOL_CREATOR_SKILL,
