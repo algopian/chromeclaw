@@ -2,7 +2,6 @@ import { ConfirmDialog, emptyConfirm } from './confirm-dialog.js';
 import { SkillConfig } from './skill-config.js';
 import { t, useT } from '@extension/i18n';
 import {
-  extractPdfText,
   toolRegistryMeta,
   backupAgent,
   backupFilename,
@@ -100,8 +99,6 @@ import type {
 } from '@extension/storage';
 import type { FileTreeNode } from '@extension/ui';
 import type { LucideIcon } from 'lucide-react';
-
-const MAX_CONTENT_LENGTH = 20_000;
 
 // ── Inline dialogs ──────
 
@@ -770,10 +767,6 @@ const AgentFilesTab = ({
       e.target.value = '';
 
       const text = await file.text();
-      if (text.length > MAX_CONTENT_LENGTH) {
-        toast.error(`File exceeds ${MAX_CONTENT_LENGTH.toLocaleString()} character limit`);
-        return;
-      }
 
       const prefix = getSelectedFolderPrefix();
       const fileName = prefix + file.name;
@@ -912,7 +905,7 @@ const AgentFilesTab = ({
   const handleDownload = useCallback(() => {
     if (selectedNode?.type !== 'file') return;
     const file = selectedNode.file;
-    const blob = new Blob([file.content], { type: 'text/markdown' });
+    const blob = new Blob([file.content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -954,56 +947,6 @@ const AgentFilesTab = ({
       );
     }
   }, [selectedNode, files]);
-
-  const handleUploadFiles = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = e.target.files;
-      if (!files || files.length === 0) return;
-      e.target.value = '';
-
-      let count = 0;
-      for (const file of Array.from(files)) {
-        try {
-          let content: string;
-          let fileName: string;
-
-          if (file.name.toLowerCase().endsWith('.pdf')) {
-            const buffer = await file.arrayBuffer();
-            content = await extractPdfText(buffer);
-            fileName = file.name.replace(/\.pdf$/i, '.md');
-          } else {
-            content = await file.text();
-            fileName = file.name;
-          }
-
-          const now = Date.now();
-          const wsFile: DbWorkspaceFile = {
-            id: nanoid(),
-            name: `memory/${fileName}`,
-            content,
-            enabled: true,
-            owner: 'user',
-            predefined: false,
-            createdAt: now,
-            updatedAt: now,
-            agentId,
-          };
-          await createWorkspaceFile(wsFile);
-          count++;
-        } catch (err) {
-          toast.error(
-            `Failed to upload ${file.name}: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          );
-        }
-      }
-
-      if (count > 0) {
-        onReload();
-        toast.success(`Uploaded ${count} file${count !== 1 ? 's' : ''}`);
-      }
-    },
-    [agentId, onReload],
-  );
 
   const handleSave = useCallback(
     async (content: string) => {
@@ -1127,7 +1070,6 @@ const AgentFilesTab = ({
       </TooltipProvider>
 
       <input
-        accept=".md,.txt,.markdown"
         className="hidden"
         ref={uploadInputRef}
         onChange={handleUploadFileSelected}
