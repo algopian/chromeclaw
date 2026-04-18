@@ -6,7 +6,8 @@ This is the agent's entry point. Read this first on every invocation.
 
 | Phase | Status | Todo File | Requirement File | Tasks | Done |
 |-------|--------|-----------|------------------|-------|------|
-| 3 | NOT STARTED | todo/active/phase-03-heartbeat-default-enabled.md | _(bug fix, no separate spec)_ | 6 | 0 |
+
+ALL PHASES COMPLETE
 
 ## Completed (do not read)
 
@@ -14,3 +15,5 @@ This is the agent's entry point. Read this first on every invocation.
 |-------|-----------|-------|------|
 | 1 | todo/archive/phase-01-gemini-temp-chat.md | 4 | 4 |
 | 2 | todo/archive/phase-02-heartbeat.md | 27 | 27 |
+| 3 | todo/archive/phase-03-heartbeat-default-enabled.md | 6 | 6 |
+| 4 | todo/archive/phase-04-file-upload-restrictions.md | 9 | 9 |
