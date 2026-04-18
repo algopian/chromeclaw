@@ -1,7 +1,7 @@
 // Unit tests for the coalescing wake queue (R20 / 02.21).
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createWakeQueue, DEFAULT_RETRY_MS } from './wake';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HeartbeatRunResult } from '../types';
 
 // Minimal chrome.storage.session stub so persist()/hydrate() don't throw.
@@ -122,6 +122,34 @@ describe('wakeQueue', () => {
     await vi.advanceTimersByTimeAsync(DEFAULT_RETRY_MS + 50);
     expect(handler).toHaveBeenCalledTimes(2);
     expect(handler.mock.calls[1][0]).toMatchObject({ reason: 'retry', agentId: 'a' });
+  });
+
+  it('drops stale wakes enqueued during a successful run', async () => {
+    const q = createWakeQueue();
+    let resolveRun!: (v: HeartbeatRunResult) => void;
+    const handler = vi
+      .fn<(opts: unknown) => Promise<HeartbeatRunResult>>()
+      .mockImplementationOnce(
+        () => new Promise<HeartbeatRunResult>(r => { resolveRun = r; }),
+      )
+      .mockResolvedValue({ status: 'ran' });
+    q.setHandler(handler);
+
+    // First click
+    q.requestHeartbeatNow({ reason: 'manual', agentId: 'a' });
+    await vi.advanceTimersByTimeAsync(300);
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    // Second and third clicks arrive while run #1 is in-flight
+    q.requestHeartbeatNow({ reason: 'manual', agentId: 'a' });
+    q.requestHeartbeatNow({ reason: 'manual', agentId: 'a' });
+
+    // Run #1 completes — pending wakes for agent 'a' should be dropped
+    resolveRun({ status: 'ran' });
+    await vi.advanceTimersByTimeAsync(500);
+
+    // Handler should NOT have been called a second time
+    expect(handler).toHaveBeenCalledTimes(1);
   });
 
   it('reports hasPendingWake() truthfully through the lifecycle', async () => {

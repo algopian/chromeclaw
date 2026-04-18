@@ -56,8 +56,10 @@ const updateAgent = async (
   await chatDb.agents.update(id, { ...updates, updatedAt: Date.now() });
 };
 
+// Note: `.where('isDefault').equals(1)` won't work because Chrome's IndexedDB
+// treats boolean `true` and numeric `1` as distinct index keys. Use .filter().
 const getDefaultAgent = async (): Promise<AgentConfig | undefined> =>
-  chatDb.agents.where('isDefault').equals(1).first();
+  chatDb.agents.filter(a => !!a.isDefault).first();
 
 const deleteAgent = async (id: string): Promise<void> => {
   const agent = await chatDb.agents.get(id);

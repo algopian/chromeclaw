@@ -162,6 +162,7 @@ const createWakeQueue = (): WakeQueue => {
     pending.clear();
     persist();
     running = true;
+    const ranAgentKeys = new Set<string>();
     try {
       for (const w of batch) {
         const opts: WakeOptions = {
@@ -177,6 +178,10 @@ const createWakeQueue = (): WakeQueue => {
             sessionKey: w.sessionKey,
           });
           schedule(DEFAULT_RETRY_MS, 'retry');
+        } else {
+          // Track agents that ran (or were skipped for non-lock reasons) so we
+          // can drop stale wakes that accumulated during this run.
+          ranAgentKeys.add(targetKey(w.agentId, w.sessionKey));
         }
       }
     } catch {
@@ -190,6 +195,14 @@ const createWakeQueue = (): WakeQueue => {
       schedule(DEFAULT_RETRY_MS, 'retry');
     } finally {
       running = false;
+      // Drop pending wakes for agents that just ran successfully — they were
+      // enqueued during execution and are stale duplicates of the user's intent.
+      if (ranAgentKeys.size > 0) {
+        for (const key of ranAgentKeys) {
+          pending.delete(key);
+        }
+        persist();
+      }
       if (pending.size > 0 || scheduled) {
         schedule(delay, 'normal');
       }
