@@ -23,7 +23,7 @@ SUMMARY_LOG="${LOG_DIR}/parallel_summary.log"
 WT_BASE="/tmp/chromeclaw-worktrees"
 
 MAX_PARALLEL="${MAX_PARALLEL:-3}"
-AGENT_MODEL="${AGENT_MODEL:-claude-opus-4-6}"
+AGENT_MODEL="${AGENT_MODEL:-claude-opus-4-7}"
 
 mkdir -p "$LOG_DIR" "$WT_BASE"
 

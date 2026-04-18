@@ -93,14 +93,14 @@ while true; do
         # Raw mode: stream-json straight to screen + log
         claude --dangerously-skip-permissions \
                -p "$(cat "${SCRIPT_DIR}/AGENT_PROMPT.md")" \
-               --model claude-opus-4-6 \
+               --model claude-opus-4-7 \
                --output-format stream-json --verbose \
                2>&1 | tee "$LOGFILE" &
     else
         # Formatted mode: raw JSON to log, pretty output to screen
         claude --dangerously-skip-permissions \
                -p "$(cat "${SCRIPT_DIR}/AGENT_PROMPT.md")" \
-               --model claude-opus-4-6 \
+               --model claude-opus-4-7 \
                --output-format stream-json --verbose \
                2>&1 | tee "$LOGFILE" | "$FORMATTER" &
     fi

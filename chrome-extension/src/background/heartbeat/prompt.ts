@@ -24,7 +24,7 @@ const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\
  * short-circuit interval ticks when the file is a placeholder.
  */
 const isHeartbeatContentEffectivelyEmpty = (content: string | undefined | null): boolean => {
-  if (content === undefined || content === null) return false;
+  if (content === undefined || content === null) return true;
   if (typeof content !== 'string') return false;
 
   const lines = content.split('\n');

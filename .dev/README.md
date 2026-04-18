@@ -148,7 +148,7 @@ PARALLEL=1 .dev/run_pipeline.sh
 |----------|---------|-------------|
 | `MAX_CYCLES` | 3 | Max code→review→fix cycles |
 | `AGENT_MAX_ITERATIONS` | 10 | Cap iterations per coding agent run |
-| `REVIEW_MODEL` | `claude-sonnet-4-6` | Model for review agent |
+| `REVIEW_MODEL` | `claude-opus-4-7` | Model for review agent |
 | `NOTIFY_WEBHOOK` | _(empty)_ | Slack/Discord webhook URL |
 | `PARALLEL` | 0 | Set to 1 to use parallel mode |
 
@@ -157,7 +157,7 @@ PARALLEL=1 .dev/run_pipeline.sh
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MAX_PARALLEL` | 3 | Max concurrent agents |
-| `AGENT_MODEL` | `claude-opus-4-6` | Model for parallel coding agents |
+| `AGENT_MODEL` | `claude-opus-4-7` | Model for parallel coding agents |
 
 ## Progress Tracking
 

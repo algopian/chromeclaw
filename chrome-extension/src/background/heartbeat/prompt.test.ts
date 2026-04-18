@@ -1,6 +1,5 @@
 // Unit tests for heartbeat prompt helpers (R20 / 02.27).
 
-import { describe, expect, it } from 'vitest';
 import {
   HEARTBEAT_TOKEN,
   isHeartbeatContentEffectivelyEmpty,
@@ -8,6 +7,7 @@ import {
   stripHeartbeatToken,
   DEFAULT_HEARTBEAT_ACK_MAX_CHARS,
 } from './prompt';
+import { describe, expect, it } from 'vitest';
 
 describe('isHeartbeatContentEffectivelyEmpty', () => {
   it('treats missing / whitespace-only content as empty', () => {
@@ -16,9 +16,7 @@ describe('isHeartbeatContentEffectivelyEmpty', () => {
   });
 
   it('skips markdown headers and empty list markers', () => {
-    expect(
-      isHeartbeatContentEffectivelyEmpty('# Heading\n\n## Sub\n\n- [ ]\n* '),
-    ).toBe(true);
+    expect(isHeartbeatContentEffectivelyEmpty('# Heading\n\n## Sub\n\n- [ ]\n* ')).toBe(true);
   });
 
   it('detects real content', () => {
@@ -26,9 +24,9 @@ describe('isHeartbeatContentEffectivelyEmpty', () => {
     expect(isHeartbeatContentEffectivelyEmpty('remind me in 5m')).toBe(false);
   });
 
-  it('returns false for null / undefined (LLM decides)', () => {
-    expect(isHeartbeatContentEffectivelyEmpty(undefined)).toBe(false);
-    expect(isHeartbeatContentEffectivelyEmpty(null)).toBe(false);
+  it('returns true for null / undefined (missing file = empty)', () => {
+    expect(isHeartbeatContentEffectivelyEmpty(undefined)).toBe(true);
+    expect(isHeartbeatContentEffectivelyEmpty(null)).toBe(true);
   });
 });
 

@@ -16,6 +16,8 @@
 // orchestrator) owns lock acquisition, alarm scheduling, and retry.
 
 import { runHeadlessLLM, resolveDefaultModel, dbModelToChatModel } from '../../agents/agent-setup';
+import { getChannelConfigs } from '../../channels/config';
+import { getChannelAdapter } from '../../channels/registry';
 import { isWithinActiveHours } from '../active-hours';
 import { loadHeartbeatConfig } from '../config';
 import { emitHeartbeatEvent } from '../events';
@@ -28,7 +30,7 @@ import {
 import { classifyReason, isActionLikeReason } from '../reason';
 import { pruneMessagesAbove } from '../transcript-prune';
 import { customModelsStorage, chatDb } from '@extension/storage';
-import type { HeartbeatRunResult } from '../types';
+import type { HeartbeatConfig, HeartbeatRunResult } from '../types';
 import type { HeartbeatLogger, RunOutcome } from './state';
 
 interface RunHeartbeatOnceOptions {
@@ -43,24 +45,6 @@ interface RunHeartbeatOnceOptions {
 }
 
 const DEDUP_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
-
-const hashText = (s: string): string => {
-  // Lightweight 53-bit hash (DJB2 xor). Sufficient for dedup bucket keys.
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) + h) ^ s.charCodeAt(i);
-  return String(h >>> 0);
-};
-
-const isInFlight = async (agentId: string, nowMs: number): Promise<boolean> => {
-  try {
-    const lock = await chatDb.heartbeatLocks.get(agentId);
-    if (!lock) return false;
-    if (lock.expiresAt <= nowMs) return false;
-    return true;
-  } catch {
-    return false;
-  }
-};
 
 const loadHeartbeatMdContent = async (agentId: string): Promise<string | undefined> => {
   try {
@@ -115,10 +99,70 @@ const shouldSuppressByDedup = async (
     const prior = await chatDb.heartbeatState.get(agentId);
     if (!prior?.lastHeartbeatText || !prior.lastHeartbeatSentAt) return false;
     if (nowMs - prior.lastHeartbeatSentAt > DEDUP_WINDOW_MS) return false;
-    return hashText(prior.lastHeartbeatText) === hashText(text);
+    return prior.lastHeartbeatText === text;
   } catch {
     return false;
   }
+};
+
+/**
+ * Deliver heartbeat text to a channel (Telegram, WhatsApp, etc.).
+ * Follows the same pattern as cron executor's `deliverResult`.
+ */
+const deliverToChannel = async (
+  config: HeartbeatConfig,
+  text: string,
+  log?: HeartbeatLogger,
+): Promise<void> => {
+  // config.target: 'last' = first active channel, 'none' = skip, string = channel id
+  const target = config.target ?? 'last';
+  if (target === 'none') return;
+
+  let channelId: string | undefined;
+  let to: string | undefined;
+
+  if (target === 'last') {
+    // Auto-resolve: pick first active channel with allowed senders
+    const configs = await getChannelConfigs();
+    const active = configs.find(
+      c => c.enabled && c.status !== 'idle' && c.allowedSenderIds.length > 0,
+    );
+    if (!active) return; // No active channel — silently skip
+    channelId = active.channelId;
+    to = config.to ?? active.allowedSenderIds[0];
+  } else {
+    channelId = target;
+    to = config.to;
+  }
+
+  if (!channelId || !to) return;
+
+  const adapter = await getChannelAdapter(channelId);
+  if (!adapter) {
+    log?.warn?.('heartbeat channel delivery: no adapter', { channelId });
+    return;
+  }
+
+  const msg =
+    text.length > adapter.maxMessageLength ? text.slice(0, adapter.maxMessageLength) : text;
+
+  const result = await adapter.sendMessage({ to, text: msg, parseMode: 'markdown' });
+  if (result.ok) {
+    log?.info?.('heartbeat delivered to channel', { channelId, to, messageId: result.messageId });
+  } else {
+    log?.warn?.('heartbeat channel delivery failed', { channelId, error: result.error });
+  }
+};
+
+/** Notify the chat UI that a heartbeat produced a message worth showing. */
+const notifyChatUI = (chatId: string, agentId: string): void => {
+  chrome.runtime
+    .sendMessage({
+      type: 'HEARTBEAT_CHAT_DELIVERED',
+      chatId,
+      agentId,
+    })
+    .catch(() => {}); // No listeners is fine
 };
 
 /**
@@ -151,7 +195,8 @@ const runHeartbeatOnce = async (opts: RunHeartbeatOnceOptions): Promise<Heartbea
     return { status: 'skipped', reason: skipReason };
   };
 
-  // 1. enabled?
+  // 1. enabled? — consult the resolver so the default agent runs out of the
+  //    box and explicit opt-in configs flip semantics correctly.
   const config = await loadHeartbeatConfig(agentId);
   if (!config.enabled) return finishSkip('disabled');
 
@@ -160,23 +205,16 @@ const runHeartbeatOnce = async (opts: RunHeartbeatOnceOptions): Promise<Heartbea
     return finishSkip('inactive-hours');
   }
 
-  // 3. in-flight?
-  if (await isInFlight(agentId, startedAt)) {
-    return finishSkip('requests-in-flight');
-  }
-
-  // 4. empty HEARTBEAT.md with non-action trigger?
+  // 3. empty HEARTBEAT.md with non-action trigger?
   const heartbeatMd = await loadHeartbeatMdContent(agentId);
   if (!isActionLikeReason(reason) && isHeartbeatContentEffectivelyEmpty(heartbeatMd)) {
     return finishSkip('empty-heartbeat');
   }
 
-  // 5. Snapshot the transcript so skip-cases can prune additions.
-  //    Heartbeat starts its own chat — we snapshot after chat creation by
-  //    pruning against the known chatId returned from runHeadlessLLM.
+  // 4. Emit started event.
   emitHeartbeatEvent({ agentId, atMs: startedAt, reason, status: 'started' });
 
-  // 6. Build & run.
+  // 5. Build & run.
   const model = await resolveModelForAgent(config.model);
   if (!model) {
     log?.warn?.('heartbeat failed: no model', { agentId });
@@ -197,6 +235,14 @@ const runHeartbeatOnce = async (opts: RunHeartbeatOnceOptions): Promise<Heartbea
 
   const prompt = resolveHeartbeatPrompt(config.prompt);
   const chatTitle = opts.chatTitle ?? `Heartbeat: ${agentId}`;
+
+  log?.info?.('heartbeat request', {
+    agentId,
+    reason,
+    model: model.id,
+    prompt,
+    heartbeatMd: heartbeatMd?.slice(0, 500),
+  });
 
   let result: Awaited<ReturnType<typeof runHeadlessLLM>>;
   try {
@@ -227,6 +273,14 @@ const runHeartbeatOnce = async (opts: RunHeartbeatOnceOptions): Promise<Heartbea
   }
 
   const chatId = result.chatId;
+
+  log?.info?.('heartbeat response', {
+    agentId,
+    chatId,
+    status: result.status,
+    responseText: result.responseText?.slice(0, 1000),
+    durationMs: nowMs() - startedAt,
+  });
 
   if (result.status === 'error') {
     const err = result.error ?? 'unknown-error';
@@ -302,10 +356,7 @@ const runHeartbeatOnce = async (opts: RunHeartbeatOnceOptions): Promise<Heartbea
     return { status: 'skipped', reason: 'dedup', chatId };
   }
 
-  // Deliver: persist state, emit `ran` event. Channel dispatch is handled
-  // by a listener (AgentsPanel UI, channels bridge). Keeping delivery out of
-  // this module avoids a hard dep on the channels registry and lets the UI
-  // be the single source of truth for alert rendering.
+  // Deliver: persist state, notify chat UI, and send to channel.
   await persistState(agentId, {
     lastRunAtMs: startedAt,
     lastStatus: 'ran',
@@ -316,6 +367,22 @@ const runHeartbeatOnce = async (opts: RunHeartbeatOnceOptions): Promise<Heartbea
     lastChatId: chatId,
   });
   const durationMs = nowMs() - startedAt;
+
+  // Notify chat UI so it can show the heartbeat conversation
+  if (chatId) {
+    notifyChatUI(chatId, agentId);
+  }
+
+  // Deliver to channel (Telegram/WhatsApp) — best-effort, don't fail the run
+  try {
+    await deliverToChannel(config, stripped.text, log);
+  } catch (err) {
+    log?.warn?.('heartbeat channel delivery error', {
+      agentId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
   emitHeartbeatEvent({
     agentId,
     atMs: startedAt,
@@ -328,5 +395,5 @@ const runHeartbeatOnce = async (opts: RunHeartbeatOnceOptions): Promise<Heartbea
   return { status: 'ran', chatId, durationMs };
 };
 
-export { runHeartbeatOnce, DEDUP_WINDOW_MS, hashText };
+export { runHeartbeatOnce, DEDUP_WINDOW_MS };
 export type { RunHeartbeatOnceOptions };

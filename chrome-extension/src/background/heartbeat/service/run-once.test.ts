@@ -1,5 +1,9 @@
 // Unit tests for runHeartbeatOnce (R20 / 02.22, 02.25 sleep-catchup, 02.26 dedup).
 
+import { runHeartbeatOnce } from './run-once';
+import { loadHeartbeatConfig } from '../config';
+import { _resetHeartbeatListeners } from '../events';
+import { HEARTBEAT_TOKEN } from '../prompt';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the agent-setup module so we don't pull in pi-mono / providers.
@@ -24,12 +28,8 @@ vi.mock('../config', () => ({
     ackMaxChars: 300,
     target: 'last',
   })),
+  isHeartbeatEnabledForAgent: vi.fn(async () => true),
 }));
-
-import { runHeartbeatOnce } from './run-once';
-import { loadHeartbeatConfig } from '../config';
-import { _resetHeartbeatListeners } from '../events';
-import { HEARTBEAT_TOKEN } from '../prompt';
 
 const ts = Date.UTC(2026, 3, 1, 12, 0, 0);
 
@@ -70,6 +70,25 @@ describe('runHeartbeatOnce', () => {
     expect(res.status).toBe('skipped');
     expect(res.reason).toBe('disabled');
     expect(runHeadless).not.toHaveBeenCalled();
+  });
+
+  it('does not skip "disabled" when config.enabled is true', async () => {
+    // loadHeartbeatConfig resolves `enabled` via the two-rule resolver, so
+    // run-once simply trusts config.enabled without a separate resolver call.
+    setConfig({ enabled: true });
+    const runHeadless = vi.fn().mockResolvedValue({
+      status: 'ok',
+      chatId: 'chat-x',
+      responseText: HEARTBEAT_TOKEN,
+    });
+    const res = await runHeartbeatOnce({
+      agentId: 'a',
+      reason: 'manual',
+      nowMs: () => ts,
+      runHeadless: runHeadless as never,
+    });
+    expect(res.reason).not.toBe('disabled');
+    expect(runHeadless).toHaveBeenCalledTimes(1);
   });
 
   it('skips interval tick when HEARTBEAT.md is effectively empty', async () => {
@@ -162,26 +181,6 @@ describe('runHeartbeatOnce', () => {
     });
     expect(second.status).toBe('skipped');
     expect(second.reason).toBe('dedup');
-  });
-
-  it('skips when an active lock indicates in-flight', async () => {
-    const { chatDb } = await import('@extension/storage');
-    await chatDb.heartbeatLocks.put({
-      agentId: 'a',
-      acquiredAt: ts - 1_000,
-      expiresAt: ts + 60_000,
-    });
-
-    const runHeadless = vi.fn();
-    const res = await runHeartbeatOnce({
-      agentId: 'a',
-      reason: 'manual',
-      nowMs: () => ts,
-      runHeadless: runHeadless as never,
-    });
-    expect(res.status).toBe('skipped');
-    expect(res.reason).toBe('requests-in-flight');
-    expect(runHeadless).not.toHaveBeenCalled();
   });
 
   it('skips outside active hours', async () => {

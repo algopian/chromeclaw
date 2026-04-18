@@ -1,7 +1,7 @@
 // Unit tests for transcript prune (R20 / 02.23).
 
-import { beforeEach, describe, expect, it } from 'vitest';
 import { snapshotMaxMessageId, pruneMessagesAbove } from './transcript-prune';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 describe('transcript-prune', () => {
   beforeEach(async () => {

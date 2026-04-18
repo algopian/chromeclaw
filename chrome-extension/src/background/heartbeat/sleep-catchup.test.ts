@@ -5,6 +5,7 @@
 // The service must collapse all that backlog into a single `runForAgent`
 // invocation and then rearm for `now + intervalMs`.
 
+import { HeartbeatService } from './service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Keep the real chatDb (fake-indexeddb) but stub listAgents since HeartbeatService.refreshAgents calls it.
@@ -23,6 +24,7 @@ vi.mock('./config', () => ({
     ackMaxChars: 300,
     target: 'last',
   })),
+  isHeartbeatEnabledForAgent: vi.fn(async () => true),
 }));
 
 // Neutralise alarm calls in test env.
@@ -41,8 +43,6 @@ const runOnceMock = vi.fn(async () => ({ status: 'ran' as const, chatId: 'c1' })
 vi.mock('./service/run-once', () => ({
   runHeartbeatOnce: (...args: unknown[]) => runOnceMock(...args),
 }));
-
-import { HeartbeatService } from './service';
 
 const makeLog = () => ({
   debug: vi.fn(),
@@ -67,7 +67,7 @@ describe('HeartbeatService sleep catch-up', () => {
 
   it('collapses a backlog into a single run and rearms nextDueMs to now+interval', async () => {
     const intervalMs = 30 * 60_000;
-    let fakeNow = Date.UTC(2026, 3, 1, 12, 0, 0);
+    const fakeNow = Date.UTC(2026, 3, 1, 12, 0, 0);
     const svc = new HeartbeatService({ log: makeLog(), nowMs: () => fakeNow });
     await svc.start();
 

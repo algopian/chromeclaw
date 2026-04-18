@@ -1,8 +1,8 @@
 // Unit tests for active-hours + reason classification (R20 / 02.24).
 
-import { describe, expect, it } from 'vitest';
 import { isWithinActiveHours } from './active-hours';
 import { classifyReason, isActionLikeReason } from './reason';
+import { describe, expect, it } from 'vitest';
 
 describe('isWithinActiveHours', () => {
   it('returns true when config is missing', () => {
@@ -10,9 +10,7 @@ describe('isWithinActiveHours', () => {
   });
 
   it('returns true for malformed time strings (permissive)', () => {
-    expect(
-      isWithinActiveHours({ start: 'nope', end: '25:00', timezone: 'UTC' }),
-    ).toBe(true);
+    expect(isWithinActiveHours({ start: 'nope', end: '25:00', timezone: 'UTC' })).toBe(true);
   });
 
   it('returns false when start === end (degenerate window)', () => {
@@ -22,20 +20,18 @@ describe('isWithinActiveHours', () => {
   it('accepts 24:00 as end-of-day', () => {
     // A UTC moment at 23:30 should be inside "00:00 - 24:00".
     const at = Date.UTC(2026, 0, 1, 23, 30);
-    expect(
-      isWithinActiveHours({ start: '00:00', end: '24:00', timezone: 'UTC' }, at),
-    ).toBe(true);
+    expect(isWithinActiveHours({ start: '00:00', end: '24:00', timezone: 'UTC' }, at)).toBe(true);
   });
 
   it('handles a normal daytime window', () => {
     const morning = Date.UTC(2026, 0, 1, 10, 0);
     const night = Date.UTC(2026, 0, 1, 22, 0);
-    expect(
-      isWithinActiveHours({ start: '09:00', end: '18:00', timezone: 'UTC' }, morning),
-    ).toBe(true);
-    expect(
-      isWithinActiveHours({ start: '09:00', end: '18:00', timezone: 'UTC' }, night),
-    ).toBe(false);
+    expect(isWithinActiveHours({ start: '09:00', end: '18:00', timezone: 'UTC' }, morning)).toBe(
+      true,
+    );
+    expect(isWithinActiveHours({ start: '09:00', end: '18:00', timezone: 'UTC' }, night)).toBe(
+      false,
+    );
   });
 
   it('handles wrap-around (night shift) windows', () => {

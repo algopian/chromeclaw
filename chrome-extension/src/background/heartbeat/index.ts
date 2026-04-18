@@ -13,6 +13,7 @@ export {
 } from './service/timer';
 export { onHeartbeatEvent } from './events';
 export {
+  isHeartbeatEnabledForAgent,
   loadHeartbeatConfig,
   loadHeartbeatDefaults,
   saveHeartbeatConfig,

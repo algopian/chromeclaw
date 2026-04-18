@@ -13,7 +13,9 @@
 // delivery / channel dispatch (see `AgentsPanel` + channel bridges),
 // config persistence (see `config.ts`).
 
-import { loadHeartbeatConfig } from './config';
+import { isHeartbeatEnabledForAgent, loadHeartbeatConfig } from './config';
+import { emitHeartbeatEvent } from './events';
+import { classifyReason } from './reason';
 import { runHeartbeatOnce } from './service/run-once';
 import { createInitialState } from './service/state';
 import {
@@ -169,15 +171,14 @@ class HeartbeatService {
 
   private async runDueAgents(): Promise<void> {
     const nowMs = this.state.deps.nowMs();
-    for (const agent of this.state.agents.values()) {
-      if (agent.inFlight) continue;
-      if (agent.nextDueMs > nowMs) continue;
-      // Fire through the wake queue so concurrent manual requests coalesce.
-      this.wake.requestHeartbeatNow({
-        reason: 'interval',
-        agentId: agent.agentId,
-      });
-    }
+    const candidates = [...this.state.agents.values()].filter(
+      a => !a.inFlight && a.nextDueMs <= nowMs,
+    );
+    const enabled = await Promise.all(candidates.map(a => isHeartbeatEnabledForAgent(a.agentId)));
+    candidates.forEach((agent, i) => {
+      if (!enabled[i]) return;
+      this.wake.requestHeartbeatNow({ reason: 'interval', agentId: agent.agentId });
+    });
   }
 
   /** Schedule a one-shot kick at the earliest upcoming due time. */
@@ -209,7 +210,16 @@ class HeartbeatService {
     if (agent?.inFlight) return { status: 'skipped', reason: 'requests-in-flight' };
 
     const got = await acquireLock(agentId, nowMs, reason);
-    if (!got) return { status: 'skipped', reason: 'requests-in-flight' };
+    if (!got) {
+      emitHeartbeatEvent({
+        agentId,
+        atMs: nowMs,
+        reason: classifyReason(reason),
+        status: 'skipped',
+        summary: 'requests-in-flight',
+      });
+      return { status: 'skipped', reason: 'requests-in-flight' };
+    }
 
     if (agent) agent.inFlight = true;
     try {
@@ -226,7 +236,7 @@ class HeartbeatService {
       this.state.deps.onEvent?.({
         agentId,
         atMs: nowMs,
-        reason: (reason as never) ?? 'interval',
+        reason: classifyReason(reason),
         status: result.status,
         chatId: result.chatId,
         durationMs: result.durationMs,
