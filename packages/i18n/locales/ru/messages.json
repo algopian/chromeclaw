@@ -402,10 +402,10 @@
     "message": "Доступные команды:"
   },
   "toast_offline": {
-    "message": "Вы не в сети. Проверьте подключение."
+    "message": "ChromeClaw не в сети. Проверьте подключение к сети."
   },
   "toast_online": {
-    "message": "Снова онлайн."
+    "message": "ChromeClaw снова в сети."
   },
   "toast_allSessionsCleared": {
     "message": "Все сессии очищены"

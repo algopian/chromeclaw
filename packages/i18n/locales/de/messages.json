@@ -402,10 +402,10 @@
     "message": "Verfügbare Befehle:"
   },
   "toast_offline": {
-    "message": "Du bist offline. Überprüfe deine Netzwerkverbindung."
+    "message": "ChromeClaw ist offline. Überprüfe deine Netzwerkverbindung."
   },
   "toast_online": {
-    "message": "Wieder online."
+    "message": "ChromeClaw ist wieder online."
   },
   "toast_allSessionsCleared": {
     "message": "Alle Sitzungen gelöscht"

@@ -402,10 +402,10 @@
     "message": "利用可能なコマンド："
   },
   "toast_offline": {
-    "message": "オフラインです。ネットワーク接続を確認してください。"
+    "message": "ChromeClaw はオフラインです。ネットワーク接続を確認してください。"
   },
   "toast_online": {
-    "message": "オンラインに復帰しました。"
+    "message": "ChromeClaw がオンラインに復帰しました。"
   },
   "toast_allSessionsCleared": {
     "message": "すべてのセッションをクリアしました"

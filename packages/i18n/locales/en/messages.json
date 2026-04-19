@@ -410,10 +410,10 @@
     "message": "Available commands:"
   },
   "toast_offline": {
-    "message": "You are offline. Check your network connection."
+    "message": "ChromeClaw is offline. Check your network connection."
   },
   "toast_online": {
-    "message": "Back online."
+    "message": "ChromeClaw is back online."
   },
   "toast_allSessionsCleared": {
     "message": "All sessions cleared"

@@ -402,10 +402,10 @@
     "message": "可用命令："
   },
   "toast_offline": {
-    "message": "您已离线，请检查网络连接。"
+    "message": "ChromeClaw 已离线，请检查网络连接。"
   },
   "toast_online": {
-    "message": "已恢复在线。"
+    "message": "ChromeClaw 已恢复在线。"
   },
   "toast_allSessionsCleared": {
     "message": "所有会话已清除"

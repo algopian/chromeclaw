@@ -261,8 +261,27 @@ const FullPageChat = () => {
 
   // Network error detection
   useEffect(() => {
-    const handleOffline = () => toast.error(t('toast_offline'));
-    const handleOnline = () => toast.success(t('toast_online'));
+    const handleOffline = () => {
+      toast.error(t('toast_offline'));
+      chrome.runtime
+        .sendMessage({
+          type: 'LOG_RELAY',
+          category: 'general',
+          level: 'warn',
+          message: '[FullPageChat] network offline (offline event fired)',
+        })
+        .catch(() => {});
+    };
+    const handleOnline = () => {
+      chrome.runtime
+        .sendMessage({
+          type: 'LOG_RELAY',
+          category: 'general',
+          level: 'debug',
+          message: '[FullPageChat] network online (online event fired)',
+        })
+        .catch(() => {});
+    };
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
     return () => {
@@ -285,6 +304,30 @@ const FullPageChat = () => {
       setInitialMessages(mapped);
     });
   }, []);
+
+  const handleOpenSession = useCallback(
+    async (targetChatId: string) => {
+      triggerJournal(currentChatIdRef.current);
+      await lastActiveSessionStorage.set(targetChatId);
+      const chat = await getChat(targetChatId);
+      if (chat) {
+        const msgs = await getMessagesByChatId(chat.id);
+        const mapped = msgs.map(m => ({
+          id: m.id,
+          chatId: m.chatId,
+          role: m.role,
+          parts: m.parts as ChatMessagePart[],
+          createdAt: m.createdAt,
+          model: m.model,
+        })) as ChatMessage[];
+        setChatId(chat.id);
+        setChatTitle(chat.title);
+        setInitialMessages(mapped);
+      }
+      setActiveView('chat');
+    },
+    [triggerJournal],
+  );
 
   // Listen for cron chat inject messages to reactively update the UI
   useEffect(() => {
@@ -404,30 +447,6 @@ const FullPageChat = () => {
       loadModels();
     },
     [activeAgentId, triggerJournal, loadModels],
-  );
-
-  const handleOpenSession = useCallback(
-    async (targetChatId: string) => {
-      triggerJournal(currentChatIdRef.current);
-      await lastActiveSessionStorage.set(targetChatId);
-      const chat = await getChat(targetChatId);
-      if (chat) {
-        const msgs = await getMessagesByChatId(chat.id);
-        const mapped = msgs.map(m => ({
-          id: m.id,
-          chatId: m.chatId,
-          role: m.role,
-          parts: m.parts as ChatMessagePart[],
-          createdAt: m.createdAt,
-          model: m.model,
-        })) as ChatMessage[];
-        setChatId(chat.id);
-        setChatTitle(chat.title);
-        setInitialMessages(mapped);
-      }
-      setActiveView('chat');
-    },
-    [triggerJournal],
   );
 
   const handleNewChat = useCallback(() => {

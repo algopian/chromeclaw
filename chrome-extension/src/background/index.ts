@@ -27,7 +27,7 @@ import { setCronServiceRef } from './tools/scheduler';
 import { createKeepAliveManager } from './utils/keep-alive';
 import { initSidePanelBehavior } from '@extension/shared';
 import { getScheduledTask } from '@extension/storage';
-import type { LLMRequestMessage } from '@extension/shared';
+import type { LLMRequestMessage, LogCategory } from '@extension/shared';
 
 // ── Port Listener for LLM Streaming ───────────
 
@@ -141,7 +141,9 @@ const messageHandlers: Record<string, MessageHandler> = {
   },
 
   LOG_RELAY: async request => {
-    const logger = createLogger('media');
+    const category =
+      typeof request.category === 'string' ? (request.category as LogCategory) : 'media';
+    const logger = createLogger(category);
     const level = request.level as string;
     const logFn = logger[level as keyof typeof logger];
     if (logFn) logFn(request.message as string, request.data);

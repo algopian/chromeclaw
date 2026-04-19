@@ -251,8 +251,27 @@ const SidePanel = () => {
 
   // Network error detection
   useEffect(() => {
-    const handleOffline = () => toast.error(t('toast_offline'));
-    const handleOnline = () => toast.success(t('toast_online'));
+    const handleOffline = () => {
+      toast.error(t('toast_offline'));
+      chrome.runtime
+        .sendMessage({
+          type: 'LOG_RELAY',
+          category: 'general',
+          level: 'warn',
+          message: '[SidePanel] network offline (offline event fired)',
+        })
+        .catch(() => {});
+    };
+    const handleOnline = () => {
+      chrome.runtime
+        .sendMessage({
+          type: 'LOG_RELAY',
+          category: 'general',
+          level: 'debug',
+          message: '[SidePanel] network online (online event fired)',
+        })
+        .catch(() => {});
+    };
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
     return () => {

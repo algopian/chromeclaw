@@ -402,10 +402,10 @@
     "message": "Beschikbare opdrachten:"
   },
   "toast_offline": {
-    "message": "Je bent offline. Controleer je netwerkverbinding."
+    "message": "ChromeClaw is offline. Controleer je netwerkverbinding."
   },
   "toast_online": {
-    "message": "Weer online."
+    "message": "ChromeClaw is weer online."
   },
   "toast_allSessionsCleared": {
     "message": "Alle sessies gewist"

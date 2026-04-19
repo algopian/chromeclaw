@@ -402,10 +402,10 @@
     "message": "Commandes disponibles :"
   },
   "toast_offline": {
-    "message": "Vous êtes hors ligne. Vérifiez votre connexion réseau."
+    "message": "ChromeClaw est hors ligne. Vérifiez votre connexion réseau."
   },
   "toast_online": {
-    "message": "De nouveau en ligne."
+    "message": "ChromeClaw est de nouveau en ligne."
   },
   "toast_allSessionsCleared": {
     "message": "Toutes les sessions effacées"
