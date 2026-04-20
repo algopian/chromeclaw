@@ -38,6 +38,7 @@ const manifest = {
     'storage',
     'scripting',
     'tabs',
+    'tabGroups',
     'notifications',
     'sidePanel',
     'alarms',

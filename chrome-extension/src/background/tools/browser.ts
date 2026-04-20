@@ -1,9 +1,9 @@
-import { cdpSend, cdpSendWithReattach } from './cdp';
 import { executeBrowserFirefox } from './browser-firefox';
-import { injectControlIndicator, removeControlIndicator } from './tab-indicator';
+import { cdpSend, cdpSendWithReattach } from './cdp';
 import { sanitizeImage } from './image-sanitization';
-import { IS_FIREFOX } from '@extension/env';
+import { injectControlIndicator, removeControlIndicator } from './tab-indicator';
 import { createLogger } from '../logging/logger-buffer';
+import { IS_FIREFOX } from '@extension/env';
 import { Type } from '@sinclair/typebox';
 import type { SanitizedImage } from './image-sanitization';
 import type { ToolRegistration, ToolResult } from './tool-registration';
@@ -31,6 +31,10 @@ const browserSchema = Type.Object({
       Type.Literal('evaluate'),
       Type.Literal('console'),
       Type.Literal('network'),
+      Type.Literal('group_tabs'),
+      Type.Literal('ungroup_tabs'),
+      Type.Literal('list_tab_groups'),
+      Type.Literal('update_tab_group'),
     ],
     {
       description:
@@ -63,6 +67,42 @@ const browserSchema = Type.Object({
   ),
   limit: Type.Optional(
     Type.Number({ description: 'Max entries for "console" or "network" (default: 50)' }),
+  ),
+  tabIds: Type.Optional(
+    Type.Array(Type.Number(), {
+      description:
+        'Tab IDs to group or ungroup (for "group_tabs" / "ungroup_tabs"). If omitted, falls back to [tabId].',
+    }),
+  ),
+  groupId: Type.Optional(
+    Type.Number({
+      description:
+        'Existing tab group ID. For "group_tabs", adds tabs to this group. Required for "update_tab_group".',
+    }),
+  ),
+  title: Type.Optional(
+    Type.String({ description: 'Title for the tab group (for "group_tabs" / "update_tab_group")' }),
+  ),
+  color: Type.Optional(
+    Type.Union(
+      [
+        Type.Literal('grey'),
+        Type.Literal('blue'),
+        Type.Literal('red'),
+        Type.Literal('yellow'),
+        Type.Literal('green'),
+        Type.Literal('pink'),
+        Type.Literal('purple'),
+        Type.Literal('cyan'),
+        Type.Literal('orange'),
+      ],
+      {
+        description: 'Color for the tab group (for "group_tabs" / "update_tab_group")',
+      },
+    ),
+  ),
+  collapsed: Type.Optional(
+    Type.Boolean({ description: 'Whether the tab group is collapsed (for "update_tab_group")' }),
   ),
 });
 
@@ -198,7 +238,10 @@ const tryAttach = async (tabId: number): Promise<string | null> => {
     await cdpSend(tabId, 'DOM.enable');
   } catch (domainErr) {
     const msg = domainErr instanceof Error ? domainErr.message : String(domainErr);
-    browserLog.warn('Domain enable failed after attach — page may have detached debugger', { tabId, error: msg });
+    browserLog.warn('Domain enable failed after attach — page may have detached debugger', {
+      tabId,
+      error: msg,
+    });
     session.attached = false;
     return msg;
   }
@@ -246,7 +289,10 @@ const ensureAttached = async (tabId: number): Promise<string | null> => {
       return null;
     } catch (err) {
       // Connection is dead — reset and re-attach below
-      browserLog.warn('Stale debugger session detected, re-attaching', { tabId, error: String(err) });
+      browserLog.warn('Stale debugger session detected, re-attaching', {
+        tabId,
+        error: String(err),
+      });
       session.attached = false;
       attachFailureCache.delete(tabId);
     }
@@ -377,7 +423,10 @@ const waitForLoad = (tabId: number, timeoutMs = 15000): Promise<void> =>
     }, timeoutMs);
 
     const listener = (source: chrome.debugger.Debuggee, method: string) => {
-      if (source.tabId === tabId && (method === 'Page.loadEventFired' || method === 'Page.frameStoppedLoading')) {
+      if (
+        source.tabId === tabId &&
+        (method === 'Page.loadEventFired' || method === 'Page.frameStoppedLoading')
+      ) {
         clearTimeout(timer);
         chrome.debugger.onEvent.removeListener(listener);
         resolve();
@@ -776,9 +825,27 @@ const ensureTabActive = async (tabId: number): Promise<void> => {
 
 const handleTabs = async (): Promise<string> => {
   const tabs = await chrome.tabs.query({});
-  const lines = tabs.map(
-    t => `[${t.id}] ${t.active ? '(active) ' : ''}${t.title ?? 'Untitled'} — ${t.url ?? ''}`,
-  );
+  // Build a map of group ID → group info for annotation. Chrome: tabGroups API;
+  // may be unavailable in Firefox or if permission missing — fail silently.
+  const groupMap = new Map<number, chrome.tabGroups.TabGroup>();
+  try {
+    if (chrome.tabGroups?.query) {
+      const groups = await chrome.tabGroups.query({});
+      for (const g of groups) groupMap.set(g.id, g);
+    }
+  } catch {
+    // ignore — tab groups not supported on this browser
+  }
+  const lines = tabs.map(t => {
+    const base = `[${t.id}] ${t.active ? '(active) ' : ''}${t.title ?? 'Untitled'} — ${t.url ?? ''}`;
+    const gid = (t as chrome.tabs.Tab).groupId;
+    if (gid != null && gid !== -1) {
+      const g = groupMap.get(gid);
+      if (g) return `${base} [group: "${g.title ?? ''}" ${g.color}]`;
+      return `${base} [group: ${gid}]`;
+    }
+    return base;
+  });
   return `Open tabs (${tabs.length}):\n${lines.join('\n')}`;
 };
 
@@ -840,7 +907,10 @@ const handleNavigate = async (args: BrowserArgs): Promise<string> => {
   browserLog.debug('handleNavigate: attaching', { tabId: args.tabId, url: args.url });
   const attachErr = await ensureAttached(args.tabId);
   if (attachErr) {
-    browserLog.info('handleNavigate: attach failed, falling back to tabs API', { tabId: args.tabId, error: attachErr });
+    browserLog.info('handleNavigate: attach failed, falling back to tabs API', {
+      tabId: args.tabId,
+      error: attachErr,
+    });
     await chrome.tabs.update(args.tabId, { url: args.url });
     await new Promise(resolve => setTimeout(resolve, 2000));
     const tab = await chrome.tabs.get(args.tabId);
@@ -878,7 +948,10 @@ const handleNavigate = async (args: BrowserArgs): Promise<string> => {
 const handleContent = async (args: BrowserArgs): Promise<string> => {
   if (args.tabId == null) return 'Error: "tabId" is required for the "content" action.';
 
-  browserLog.debug('handleContent: executing script', { tabId: args.tabId, selector: args.selector ?? null });
+  browserLog.debug('handleContent: executing script', {
+    tabId: args.tabId,
+    selector: args.selector ?? null,
+  });
   const results = await chrome.scripting.executeScript({
     target: { tabId: args.tabId },
     func: (selector: string | null) => {
@@ -904,8 +977,11 @@ const handleSnapshot = async (args: BrowserArgs): Promise<string> => {
   browserLog.debug('handleSnapshot: attaching', { tabId: args.tabId });
   const attachErr = await ensureAttached(args.tabId);
   if (attachErr) {
-    browserLog.warn('handleSnapshot: CDP attach failed, falling back to scripting snapshot', { tabId: args.tabId, error: attachErr });
-    
+    browserLog.warn('handleSnapshot: CDP attach failed, falling back to scripting snapshot', {
+      tabId: args.tabId,
+      error: attachErr,
+    });
+
     const fallback = await executeBrowserFirefox({ ...args, action: 'snapshot' });
     if (typeof fallback === 'string' && !fallback.startsWith('Error:')) {
       return fallback;
@@ -920,8 +996,11 @@ const handleSnapshot = async (args: BrowserArgs): Promise<string> => {
   } catch (snapshotErr) {
     // Debugger may have been immediately detached — fall back to scripting snapshot
     const msg = snapshotErr instanceof Error ? snapshotErr.message : String(snapshotErr);
-    browserLog.warn('handleSnapshot: buildSnapshot failed, falling back to scripting snapshot', { tabId: args.tabId, error: msg });
-    
+    browserLog.warn('handleSnapshot: buildSnapshot failed, falling back to scripting snapshot', {
+      tabId: args.tabId,
+      error: msg,
+    });
+
     const fallback = await executeBrowserFirefox({ ...args, action: 'snapshot' });
     if (typeof fallback === 'string' && !fallback.startsWith('Error:')) {
       return fallback;
@@ -931,12 +1010,15 @@ const handleSnapshot = async (args: BrowserArgs): Promise<string> => {
 
   // Warn on minimal content — use total snapshot length as a simple heuristic
   if (snapshot.length < 200) {
-    snapshot += '\n\n[Note: This page returned very little visible content. The site may be blocking content extraction. Consider asking the user to describe the page content instead.]';
+    snapshot +=
+      '\n\n[Note: This page returned very little visible content. The site may be blocking content extraction. Consider asking the user to describe the page content instead.]';
   }
 
   // Truncate oversized snapshots
   if (snapshot.length > MAX_RESULT_CHARS) {
-    snapshot = snapshot.slice(0, MAX_RESULT_CHARS) + '\n\n[Snapshot truncated at 30000 chars. Full page has more content — use evaluate action with specific DOM queries to extract targeted data.]';
+    snapshot =
+      snapshot.slice(0, MAX_RESULT_CHARS) +
+      '\n\n[Snapshot truncated at 30000 chars. Full page has more content — use evaluate action with specific DOM queries to extract targeted data.]';
   }
 
   return snapshot;
@@ -970,7 +1052,11 @@ const handleScreenshot = async (args: BrowserArgs): Promise<string | ScreenshotR
   }
 
   try {
-    const result = await cdpSendWithReattach<{ data: string }>(args.tabId, 'Page.captureScreenshot', params);
+    const result = await cdpSendWithReattach<{ data: string }>(
+      args.tabId,
+      'Page.captureScreenshot',
+      params,
+    );
 
     // Resize and compress the screenshot
     let sanitized: SanitizedImage | null;
@@ -1166,6 +1252,89 @@ const handleNetwork = async (args: BrowserArgs): Promise<string> => {
 };
 
 // ---------------------------------------------------------------------------
+// Tab group handlers
+// ---------------------------------------------------------------------------
+
+const resolveTabIds = (args: BrowserArgs): number[] | null => {
+  if (args.tabIds && args.tabIds.length > 0) return args.tabIds;
+  if (args.tabId != null) return [args.tabId];
+  return null;
+};
+
+const handleGroupTabs = async (args: BrowserArgs): Promise<string> => {
+  const tabIds = resolveTabIds(args);
+  if (!tabIds) {
+    return 'Error: "tabIds" (or "tabId") is required for the "group_tabs" action.';
+  }
+  try {
+    const groupOptions: chrome.tabs.GroupOptions = { tabIds };
+    if (args.groupId != null) groupOptions.groupId = args.groupId;
+    const groupId = await chrome.tabs.group(groupOptions);
+    if (args.title != null || args.color != null) {
+      const updateProps: chrome.tabGroups.UpdateProperties = {};
+      if (args.title != null) updateProps.title = args.title;
+      if (args.color != null) updateProps.color = args.color;
+      await chrome.tabGroups.update(groupId, updateProps);
+    }
+    return `Grouped ${tabIds.length} tab(s) into group [${groupId}]${args.title ? ` "${args.title}"` : ''}${args.color ? ` (${args.color})` : ''}.`;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return `Error grouping tabs: ${msg}`;
+  }
+};
+
+const handleUngroupTabs = async (args: BrowserArgs): Promise<string> => {
+  const tabIds = resolveTabIds(args);
+  if (!tabIds) {
+    return 'Error: "tabIds" (or "tabId") is required for the "ungroup_tabs" action.';
+  }
+  try {
+    await chrome.tabs.ungroup(tabIds);
+    return `Ungrouped ${tabIds.length} tab(s).`;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return `Error ungrouping tabs: ${msg}`;
+  }
+};
+
+const handleListTabGroups = async (): Promise<string> => {
+  try {
+    const groups = await chrome.tabGroups.query({});
+    if (groups.length === 0) return 'No tab groups.';
+    const lines = groups.map(
+      g => `[${g.id}] "${g.title ?? ''}" — ${g.color}${g.collapsed ? ' (collapsed)' : ''}`,
+    );
+    return `Tab groups (${groups.length}):\n${lines.join('\n')}`;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return `Error listing tab groups: ${msg}`;
+  }
+};
+
+const handleUpdateTabGroup = async (args: BrowserArgs): Promise<string> => {
+  if (args.groupId == null) {
+    return 'Error: "groupId" is required for the "update_tab_group" action.';
+  }
+  const updateProps: chrome.tabGroups.UpdateProperties = {};
+  if (args.title != null) updateProps.title = args.title;
+  if (args.color != null) updateProps.color = args.color;
+  if (args.collapsed != null) updateProps.collapsed = args.collapsed;
+  if (Object.keys(updateProps).length === 0) {
+    return 'Error: at least one of "title", "color", or "collapsed" is required for the "update_tab_group" action.';
+  }
+  try {
+    const group = await chrome.tabGroups.update(args.groupId, updateProps);
+    if (!group) {
+      return `Updated tab group [${args.groupId}].`;
+    }
+    return `Updated tab group [${group.id}]: "${group.title ?? ''}" — ${group.color}${group.collapsed ? ' (collapsed)' : ''}.`;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return `Error updating tab group: ${msg}`;
+  }
+};
+
+// ---------------------------------------------------------------------------
 // Main executor
 // ---------------------------------------------------------------------------
 
@@ -1181,6 +1350,26 @@ const executeBrowser = async (args: BrowserArgs): Promise<string | ScreenshotRes
     (args as Record<string, unknown>).ref = Number(args.ref);
     if (Number.isNaN(args.ref)) (args as Record<string, unknown>).ref = undefined;
   }
+  if (args.groupId != null && typeof args.groupId !== 'number') {
+    (args as Record<string, unknown>).groupId = Number(args.groupId);
+    if (Number.isNaN(args.groupId)) (args as Record<string, unknown>).groupId = undefined;
+  }
+  if (Array.isArray(args.tabIds)) {
+    (args as Record<string, unknown>).tabIds = args.tabIds
+      .map(id => (typeof id === 'number' ? id : Number(id)))
+      .filter((id): id is number => typeof id === 'number' && !Number.isNaN(id));
+  }
+
+  const isTabGroupAction =
+    args.action === 'group_tabs' ||
+    args.action === 'ungroup_tabs' ||
+    args.action === 'list_tab_groups' ||
+    args.action === 'update_tab_group';
+
+  // Firefox: no chrome.tabGroups support — return a clear error for tab group actions
+  if (IS_FIREFOX && isTabGroupAction) {
+    return `Error: The "${args.action}" action is not supported on Firefox (chrome.tabGroups is Chrome-only).`;
+  }
 
   // Firefox: delegate to scripting-based implementation (no chrome.debugger)
   if (IS_FIREFOX) {
@@ -1188,7 +1377,7 @@ const executeBrowser = async (args: BrowserArgs): Promise<string | ScreenshotRes
   }
 
   // Visual indicator — highlight the tab while the tool is executing
-  const noHighlight = args.action === 'tabs' || args.action === 'close';
+  const noHighlight = args.action === 'tabs' || args.action === 'close' || isTabGroupAction;
   let indicatorTabId: number | undefined = !noHighlight ? (args.tabId ?? undefined) : undefined;
 
   // Inject before action (when tabId is known upfront)
@@ -1200,31 +1389,56 @@ const executeBrowser = async (args: BrowserArgs): Promise<string | ScreenshotRes
     let result: string | ScreenshotResult;
     switch (args.action) {
       case 'tabs':
-        result = await handleTabs(); break;
+        result = await handleTabs();
+        break;
       case 'open':
-        result = await handleOpen(args); break;
+        result = await handleOpen(args);
+        break;
       case 'focus':
-        result = await handleFocus(args); break;
+        result = await handleFocus(args);
+        break;
       case 'close':
-        result = await handleClose(args); break;
+        result = await handleClose(args);
+        break;
       case 'navigate':
-        result = await handleNavigate(args); break;
+        result = await handleNavigate(args);
+        break;
       case 'content':
-        result = await handleContent(args); break;
+        result = await handleContent(args);
+        break;
       case 'snapshot':
-        result = await handleSnapshot(args); break;
+        result = await handleSnapshot(args);
+        break;
       case 'screenshot':
-        result = await handleScreenshot(args); break;
+        result = await handleScreenshot(args);
+        break;
       case 'click':
-        result = await handleClick(args); break;
+        result = await handleClick(args);
+        break;
       case 'type':
-        result = await handleType(args); break;
+        result = await handleType(args);
+        break;
       case 'evaluate':
-        result = await handleEvaluate(args); break;
+        result = await handleEvaluate(args);
+        break;
       case 'console':
-        result = await handleConsole(args); break;
+        result = await handleConsole(args);
+        break;
       case 'network':
-        result = await handleNetwork(args); break;
+        result = await handleNetwork(args);
+        break;
+      case 'group_tabs':
+        result = await handleGroupTabs(args);
+        break;
+      case 'ungroup_tabs':
+        result = await handleUngroupTabs(args);
+        break;
+      case 'list_tab_groups':
+        result = await handleListTabGroups();
+        break;
+      case 'update_tab_group':
+        result = await handleUpdateTabGroup(args);
+        break;
       default:
         result = `Error: Unknown action "${args.action}".`;
     }
@@ -1238,26 +1452,37 @@ const executeBrowser = async (args: BrowserArgs): Promise<string | ScreenshotRes
     return result;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    browserLog.error('executeBrowser error', { action: args.action, tabId: args.tabId, error: msg });
+    browserLog.error('executeBrowser error', {
+      action: args.action,
+      tabId: args.tabId,
+      error: msg,
+    });
 
     // If the error is debugger-related, fall back to the Firefox (scripting-based) implementation
     // which works on any page without CDP.
-    const isDebuggerError = msg.toLowerCase().includes('not attached') ||
+    const isDebuggerError =
+      msg.toLowerCase().includes('not attached') ||
       msg.toLowerCase().includes('detached') ||
       msg.toLowerCase().includes('debugger') ||
       msg.toLowerCase().includes('cannot attach');
     if (isDebuggerError) {
-      browserLog.info('Falling back to scripting-based implementation', { action: args.action, tabId: args.tabId });
+      browserLog.info('Falling back to scripting-based implementation', {
+        action: args.action,
+        tabId: args.tabId,
+      });
       try {
-        
         const fallback = await executeBrowserFirefox(args);
         if (typeof fallback === 'string' && fallback.startsWith('Error:')) {
           return fallback;
         }
         return fallback;
       } catch (fallbackErr) {
-        const fallbackMsg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
-        browserLog.error('Scripting fallback also failed', { action: args.action, error: fallbackMsg });
+        const fallbackMsg =
+          fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+        browserLog.error('Scripting fallback also failed', {
+          action: args.action,
+          error: fallbackMsg,
+        });
         return `Error: ${msg}. Scripting fallback also failed: ${fallbackMsg}`;
       }
     }
@@ -1309,7 +1534,7 @@ const browserToolDef: ToolRegistration = {
   name: 'browser',
   label: 'Browser',
   description:
-    'Control browser tabs: list/open/close/focus tabs, navigate to URLs, take DOM snapshots with numbered element refs, take screenshots, click or type on elements by ref, evaluate JavaScript, and view console logs or network requests. Use "snapshot" to understand page content, then "click"/"type" with ref numbers to interact.',
+    'Control browser tabs: list/open/close/focus tabs, navigate to URLs, take DOM snapshots with numbered element refs, take screenshots, click or type on elements by ref, evaluate JavaScript, view console logs or network requests, and group/ungroup tabs (list/create/update tab groups). Use "snapshot" to understand page content, then "click"/"type" with ref numbers to interact.',
   schema: browserSchema,
   execute: args => executeBrowser(args as BrowserArgs),
   formatResult: (raw): ToolResult => {
