@@ -31,6 +31,10 @@ const browserSchema = Type.Object({
       Type.Literal('evaluate'),
       Type.Literal('console'),
       Type.Literal('network'),
+      Type.Literal('group_tabs'),
+      Type.Literal('ungroup_tabs'),
+      Type.Literal('list_tab_groups'),
+      Type.Literal('update_tab_group'),
     ],
     {
       description:
@@ -63,6 +67,42 @@ const browserSchema = Type.Object({
   ),
   limit: Type.Optional(
     Type.Number({ description: 'Max entries for "console" or "network" (default: 50)' }),
+  ),
+  tabIds: Type.Optional(
+    Type.Array(Type.Number(), {
+      description:
+        'Tab IDs to group or ungroup (for "group_tabs" / "ungroup_tabs"). If omitted, falls back to [tabId].',
+    }),
+  ),
+  groupId: Type.Optional(
+    Type.Number({
+      description:
+        'Existing tab group ID. For "group_tabs", adds tabs to this group. Required for "update_tab_group".',
+    }),
+  ),
+  title: Type.Optional(
+    Type.String({ description: 'Title for the tab group (for "group_tabs" / "update_tab_group")' }),
+  ),
+  color: Type.Optional(
+    Type.Union(
+      [
+        Type.Literal('grey'),
+        Type.Literal('blue'),
+        Type.Literal('red'),
+        Type.Literal('yellow'),
+        Type.Literal('green'),
+        Type.Literal('pink'),
+        Type.Literal('purple'),
+        Type.Literal('cyan'),
+        Type.Literal('orange'),
+      ],
+      {
+        description: 'Color for the tab group (for "group_tabs" / "update_tab_group")',
+      },
+    ),
+  ),
+  collapsed: Type.Optional(
+    Type.Boolean({ description: 'Whether the tab group is collapsed (for "update_tab_group")' }),
   ),
 });
 
@@ -776,9 +816,27 @@ const ensureTabActive = async (tabId: number): Promise<void> => {
 
 const handleTabs = async (): Promise<string> => {
   const tabs = await chrome.tabs.query({});
-  const lines = tabs.map(
-    t => `[${t.id}] ${t.active ? '(active) ' : ''}${t.title ?? 'Untitled'} — ${t.url ?? ''}`,
-  );
+  // Build a map of group ID → group info for annotation. Chrome: tabGroups API;
+  // may be unavailable in Firefox or if permission missing — fail silently.
+  const groupMap = new Map<number, chrome.tabGroups.TabGroup>();
+  try {
+    if (chrome.tabGroups?.query) {
+      const groups = await chrome.tabGroups.query({});
+      for (const g of groups) groupMap.set(g.id, g);
+    }
+  } catch {
+    // ignore — tab groups not supported on this browser
+  }
+  const lines = tabs.map(t => {
+    const base = `[${t.id}] ${t.active ? '(active) ' : ''}${t.title ?? 'Untitled'} — ${t.url ?? ''}`;
+    const gid = (t as chrome.tabs.Tab).groupId;
+    if (gid != null && gid !== -1) {
+      const g = groupMap.get(gid);
+      if (g) return `${base} [group: "${g.title ?? ''}" ${g.color}]`;
+      return `${base} [group: ${gid}]`;
+    }
+    return base;
+  });
   return `Open tabs (${tabs.length}):\n${lines.join('\n')}`;
 };
 
@@ -1166,6 +1224,90 @@ const handleNetwork = async (args: BrowserArgs): Promise<string> => {
 };
 
 // ---------------------------------------------------------------------------
+// Tab group handlers
+// ---------------------------------------------------------------------------
+
+const resolveTabIds = (args: BrowserArgs): number[] | null => {
+  if (args.tabIds && args.tabIds.length > 0) return args.tabIds;
+  if (args.tabId != null) return [args.tabId];
+  return null;
+};
+
+const handleGroupTabs = async (args: BrowserArgs): Promise<string> => {
+  const tabIds = resolveTabIds(args);
+  if (!tabIds) {
+    return 'Error: "tabIds" (or "tabId") is required for the "group_tabs" action.';
+  }
+  try {
+    const groupOptions: chrome.tabs.GroupOptions = { tabIds };
+    if (args.groupId != null) groupOptions.groupId = args.groupId;
+    const groupId = await chrome.tabs.group(groupOptions);
+    if (args.title != null || args.color != null) {
+      const updateProps: chrome.tabGroups.UpdateProperties = {};
+      if (args.title != null) updateProps.title = args.title;
+      if (args.color != null) updateProps.color = args.color;
+      await chrome.tabGroups.update(groupId, updateProps);
+    }
+    return `Grouped ${tabIds.length} tab(s) into group [${groupId}]${args.title ? ` "${args.title}"` : ''}${args.color ? ` (${args.color})` : ''}.`;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return `Error grouping tabs: ${msg}`;
+  }
+};
+
+const handleUngroupTabs = async (args: BrowserArgs): Promise<string> => {
+  const tabIds = resolveTabIds(args);
+  if (!tabIds) {
+    return 'Error: "tabIds" (or "tabId") is required for the "ungroup_tabs" action.';
+  }
+  try {
+    await chrome.tabs.ungroup(tabIds);
+    return `Ungrouped ${tabIds.length} tab(s).`;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return `Error ungrouping tabs: ${msg}`;
+  }
+};
+
+const handleListTabGroups = async (): Promise<string> => {
+  try {
+    const groups = await chrome.tabGroups.query({});
+    if (groups.length === 0) return 'No tab groups.';
+    const lines = groups.map(
+      g =>
+        `[${g.id}] "${g.title ?? ''}" — ${g.color}${g.collapsed ? ' (collapsed)' : ''}`,
+    );
+    return `Tab groups (${groups.length}):\n${lines.join('\n')}`;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return `Error listing tab groups: ${msg}`;
+  }
+};
+
+const handleUpdateTabGroup = async (args: BrowserArgs): Promise<string> => {
+  if (args.groupId == null) {
+    return 'Error: "groupId" is required for the "update_tab_group" action.';
+  }
+  const updateProps: chrome.tabGroups.UpdateProperties = {};
+  if (args.title != null) updateProps.title = args.title;
+  if (args.color != null) updateProps.color = args.color;
+  if (args.collapsed != null) updateProps.collapsed = args.collapsed;
+  if (Object.keys(updateProps).length === 0) {
+    return 'Error: at least one of "title", "color", or "collapsed" is required for the "update_tab_group" action.';
+  }
+  try {
+    const group = await chrome.tabGroups.update(args.groupId, updateProps);
+    if (!group) {
+      return `Updated tab group [${args.groupId}].`;
+    }
+    return `Updated tab group [${group.id}]: "${group.title ?? ''}" — ${group.color}${group.collapsed ? ' (collapsed)' : ''}.`;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return `Error updating tab group: ${msg}`;
+  }
+};
+
+// ---------------------------------------------------------------------------
 // Main executor
 // ---------------------------------------------------------------------------
 
@@ -1181,6 +1323,26 @@ const executeBrowser = async (args: BrowserArgs): Promise<string | ScreenshotRes
     (args as Record<string, unknown>).ref = Number(args.ref);
     if (Number.isNaN(args.ref)) (args as Record<string, unknown>).ref = undefined;
   }
+  if (args.groupId != null && typeof args.groupId !== 'number') {
+    (args as Record<string, unknown>).groupId = Number(args.groupId);
+    if (Number.isNaN(args.groupId)) (args as Record<string, unknown>).groupId = undefined;
+  }
+  if (Array.isArray(args.tabIds)) {
+    (args as Record<string, unknown>).tabIds = args.tabIds
+      .map(id => (typeof id === 'number' ? id : Number(id)))
+      .filter((id): id is number => typeof id === 'number' && !Number.isNaN(id));
+  }
+
+  const isTabGroupAction =
+    args.action === 'group_tabs' ||
+    args.action === 'ungroup_tabs' ||
+    args.action === 'list_tab_groups' ||
+    args.action === 'update_tab_group';
+
+  // Firefox: no chrome.tabGroups support — return a clear error for tab group actions
+  if (IS_FIREFOX && isTabGroupAction) {
+    return `Error: The "${args.action}" action is not supported on Firefox (chrome.tabGroups is Chrome-only).`;
+  }
 
   // Firefox: delegate to scripting-based implementation (no chrome.debugger)
   if (IS_FIREFOX) {
@@ -1188,7 +1350,10 @@ const executeBrowser = async (args: BrowserArgs): Promise<string | ScreenshotRes
   }
 
   // Visual indicator — highlight the tab while the tool is executing
-  const noHighlight = args.action === 'tabs' || args.action === 'close';
+  const noHighlight =
+    args.action === 'tabs' ||
+    args.action === 'close' ||
+    isTabGroupAction;
   let indicatorTabId: number | undefined = !noHighlight ? (args.tabId ?? undefined) : undefined;
 
   // Inject before action (when tabId is known upfront)
@@ -1225,6 +1390,14 @@ const executeBrowser = async (args: BrowserArgs): Promise<string | ScreenshotRes
         result = await handleConsole(args); break;
       case 'network':
         result = await handleNetwork(args); break;
+      case 'group_tabs':
+        result = await handleGroupTabs(args); break;
+      case 'ungroup_tabs':
+        result = await handleUngroupTabs(args); break;
+      case 'list_tab_groups':
+        result = await handleListTabGroups(); break;
+      case 'update_tab_group':
+        result = await handleUpdateTabGroup(args); break;
       default:
         result = `Error: Unknown action "${args.action}".`;
     }
@@ -1309,7 +1482,7 @@ const browserToolDef: ToolRegistration = {
   name: 'browser',
   label: 'Browser',
   description:
-    'Control browser tabs: list/open/close/focus tabs, navigate to URLs, take DOM snapshots with numbered element refs, take screenshots, click or type on elements by ref, evaluate JavaScript, and view console logs or network requests. Use "snapshot" to understand page content, then "click"/"type" with ref numbers to interact.',
+    'Control browser tabs: list/open/close/focus tabs, navigate to URLs, take DOM snapshots with numbered element refs, take screenshots, click or type on elements by ref, evaluate JavaScript, view console logs or network requests, and group/ungroup tabs (list/create/update tab groups). Use "snapshot" to understand page content, then "click"/"type" with ref numbers to interact.',
   schema: browserSchema,
   execute: args => executeBrowser(args as BrowserArgs),
   formatResult: (raw): ToolResult => {
