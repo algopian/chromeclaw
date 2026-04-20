@@ -13,3 +13,4 @@ export * from './lib/tool-registry.js';
 export * from './lib/pdf-extract.js';
 export * from './lib/slash-commands/index.js';
 export * from './lib/compaction-config.js';
+export * from './lib/network-message.js';

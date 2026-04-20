@@ -429,6 +429,9 @@
   "toast_scheduledTaskFired": {
     "message": "排程任務已觸發"
   },
+  "toast_heartbeatDelivered": {
+    "message": "心跳提醒"
+  },
   "toast_newTelegramMessage": {
     "message": "收到新的 Telegram 訊息"
   },

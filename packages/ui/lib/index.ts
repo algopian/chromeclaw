@@ -13,4 +13,5 @@ export { buildFileTree } from './build-file-tree';
 export type { FileTreeNode } from './build-file-tree';
 export * from './artifacts/index';
 export * from './utils';
+export * from './toast-utils';
 export * from './with-ui';

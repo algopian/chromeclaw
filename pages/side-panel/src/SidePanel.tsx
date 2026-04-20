@@ -27,6 +27,7 @@ import {
   ErrorDisplay,
   LoadingSpinner,
   useSubagentProgress,
+  toastIfVisible,
 } from '@extension/ui';
 import { LocaleProvider, t } from '@extension/i18n';
 import { nanoid } from 'nanoid';
@@ -37,9 +38,16 @@ import type {
   ChatMessage,
   ChatMessagePart,
   ChatModel,
+  NetworkStatusMessage,
   SessionUsage,
 } from '@extension/shared';
 import type { LocaleCode } from '@extension/i18n';
+
+const isNetworkStatusMessage = (m: unknown): m is NetworkStatusMessage =>
+  typeof m === 'object' &&
+  m !== null &&
+  (m as { type?: unknown }).type === 'NETWORK_STATUS' &&
+  ((m as { status?: unknown }).status === 'online' || (m as { status?: unknown }).status === 'offline');
 
 const SidePanel = () => {
   const [chatId, setChatId] = useState('');
@@ -249,35 +257,17 @@ const SidePanel = () => {
     return () => { unsub1(); unsub2(); };
   }, [loadModels]);
 
-  // Network error detection
+  // Network status — receive transition broadcasts from the background SW.
+  // The SW dedupes across pages and burst events so each real transition yields
+  // at most one toast per open page.
   useEffect(() => {
-    const handleOffline = () => {
-      toast.error(t('toast_offline'));
-      chrome.runtime
-        .sendMessage({
-          type: 'LOG_RELAY',
-          category: 'general',
-          level: 'warn',
-          message: '[SidePanel] network offline (offline event fired)',
-        })
-        .catch(() => {});
+    const handler = (message: unknown) => {
+      if (!isNetworkStatusMessage(message)) return;
+      if (message.status === 'offline') toastIfVisible(() => toast.error(t('toast_offline')));
+      else toastIfVisible(() => toast.success(t('toast_online')));
     };
-    const handleOnline = () => {
-      chrome.runtime
-        .sendMessage({
-          type: 'LOG_RELAY',
-          category: 'general',
-          level: 'debug',
-          message: '[SidePanel] network online (online event fired)',
-        })
-        .catch(() => {});
-    };
-    window.addEventListener('offline', handleOffline);
-    window.addEventListener('online', handleOnline);
-    return () => {
-      window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('online', handleOnline);
-    };
+    chrome.runtime.onMessage.addListener(handler);
+    return () => chrome.runtime.onMessage.removeListener(handler);
   }, []);
 
   const handleAgentChange = useCallback(
@@ -469,13 +459,15 @@ const SidePanel = () => {
   const activeSubagents = useSubagentProgress(chatId, {
     onCurrentChatComplete: reloadMessages,
     onOtherChatComplete: (targetChatId, task) => {
-      toast.info(t('toast_subagentFinished', String(task)), {
-        action: {
-          label: t('toast_view'),
-          onClick: () => loadAndSwitchToChat(targetChatId),
-        },
-        duration: 10000,
-      });
+      toastIfVisible(() =>
+        toast.info(t('toast_subagentFinished', String(task)), {
+          action: {
+            label: t('toast_view'),
+            onClick: () => loadAndSwitchToChat(targetChatId),
+          },
+          duration: 10000,
+        }),
+      );
     },
   });
 
@@ -492,13 +484,15 @@ const SidePanel = () => {
           if (prev === msgChatId) {
             reloadMessages(msgChatId);
           } else {
-            toast.info(taskName ? t('toast_scheduledTask', taskName) : t('toast_scheduledTaskFired'), {
-              action: {
-                label: t('toast_view'),
-                onClick: () => loadAndSwitchToChat(msgChatId),
-              },
-              duration: 10000,
-            });
+            toastIfVisible(() =>
+              toast.info(taskName ? t('toast_scheduledTask', taskName) : t('toast_scheduledTaskFired'), {
+                action: {
+                  label: t('toast_view'),
+                  onClick: () => loadAndSwitchToChat(msgChatId),
+                },
+                duration: 10000,
+              }),
+            );
           }
           return prev;
         });
@@ -511,13 +505,15 @@ const SidePanel = () => {
           if (prev === msgChatId) {
             reloadMessages(msgChatId);
           } else {
-            toast.info(t('toast_heartbeatDelivered') ?? 'Heartbeat alert', {
-              action: {
-                label: t('toast_view'),
-                onClick: () => loadAndSwitchToChat(msgChatId),
-              },
-              duration: 10000,
-            });
+            toastIfVisible(() =>
+              toast.info(t('toast_heartbeatDelivered') ?? 'Heartbeat alert', {
+                action: {
+                  label: t('toast_view'),
+                  onClick: () => loadAndSwitchToChat(msgChatId),
+                },
+                duration: 10000,
+              }),
+            );
           }
           return prev;
         });

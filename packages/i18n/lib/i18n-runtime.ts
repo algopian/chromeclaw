@@ -1,7 +1,7 @@
 import enMessages from '../locales/en/messages.json' with { type: 'json' };
 import type { MessageKeyType, I18nValueType } from './types.js';
 
-type LocaleCode = 'auto' | 'en' | 'zh_CN' | 'zh_TW' | 'ja' | 'es' | 'de' | 'fr' | 'nl' | 'ru' | 'pt';
+type LocaleCode = 'auto' | 'en' | 'zh_CN' | 'zh_TW' | 'ja' | 'ko' | 'es' | 'de' | 'fr' | 'nl' | 'ru' | 'pt';
 
 type MessagesMap = Record<string, I18nValueType>;
 
@@ -10,6 +10,7 @@ const LOCALE_LABELS: Record<Exclude<LocaleCode, 'auto'>, string> = {
   zh_CN: '\u7B80\u4F53\u4E2D\u6587',
   zh_TW: '\u7E41\u9AD4\u4E2D\u6587',
   ja: '\u65E5\u672C\u8A9E',
+  ko: '\uD55C\uAD6D\uC5B4',
   es: 'Espa\u00F1ol',
   de: 'Deutsch',
   fr: 'Fran\u00E7ais',
@@ -24,6 +25,7 @@ const LOCALE_OPTIONS: { value: LocaleCode; label: string }[] = [
   { value: 'zh_CN', label: '\u7B80\u4F53\u4E2D\u6587' },
   { value: 'zh_TW', label: '\u7E41\u9AD4\u4E2D\u6587' },
   { value: 'ja', label: '\u65E5\u672C\u8A9E' },
+  { value: 'ko', label: '\uD55C\uAD6D\uC5B4' },
   { value: 'es', label: 'Espa\u00F1ol' },
   { value: 'de', label: 'Deutsch' },
   { value: 'fr', label: 'Fran\u00E7ais' },
@@ -38,6 +40,7 @@ const localeLoaders: Record<string, () => Promise<MessagesMap>> = {
   zh_CN: () => import('../locales/zh_CN/messages.json', { with: { type: 'json' } }).then(m => m.default as unknown as MessagesMap),
   zh_TW: () => import('../locales/zh_TW/messages.json', { with: { type: 'json' } }).then(m => m.default as unknown as MessagesMap),
   ja: () => import('../locales/ja/messages.json', { with: { type: 'json' } }).then(m => m.default as unknown as MessagesMap),
+  ko: () => import('../locales/ko/messages.json', { with: { type: 'json' } }).then(m => m.default as unknown as MessagesMap),
   es: () => import('../locales/es/messages.json', { with: { type: 'json' } }).then(m => m.default as unknown as MessagesMap),
   de: () => import('../locales/de/messages.json', { with: { type: 'json' } }).then(m => m.default as unknown as MessagesMap),
   fr: () => import('../locales/fr/messages.json', { with: { type: 'json' } }).then(m => m.default as unknown as MessagesMap),

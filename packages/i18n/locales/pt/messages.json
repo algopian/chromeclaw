@@ -134,6 +134,7 @@
   "toast_subagentFinished": { "message": "Subagente concluiu: $TASK$", "placeholders": { "task": { "content": "$1" } } },
   "toast_scheduledTask": { "message": "Agendado: $TASK$", "placeholders": { "task": { "content": "$1" } } },
   "toast_scheduledTaskFired": { "message": "Tarefa agendada executada" },
+  "toast_heartbeatDelivered": { "message": "Alerta de heartbeat" },
   "toast_newTelegramMessage": { "message": "Nova mensagem do Telegram" },
   "toast_view": { "message": "Ver" },
   "settings_title": { "message": "Configurações" },

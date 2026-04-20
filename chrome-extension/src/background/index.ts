@@ -23,6 +23,7 @@ import {
   registerStreamPort,
 } from './logging/logger-buffer';
 import { runSessionJournal } from './memory/memory-journal';
+import { initNetworkStatus } from './network/network-status';
 import { setCronServiceRef } from './tools/scheduler';
 import { createKeepAliveManager } from './utils/keep-alive';
 import { initSidePanelBehavior } from '@extension/shared';
@@ -46,6 +47,12 @@ const cronService = new CronService({
 });
 
 setCronServiceRef(cronService);
+
+// ── Network status broadcaster ──────────────────
+// Single source of truth for online/offline transitions. Emits NETWORK_STATUS
+// messages to all open pages on real state changes, with internal dedup so
+// burst events (e.g. after waking from hibernate) collapse into one broadcast.
+initNetworkStatus();
 
 // ── Heartbeat subsystem ─────────────────────────
 const heartbeatLog = createLogger('heartbeat');

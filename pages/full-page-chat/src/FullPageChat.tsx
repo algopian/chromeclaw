@@ -30,6 +30,7 @@ import {
   LoadingSpinner,
   cn,
   useSubagentProgress,
+  toastIfVisible,
 } from '@extension/ui';
 import { LocaleProvider, t } from '@extension/i18n';
 import { FullPageSidebar } from './full-page-sidebar';
@@ -41,9 +42,16 @@ import type {
   ChatMessage,
   ChatMessagePart,
   ChatModel,
+  NetworkStatusMessage,
   SessionUsage,
 } from '@extension/shared';
 import type { LocaleCode } from '@extension/i18n';
+
+const isNetworkStatusMessage = (m: unknown): m is NetworkStatusMessage =>
+  typeof m === 'object' &&
+  m !== null &&
+  (m as { type?: unknown }).type === 'NETWORK_STATUS' &&
+  ((m as { status?: unknown }).status === 'online' || (m as { status?: unknown }).status === 'offline');
 
 const FullPageChat = () => {
   const [chatId, setChatId] = useState('');
@@ -259,35 +267,17 @@ const FullPageChat = () => {
     return () => { unsub1(); unsub2(); };
   }, [loadModels]);
 
-  // Network error detection
+  // Network status — receive transition broadcasts from the background SW.
+  // The SW dedupes across pages and burst events so each real transition yields
+  // at most one toast per open page.
   useEffect(() => {
-    const handleOffline = () => {
-      toast.error(t('toast_offline'));
-      chrome.runtime
-        .sendMessage({
-          type: 'LOG_RELAY',
-          category: 'general',
-          level: 'warn',
-          message: '[FullPageChat] network offline (offline event fired)',
-        })
-        .catch(() => {});
+    const handler = (message: unknown) => {
+      if (!isNetworkStatusMessage(message)) return;
+      if (message.status === 'offline') toastIfVisible(() => toast.error(t('toast_offline')));
+      else toastIfVisible(() => toast.success(t('toast_online')));
     };
-    const handleOnline = () => {
-      chrome.runtime
-        .sendMessage({
-          type: 'LOG_RELAY',
-          category: 'general',
-          level: 'debug',
-          message: '[FullPageChat] network online (online event fired)',
-        })
-        .catch(() => {});
-    };
-    window.addEventListener('offline', handleOffline);
-    window.addEventListener('online', handleOnline);
-    return () => {
-      window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('online', handleOnline);
-    };
+    chrome.runtime.onMessage.addListener(handler);
+    return () => chrome.runtime.onMessage.removeListener(handler);
   }, []);
 
   // Reload messages for a given chat (shared by cron and subagent handlers)
@@ -342,9 +332,11 @@ const FullPageChat = () => {
             reloadMessages(injectChatId);
           } else {
             const taskName = message.taskName as string | undefined;
-            toast.info(taskName ? t('toast_scheduledTask', taskName) : t('toast_scheduledTaskFired'), {
-              duration: 10000,
-            });
+            toastIfVisible(() =>
+              toast.info(taskName ? t('toast_scheduledTask', taskName) : t('toast_scheduledTaskFired'), {
+                duration: 10000,
+              }),
+            );
           }
           return prev;
         });
@@ -356,13 +348,15 @@ const FullPageChat = () => {
           if (prev === injectChatId) {
             reloadMessages(injectChatId);
           } else {
-            toast.info(t('toast_heartbeatDelivered') ?? 'Heartbeat alert', {
-              action: {
-                label: t('toast_view'),
-                onClick: () => handleOpenSession(injectChatId),
-              },
-              duration: 10000,
-            });
+            toastIfVisible(() =>
+              toast.info(t('toast_heartbeatDelivered') ?? 'Heartbeat alert', {
+                action: {
+                  label: t('toast_view'),
+                  onClick: () => handleOpenSession(injectChatId),
+                },
+                duration: 10000,
+              }),
+            );
           }
           return prev;
         });
@@ -381,7 +375,9 @@ const FullPageChat = () => {
   const activeSubagents = useSubagentProgress(chatId, {
     onCurrentChatComplete: reloadMessages,
     onOtherChatComplete: (_chatId, task) => {
-      toast.info(t('toast_subagentFinished', String(task)), { duration: 10000 });
+      toastIfVisible(() =>
+        toast.info(t('toast_subagentFinished', String(task)), { duration: 10000 }),
+      );
     },
   });
 

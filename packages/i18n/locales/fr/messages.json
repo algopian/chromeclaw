@@ -429,6 +429,9 @@
   "toast_scheduledTaskFired": {
     "message": "Tâche planifiée exécutée"
   },
+  "toast_heartbeatDelivered": {
+    "message": "Alerte heartbeat"
+  },
   "toast_newTelegramMessage": {
     "message": "Nouveau message Telegram"
   },

@@ -429,6 +429,9 @@
   "toast_scheduledTaskFired": {
     "message": "スケジュールタスクが実行されました"
   },
+  "toast_heartbeatDelivered": {
+    "message": "ハートビート通知"
+  },
   "toast_newTelegramMessage": {
     "message": "新しい Telegram メッセージ"
   },

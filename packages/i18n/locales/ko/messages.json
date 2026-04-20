@@ -1,0 +1,1444 @@
+{
+  "extensionDescription": {
+    "description": "Extension description",
+    "message": "ChromeClaw - 브라우저에서 사용하는 나만의 개인 AI 비서. 어떤 OS, 어떤 플랫폼에서도. 🦞"
+  },
+  "extensionName": {
+    "description": "Extension name",
+    "message": "ChromeClaw - 브라우저에서 사용하는 나만의 개인 AI 비서 🦞"
+  },
+  "extensionShortName": {
+    "description": "Short extension name for Firefox (max 50 chars)",
+    "message": "ChromeClaw - 브라우저 개인 AI 비서 🦞"
+  },
+  "displayErrorInfo": {
+    "message": "오류가 발생했습니다"
+  },
+  "displayErrorDescription": {
+    "message": "죄송합니다. 페이지를 불러오는 중 문제가 발생했습니다."
+  },
+  "displayErrorDetailsInfo": {
+    "message": "오류 세부 정보:"
+  },
+  "displayErrorUnknownErrorInfo": {
+    "message": "알 수 없는 오류"
+  },
+  "displayErrorReset": {
+    "message": "다시 실행"
+  },
+  "firstRun_welcome": {
+    "message": "ChromeClaw에 오신 것을 환영합니다"
+  },
+  "firstRun_addApiKey": {
+    "message": "API 키를 추가하여 채팅을 시작하세요"
+  },
+  "firstRun_apiKeyRequired": {
+    "message": "API 키가 필요합니다 (인증이 필요 없는 프록시의 경우 Base URL을 설정하세요)"
+  },
+  "firstRun_modelIdRequired": {
+    "message": "모델 ID가 필요합니다"
+  },
+  "firstRun_saveFailed": {
+    "message": "모델 저장에 실패했습니다"
+  },
+  "firstRun_restoreFailed": {
+    "message": "백업에서 에이전트를 복원하지 못했습니다"
+  },
+  "firstRun_provider": {
+    "message": "제공자"
+  },
+  "firstRun_apiKey": {
+    "message": "API 키"
+  },
+  "firstRun_apiKeyOptional": {
+    "message": "API 키 (프록시의 경우 선택사항)"
+  },
+  "firstRun_modelId": {
+    "message": "모델 ID"
+  },
+  "firstRun_baseUrl": {
+    "message": "Base URL (선택사항)"
+  },
+  "firstRun_baseUrlHint": {
+    "message": "OpenAI 호환 프록시용 (ollama, copilot-api 등)"
+  },
+  "firstRun_startChatting": {
+    "message": "채팅 시작하기"
+  },
+  "firstRun_stepModel": {
+    "message": "모델"
+  },
+  "firstRun_stepChannels": {
+    "message": "채널"
+  },
+  "firstRun_stepAgent": {
+    "message": "에이전트"
+  },
+  "firstRun_stepTools": {
+    "message": "도구"
+  },
+  "firstRun_stepPermissions": {
+    "message": "권한"
+  },
+  "firstRun_permissionsTitle": {
+    "message": "호스트 권한"
+  },
+  "firstRun_permissionsDescription": {
+    "message": "Firefox에서는 도구가 웹 페이지와 상호작용하려면 명시적인 권한이 필요합니다. AI 비서가 페이지 내용을 읽고 조작할 수 있도록 액세스를 허용해 주세요."
+  },
+  "firstRun_permissionsGranted": {
+    "message": "호스트 권한이 부여되었습니다 — 도구가 웹 페이지에 액세스할 수 있습니다."
+  },
+  "firstRun_permissionsGrant": {
+    "message": "권한 부여"
+  },
+  "firstRun_permissionsDenied": {
+    "message": "권한이 거부되었습니다. 웹 페이지와 상호작용하는 도구가 작동하지 않을 수 있습니다. 나중에 확장 프로그램의 권한 설정에서 부여할 수 있습니다."
+  },
+  "firstRun_step2Title": {
+    "message": "채널 연결"
+  },
+  "firstRun_step2Description": {
+    "message": "선택적으로 Telegram 봇을 연결하여 휴대전화에서 채팅할 수 있습니다."
+  },
+  "firstRun_step3Title": {
+    "message": "에이전트 맞춤 설정"
+  },
+  "firstRun_step3Description": {
+    "message": "AI 비서에게 이름과 성격을 부여하세요."
+  },
+  "firstRun_step4Title": {
+    "message": "도구 활성화"
+  },
+  "firstRun_step4Description": {
+    "message": "AI 비서가 사용할 도구를 선택하세요."
+  },
+  "firstRun_next": {
+    "message": "다음"
+  },
+  "firstRun_skip": {
+    "message": "건너뛰기"
+  },
+  "firstRun_back": {
+    "message": "뒤로"
+  },
+  "firstRun_skipSetup": {
+    "message": "설정 건너뛰기 \u2192"
+  },
+  "firstRun_getStarted": {
+    "message": "시작하기"
+  },
+  "firstRun_telegramBotToken": {
+    "message": "Telegram 봇 토큰"
+  },
+  "firstRun_telegramValidate": {
+    "message": "검증"
+  },
+  "firstRun_telegramValidated": {
+    "message": "토큰이 유효합니다"
+  },
+  "firstRun_telegramAllowedUsers": {
+    "message": "허용된 사용자 ID (쉼표로 구분)"
+  },
+  "firstRun_whatsappNote": {
+    "message": "WhatsApp은 나중에 설정 > 채널에서 연결할 수 있습니다 (QR 코드 스캔 필요)."
+  },
+  "firstRun_agentName": {
+    "message": "에이전트 이름"
+  },
+  "firstRun_agentEmoji": {
+    "message": "에이전트 이모지"
+  },
+  "firstRun_stepSkills": {
+    "message": "스킬"
+  },
+  "firstRun_step5Title": {
+    "message": "스킬 활성화"
+  },
+  "firstRun_step5Description": {
+    "message": "스킬은 비서의 기능을 확장하는 재사용 가능한 프롬프트 템플릿입니다."
+  },
+  "firstRun_noSkills": {
+    "message": "아직 사용 가능한 스킬이 없습니다. 나중에 설정에서 스킬을 추가할 수 있습니다."
+  },
+  "firstRun_advancedSetup": {
+    "message": "고급 설정"
+  },
+  "firstRun_defaultAgentName": {
+    "message": "메인 에이전트"
+  },
+  "firstRun_webProviderRequired": {
+    "message": "웹 제공자를 선택해 주세요"
+  },
+  "firstRun_webLoginRequired": {
+    "message": "계속하려면 웹 제공자에 로그인해야 합니다."
+  },
+  "firstRun_webProvider": {
+    "message": "웹 제공자"
+  },
+  "firstRun_webProviderHint": {
+    "message": "(브라우저 세션을 사용합니다 — API 키가 필요하지 않습니다)"
+  },
+  "firstRun_selectWebProvider": {
+    "message": "웹 제공자 선택"
+  },
+  "firstRun_webChecking": {
+    "message": "확인 중..."
+  },
+  "firstRun_webLoggedIn": {
+    "message": "로그인됨"
+  },
+  "firstRun_webNotLoggedIn": {
+    "message": "로그인을 클릭하여 상태를 확인하세요"
+  },
+  "firstRun_webLogout": {
+    "message": "로그아웃"
+  },
+  "firstRun_webWaiting": {
+    "message": "로그인 대기 중..."
+  },
+  "firstRun_webLogin": {
+    "message": "로그인"
+  },
+  "firstRun_webLoginInstruction": {
+    "message": "열린 페이지에서 로그인하세요. 세션이 자동으로 캡처됩니다."
+  },
+  "firstRun_optional": {
+    "message": "(선택사항)"
+  },
+  "firstRun_autoDetected": {
+    "message": "자동 감지됨"
+  },
+  "firstRun_autoDetectedHint": {
+    "message": "웹 제공자에서 자동 감지됨. 필요한 경우에만 재정의하세요."
+  },
+  "firstRun_tools": {
+    "message": "도구"
+  },
+  "chat_placeholder": {
+    "message": "무엇을 알고 싶으신가요?"
+  },
+  "chat_modelSelect": {
+    "message": "모델"
+  },
+  "chat_thinkLevelThinking": {
+    "message": "사고 모드"
+  },
+  "chat_thinkLevelThinkingDesc": {
+    "message": "복잡한 문제를 해결합니다"
+  },
+  "chat_thinkLevelFast": {
+    "message": "빠름"
+  },
+  "chat_thinkLevelFastDesc": {
+    "message": "빠르게 답변합니다"
+  },
+  "chat_fileSizeError": {
+    "message": "파일 \"$FILE_NAME$\"이(가) 10MB 제한을 초과합니다.",
+    "placeholders": {
+      "file_name": {
+        "content": "$1"
+      }
+    }
+  },
+  "chat_fileReadError": {
+    "message": "\"$FILE_NAME$\"을(를) 읽지 못했습니다.",
+    "placeholders": {
+      "file_name": {
+        "content": "$1"
+      }
+    }
+  },
+  "chat_maxFilesError": {
+    "message": "최대 $MAX_FILES$개의 파일만 허용됩니다.",
+    "placeholders": {
+      "max_files": {
+        "content": "$1"
+      }
+    }
+  },
+  "session_newSession": {
+    "message": "새 세션"
+  },
+  "session_rename": {
+    "message": "이름 변경"
+  },
+  "session_delete": {
+    "message": "삭제"
+  },
+  "session_searchPlaceholder": {
+    "message": "채팅 검색..."
+  },
+  "session_noMatching": {
+    "message": "일치하는 세션이 없습니다"
+  },
+  "session_noSessions": {
+    "message": "아직 세션이 없습니다"
+  },
+  "session_today": {
+    "message": "오늘"
+  },
+  "session_yesterday": {
+    "message": "어제"
+  },
+  "session_last7Days": {
+    "message": "최근 7일"
+  },
+  "session_last30Days": {
+    "message": "최근 30일"
+  },
+  "session_older": {
+    "message": "이전"
+  },
+  "session_deleteTitle": {
+    "message": "세션 삭제"
+  },
+  "session_deleteDescription": {
+    "message": "이 세션과 모든 메시지가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다."
+  },
+  "session_deleteAllTitle": {
+    "message": "모든 세션을 삭제하시겠습니까?"
+  },
+  "session_deleteAllDescription": {
+    "message": "모든 세션, 메시지 및 아티팩트가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다."
+  },
+  "common_cancel": {
+    "message": "취소"
+  },
+  "common_delete": {
+    "message": "삭제"
+  },
+  "common_deleteAll": {
+    "message": "모두 삭제"
+  },
+  "common_save": {
+    "message": "저장"
+  },
+  "common_saved": {
+    "message": "저장됨"
+  },
+  "common_confirm": {
+    "message": "확인"
+  },
+  "common_ok": {
+    "message": "확인"
+  },
+  "common_loading": {
+    "message": "로딩 중..."
+  },
+  "common_error": {
+    "message": "오류"
+  },
+  "common_on": {
+    "message": "켜기"
+  },
+  "common_off": {
+    "message": "끄기"
+  },
+  "common_enabled": {
+    "message": "활성화됨"
+  },
+  "common_disabled": {
+    "message": "비활성화됨"
+  },
+  "toolbar_elementary": {
+    "message": "초등학생"
+  },
+  "toolbar_middleSchool": {
+    "message": "중학생"
+  },
+  "toolbar_keepLevel": {
+    "message": "현재 수준 유지"
+  },
+  "toolbar_highSchool": {
+    "message": "고등학생"
+  },
+  "toolbar_college": {
+    "message": "대학생"
+  },
+  "toolbar_graduate": {
+    "message": "대학원생"
+  },
+  "toolbar_adjustReading": {
+    "message": "읽기 수준을 $LEVEL$ 수준으로 조정해 주세요.",
+    "placeholders": {
+      "level": {
+        "content": "$1"
+      }
+    }
+  },
+  "slash_notEnoughMessages": {
+    "message": "압축할 메시지가 충분하지 않습니다"
+  },
+  "slash_compacting": {
+    "message": "대화를 압축하는 중..."
+  },
+  "slash_noResponse": {
+    "message": "백그라운드에서 응답이 없습니다 (서비스 워커가 재시작되었을 수 있음)"
+  },
+  "slash_conversationSummary": {
+    "message": "[대화 요약]"
+  },
+  "slash_earlierCompacted": {
+    "message": "[이전 메시지 압축됨]"
+  },
+  "slash_compactSuccess": {
+    "message": "대화가 압축되었습니다"
+  },
+  "slash_compactFailed": {
+    "message": "압축에 실패했습니다"
+  },
+  "slash_conversationCleared": {
+    "message": "대화가 지워졌습니다"
+  },
+  "slash_copied": {
+    "message": "클립보드에 복사됨"
+  },
+  "slash_noAssistantMessage": {
+    "message": "복사할 비서 메시지가 없습니다"
+  },
+  "slash_invalidCopyArg": {
+    "message": "잘못된 인수 — /copy 또는 /copy N 을 사용하세요 (예: /copy 2)"
+  },
+  "slash_exported": {
+    "message": "대화를 내보냈습니다"
+  },
+  "slash_exportEmpty": {
+    "message": "내보낼 메시지가 없습니다"
+  },
+  "slash_availableCommands": {
+    "message": "사용 가능한 명령어:"
+  },
+  "toast_offline": {
+    "message": "ChromeClaw이(가) 오프라인 상태입니다. 네트워크 연결을 확인하세요."
+  },
+  "toast_online": {
+    "message": "ChromeClaw이(가) 다시 온라인 상태입니다."
+  },
+  "toast_allSessionsCleared": {
+    "message": "모든 세션이 지워졌습니다"
+  },
+  "toast_subagentFinished": {
+    "message": "서브에이전트 완료: $TASK$",
+    "placeholders": {
+      "task": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_scheduledTask": {
+    "message": "예약됨: $TASK$",
+    "placeholders": {
+      "task": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_scheduledTaskFired": {
+    "message": "예약된 작업이 실행되었습니다"
+  },
+  "toast_heartbeatDelivered": {
+    "message": "하트비트 알림"
+  },
+  "toast_newTelegramMessage": {
+    "message": "새로운 Telegram 메시지"
+  },
+  "toast_view": {
+    "message": "보기"
+  },
+  "settings_title": {
+    "message": "설정"
+  },
+  "settings_description": {
+    "message": "외관 및 환경설정 구성"
+  },
+  "settings_appearance": {
+    "message": "외관"
+  },
+  "settings_theme": {
+    "message": "테마"
+  },
+  "settings_themeSystem": {
+    "message": "시스템"
+  },
+  "settings_themeLight": {
+    "message": "라이트"
+  },
+  "settings_themeDark": {
+    "message": "다크"
+  },
+  "settings_language": {
+    "message": "언어"
+  },
+  "settings_languageAuto": {
+    "message": "자동 (브라우저 기본값)"
+  },
+  "model_title": {
+    "message": "모델 설정"
+  },
+  "model_description": {
+    "message": "채팅용 AI 모델 관리"
+  },
+  "model_customModels": {
+    "message": "사용자 지정 모델"
+  },
+  "model_addModel": {
+    "message": "모델 추가"
+  },
+  "model_editModel": {
+    "message": "모델 편집"
+  },
+  "model_noModels": {
+    "message": "구성된 사용자 지정 모델이 없습니다. 시작하려면 모델을 추가하세요."
+  },
+  "model_downloadModel": {
+    "message": "모델 다운로드"
+  },
+  "model_deleteCachedModel": {
+    "message": "캐시된 모델 삭제"
+  },
+  "model_deleteModel": {
+    "message": "모델을 삭제하시겠습니까?"
+  },
+  "model_deleteCache": {
+    "message": "캐시된 모델을 삭제하시겠습니까?"
+  },
+  "model_downloaded": {
+    "message": "다운로드됨"
+  },
+  "model_notDownloaded": {
+    "message": "다운로드되지 않음"
+  },
+  "model_localDescription": {
+    "message": "로컬 온디바이스 모델을 구성합니다. API 키가 필요하지 않습니다."
+  },
+  "model_remoteDescription": {
+    "message": "모델 제공자 및 연결 세부 정보를 구성합니다."
+  },
+  "model_name": {
+    "message": "이름"
+  },
+  "model_apiFormat": {
+    "message": "API 형식"
+  },
+  "model_autoDetect": {
+    "message": "자동 감지"
+  },
+  "model_chatCompletions": {
+    "message": "Chat Completions (/v1/chat/completions)"
+  },
+  "model_responses": {
+    "message": "Responses (/v1/responses)"
+  },
+  "model_codexResponses": {
+    "message": "Codex Responses (/v1/responses)"
+  },
+  "model_descriptionOptional": {
+    "message": "설명 (선택사항)"
+  },
+  "model_supportsTools": {
+    "message": "도구 지원"
+  },
+  "model_supportsReasoning": {
+    "message": "추론 지원"
+  },
+  "model_advanced": {
+    "message": "고급"
+  },
+  "model_toolTimeout": {
+    "message": "도구 타임아웃 (초)"
+  },
+  "model_toolTimeoutHint": {
+    "message": "도구 실행을 중지하기까지의 최대 시간 (기본값: 600초 / 10분)"
+  },
+  "model_contextWindow": {
+    "message": "컨텍스트 윈도우 (토큰)"
+  },
+  "model_contextWindowPlaceholder": {
+    "message": "모델 ID에서 자동 감지"
+  },
+  "model_contextWindowHint": {
+    "message": "압축에 사용되는 컨텍스트 윈도우 크기를 재정의합니다. 자동 감지하려면 비워 두세요."
+  },
+  "model_downloading": {
+    "message": "모델 다운로드 중..."
+  },
+  "model_downloadComplete": {
+    "message": "다운로드 완료"
+  },
+  "model_downloadFailed": {
+    "message": "다운로드 실패"
+  },
+  "model_testConnection": {
+    "message": "연결 테스트"
+  },
+  "model_connectionFailed": {
+    "message": "연결 실패"
+  },
+  "model_baseUrlNeeded": {
+    "message": "연결 테스트를 위해서는 Base URL이 필요합니다"
+  },
+  "model_nameRequired": {
+    "message": "이름이 필요합니다"
+  },
+  "model_providerRequired": {
+    "message": "제공자가 필요합니다"
+  },
+  "model_baseUrlInvalid": {
+    "message": "Base URL은 http:// 또는 https:// 로 시작해야 합니다"
+  },
+  "model_huggingFaceModelId": {
+    "message": "HuggingFace 모델 ID"
+  },
+  "skill_title": {
+    "message": "스킬"
+  },
+  "skill_description": {
+    "message": "스킬은 LLM이 read 도구를 통해 요청에 따라 읽을 수 있는 작업별 가이드를 제공합니다."
+  },
+  "skill_browserWarning": {
+    "message": "스킬은 Chrome 브라우저 환경에서 실행됩니다 — CLI 도구, Python 스크립트 및 기타 로컬 실행 파일은 지원되지 않습니다."
+  },
+  "skill_installedSkills": {
+    "message": "설치된 스킬"
+  },
+  "skill_importZip": {
+    "message": "Zip 가져오기"
+  },
+  "skill_newSkill": {
+    "message": "새 스킬"
+  },
+  "skill_loadingSkills": {
+    "message": "스킬을 불러오는 중…"
+  },
+  "skill_noSkills": {
+    "message": "설치된 스킬이 없습니다"
+  },
+  "skill_deleted": {
+    "message": "스킬이 삭제되었습니다"
+  },
+  "skill_importExists": {
+    "message": "$PATH$ 경로에 스킬이 이미 존재합니다. 먼저 삭제하거나 가져오기 이름을 변경하세요.",
+    "placeholders": {
+      "path": {
+        "content": "$1"
+      }
+    }
+  },
+  "skill_importedSkill": {
+    "message": "스킬을 가져왔습니다: $SKILL_NAME$",
+    "placeholders": {
+      "skill_name": {
+        "content": "$1"
+      }
+    }
+  },
+  "skill_importFailed": {
+    "message": "스킬 가져오기에 실패했습니다"
+  },
+  "skill_deleteConfirm": {
+    "message": "스킬 \"$SKILL_NAME$\"을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+    "placeholders": {
+      "skill_name": {
+        "content": "$1"
+      }
+    }
+  },
+  "sessionMgr_title": {
+    "message": "세션"
+  },
+  "sessionMgr_searchPlaceholder": {
+    "message": "세션 검색..."
+  },
+  "sessionMgr_noMatching": {
+    "message": "일치하는 세션이 없습니다."
+  },
+  "sessionMgr_noSessions": {
+    "message": "아직 세션이 없습니다."
+  },
+  "sessionMgr_clickToSelect": {
+    "message": "클릭하여 선택, 더블클릭하여 열기"
+  },
+  "sessionMgr_clickToSelectSidePanel": {
+    "message": "클릭하여 선택, 더블클릭하여 사이드 패널에서 열기"
+  },
+  "telegram_title": {
+    "message": "Telegram 봇"
+  },
+  "telegram_description": {
+    "message": "Telegram 봇을 연결하여 Telegram에서 AI 비서와 채팅할 수 있습니다."
+  },
+  "telegram_enableBot": {
+    "message": "Telegram 봇 활성화"
+  },
+  "telegram_botToken": {
+    "message": "봇 토큰"
+  },
+  "telegram_validate": {
+    "message": "검증"
+  },
+  "telegram_tokenValid": {
+    "message": "토큰이 유효합니다"
+  },
+  "telegram_invalidToken": {
+    "message": "유효하지 않은 토큰"
+  },
+  "telegram_allowedUserIds": {
+    "message": "허용된 사용자 ID"
+  },
+  "telegram_userIdsHint": {
+    "message": "이 Telegram 사용자 ID의 메시지만 처리됩니다. @userinfobot에서 ID를 확인할 수 있습니다. 숫자여야 합니다."
+  },
+  "telegram_noUsers": {
+    "message": "아직 허용된 사용자가 없습니다. 메시지 수신을 시작하려면 사용자 ID를 하나 이상 추가하세요."
+  },
+  "telegram_loadFailed": {
+    "message": "설정을 불러오지 못했습니다"
+  },
+  "telegram_validationFailed": {
+    "message": "검증 실패"
+  },
+  "telegram_saveFailed": {
+    "message": "저장 실패"
+  },
+  "telegram_toggleFailed": {
+    "message": "토글 실패"
+  },
+  "agents_newAgent": {
+    "message": "새 에이전트"
+  },
+  "agents_mainAgent": {
+    "message": "메인 에이전트"
+  },
+  "agents_deleteAgent": {
+    "message": "에이전트 삭제"
+  },
+  "agents_deleteAgentConfirm": {
+    "message": "이 에이전트와 모든 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+  },
+  "agents_overview": {
+    "message": "개요"
+  },
+  "agents_files": {
+    "message": "파일"
+  },
+  "agents_tools": {
+    "message": "도구"
+  },
+  "agents_skills": {
+    "message": "스킬"
+  },
+  "agents_workspaceFiles": {
+    "message": "워크스페이스 파일"
+  },
+  "agents_agentCreated": {
+    "message": "에이전트가 생성되었습니다"
+  },
+  "agents_agentDeleted": {
+    "message": "에이전트가 삭제되었습니다"
+  },
+  "agents_deleteAgentFailed": {
+    "message": "에이전트 삭제에 실패했습니다"
+  },
+  "agents_fileDeleted": {
+    "message": "파일이 삭제되었습니다"
+  },
+  "agents_fileUploaded": {
+    "message": "파일이 업로드되었습니다"
+  },
+  "agents_fileRenamed": {
+    "message": "파일 이름이 변경되었습니다"
+  },
+  "agents_cannotRenamePredefined": {
+    "message": "미리 정의된 파일이 포함된 폴더의 이름은 변경할 수 없습니다"
+  },
+  "agents_cannotDeletePredefined": {
+    "message": "미리 정의된 파일이 포함된 폴더는 삭제할 수 없습니다"
+  },
+  "agents_folderRenamed": {
+    "message": "폴더 이름이 변경되었습니다"
+  },
+  "agents_folderDeleted": {
+    "message": "폴더가 삭제되었습니다"
+  },
+  "agents_folderEmpty": {
+    "message": "폴더가 비어 있습니다"
+  },
+  "agents_fileSaved": {
+    "message": "파일이 저장되었습니다"
+  },
+  "agents_identity": {
+    "message": "신원"
+  },
+  "agents_identityHint": {
+    "message": "파일 탭의 IDENTITY.md 파일에서 이 값을 편집하세요."
+  },
+  "agents_notSet": {
+    "message": "(설정되지 않음)"
+  },
+  "agents_justNow": {
+    "message": "방금 전"
+  },
+  "agents_minutesAgo": {
+    "message": "$MINUTES$분 전",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_hoursAgo": {
+    "message": "$HOURS$시간 전",
+    "placeholders": {
+      "hours": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_daysAgo": {
+    "message": "$DAYS$일 전",
+    "placeholders": {
+      "days": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_monthsAgo": {
+    "message": "$MONTHS$개월 전",
+    "placeholders": {
+      "months": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_deleteFile": {
+    "message": "파일 삭제"
+  },
+  "agents_deleteFileConfirm": {
+    "message": "\"$FILE_NAME$\"을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+    "placeholders": {
+      "file_name": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_deleteFolder": {
+    "message": "폴더 삭제"
+  },
+  "agents_deleteFolderConfirm": {
+    "message": "폴더 \"$FOLDER_NAME$\"과(와) 그 안의 $FILE_COUNT$개 파일을 모두 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+    "placeholders": {
+      "folder_name": {
+        "content": "$1"
+      },
+      "file_count": {
+        "content": "$2"
+      }
+    }
+  },
+  "agents_renameFile": {
+    "message": "파일 이름 변경"
+  },
+  "agents_renameFolder": {
+    "message": "폴더 이름 변경"
+  },
+  "agents_newFile": {
+    "message": "새 파일"
+  },
+  "agents_newFolder": {
+    "message": "새 폴더"
+  },
+  "agents_newFolderName": {
+    "message": "새 폴더 이름"
+  },
+  "agents_upload": {
+    "message": "업로드"
+  },
+  "agents_edit": {
+    "message": "편집"
+  },
+  "agents_download": {
+    "message": "다운로드"
+  },
+  "agents_downloadFolderZip": {
+    "message": "폴더를 ZIP으로 다운로드"
+  },
+  "agents_refresh": {
+    "message": "새로고침"
+  },
+  "agents_importZip": {
+    "message": "ZIP 가져오기"
+  },
+  "agents_backupAgent": {
+    "message": "백업"
+  },
+  "agents_restoreAgent": {
+    "message": "복원"
+  },
+  "agents_restoreConfirm": {
+    "message": "에이전트 '$1'을(를) 백업 '$2'으로 덮어씁니다. 모든 워크스페이스 파일과 설정이 교체됩니다. 계속하시겠습니까?"
+  },
+  "agents_backupSuccess": {
+    "message": "에이전트가 성공적으로 백업되었습니다"
+  },
+  "agents_restoreSuccess": {
+    "message": "에이전트가 성공적으로 복원되었습니다"
+  },
+  "agents_restoreFailed": {
+    "message": "에이전트 복원에 실패했습니다"
+  },
+  "agents_backupFailed": {
+    "message": "에이전트 백업에 실패했습니다"
+  },
+  "agents_invalidBackup": {
+    "message": "유효하지 않은 백업 파일"
+  },
+  "optionsPage_title": {
+    "message": "ChromeClaw 설정"
+  },
+  "provider_openai": {
+    "message": "OpenAI"
+  },
+  "provider_anthropic": {
+    "message": "Anthropic"
+  },
+  "provider_google": {
+    "message": "Google"
+  },
+  "provider_openrouter": {
+    "message": "OpenRouter"
+  },
+  "provider_openaiCompatible": {
+    "message": "OpenAI 호환"
+  },
+  "provider_webgpu": {
+    "message": "WebGPU (온디바이스)"
+  },
+  "provider_web": {
+    "message": "웹 (브라우저 세션, 토큰 없음)"
+  },
+  "time_mAgo": {
+    "message": "$MINUTES$분 전",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "time_hAgo": {
+    "message": "$HOURS$시간 전",
+    "placeholders": {
+      "hours": {
+        "content": "$1"
+      }
+    }
+  },
+  "time_dAgo": {
+    "message": "$DAYS$일 전",
+    "placeholders": {
+      "days": {
+        "content": "$1"
+      }
+    }
+  },
+  "tabGroup_control": {
+    "message": "제어"
+  },
+  "tabGroup_agent": {
+    "message": "에이전트"
+  },
+  "tabGroup_settings": {
+    "message": "설정"
+  },
+  "tab_channels": {
+    "message": "채널"
+  },
+  "tab_cronJobs": {
+    "message": "크론 작업"
+  },
+  "tab_sessions": {
+    "message": "세션"
+  },
+  "tab_usage": {
+    "message": "사용량"
+  },
+  "tab_agents": {
+    "message": "에이전트"
+  },
+  "tab_tools": {
+    "message": "도구"
+  },
+  "tab_skills": {
+    "message": "스킬"
+  },
+  "tab_general": {
+    "message": "일반"
+  },
+  "tab_models": {
+    "message": "모델"
+  },
+  "tab_actions": {
+    "message": "액션"
+  },
+  "tab_logs": {
+    "message": "로그"
+  },
+  "tab_community": {
+    "message": "커뮤니티"
+  },
+  "firstRun_agentCreature": {
+    "message": "존재"
+  },
+  "firstRun_agentVibe": {
+    "message": "분위기"
+  },
+  "firstRun_agentStrengths": {
+    "message": "강점"
+  },
+  "firstRun_agentBoundaries": {
+    "message": "경계"
+  },
+  "firstRun_agentTemplate": {
+    "message": "페르소나 선택"
+  },
+  "agent_tpl_claw_creature": {
+    "message": "브라우저 상주 작업 에이전트"
+  },
+  "agent_tpl_claw_vibe": {
+    "message": "기지 있고 신중하며 능숙한"
+  },
+  "agent_tpl_claw_bestFor": {
+    "message": "일반 용도"
+  },
+  "agent_tpl_claw_strengths": {
+    "message": "균형 잡힌 판단력, 강력한 도구 활용, 실용적인 실행"
+  },
+  "agent_tpl_claw_boundaries": {
+    "message": "위험하거나 파괴적인 작업 전에 확인합니다"
+  },
+  "agent_tpl_sage_creature": {
+    "message": "사려 깊은 안내자"
+  },
+  "agent_tpl_sage_vibe": {
+    "message": "차분하고, 성찰적이며, 현명한"
+  },
+  "agent_tpl_sage_bestFor": {
+    "message": "의사결정 지원, 코칭, 트레이드오프 논의"
+  },
+  "agent_tpl_sage_strengths": {
+    "message": "좋은 질문, 균형 잡힌 프레이밍"
+  },
+  "agent_tpl_sage_boundaries": {
+    "message": "사용자의 자율성을 존중하며 설교하지 않습니다"
+  },
+  "agent_tpl_slate_creature": {
+    "message": "임베디드 시스템 고스트"
+  },
+  "agent_tpl_slate_vibe": {
+    "message": "직접적이고, 건조하며, 효율적인"
+  },
+  "agent_tpl_slate_bestFor": {
+    "message": "코딩, 구현, CLI 스타일 작업"
+  },
+  "agent_tpl_slate_strengths": {
+    "message": "최소한의 장황함, 범위 내 실행"
+  },
+  "agent_tpl_slate_boundaries": {
+    "message": "요청받지 않는 한 범위를 확장하지 않습니다"
+  },
+  "greeting_hello": {
+    "message": "안녕하세요!"
+  },
+  "greeting_help": {
+    "message": "오늘 무엇을 도와드릴까요?"
+  },
+  "community_title": {
+    "message": "커뮤니티"
+  },
+  "community_description": {
+    "message": "커뮤니티에 참여하여 피드백을 공유하고, 도움을 받고, 다른 사용자들과 아이디어를 논의하세요."
+  },
+  "community_discordTitle": {
+    "message": "Discord 서버"
+  },
+  "community_discordDescription": {
+    "message": "커뮤니티와 채팅하고, 버그를 보고하고, 기능을 요청하고, 다른 ChromeClaw 사용자로부터 도움을 받으세요."
+  },
+  "community_joinDiscord": {
+    "message": "Discord 참여"
+  },
+  "community_rateTitle": {
+    "message": "ChromeClaw 평가"
+  },
+  "community_rateDescription": {
+    "message": "ChromeClaw가 마음에 드시나요? Chrome 웹 스토어에 리뷰를 남겨 다른 사람들이 발견할 수 있도록 도와주세요."
+  },
+  "community_leaveReview": {
+    "message": "리뷰 남기기"
+  },
+  "whatsapp_title": {
+    "message": "WhatsApp"
+  },
+  "whatsapp_description": {
+    "message": "WhatsApp을 연결하여 휴대전화에서 AI 비서와 채팅하세요. WhatsApp Web 프로토콜을 사용하므로 외부 서버가 필요하지 않습니다."
+  },
+  "whatsapp_connection": {
+    "message": "연결"
+  },
+  "whatsapp_connect": {
+    "message": "연결"
+  },
+  "whatsapp_disconnect": {
+    "message": "연결 해제"
+  },
+  "whatsapp_disconnected": {
+    "message": "연결 해제됨"
+  },
+  "whatsapp_connecting": {
+    "message": "QR 스캔 대기 중..."
+  },
+  "whatsapp_connected": {
+    "message": "연결됨"
+  },
+  "whatsapp_reconnecting": {
+    "message": "재연결 중..."
+  },
+  "whatsapp_loggedOut": {
+    "message": "로그아웃됨"
+  },
+  "whatsapp_scanQr": {
+    "message": "WhatsApp으로 스캔"
+  },
+  "whatsapp_scanInstructions": {
+    "message": "휴대전화에서 WhatsApp 열기 → 설정 → 연결된 기기 → 기기 연결"
+  },
+  "whatsapp_connectedMsg": {
+    "message": "WhatsApp이 연결되어 메시지를 수신하고 있습니다"
+  },
+  "whatsapp_reconnectingMsg": {
+    "message": "WhatsApp에 재연결 중..."
+  },
+  "whatsapp_allowedNumbers": {
+    "message": "허용된 전화번호"
+  },
+  "whatsapp_numbersHint": {
+    "message": "이 전화번호의 메시지만 처리됩니다. 국가 코드를 포함하여 입력하세요 (예: +1234567890)."
+  },
+  "whatsapp_noNumbers": {
+    "message": "아직 허용된 번호가 없습니다. 메시지 수신을 시작하려면 최소 하나의 전화번호를 추가하세요."
+  },
+  "whatsapp_messageDirection": {
+    "message": "메시지 방향"
+  },
+  "whatsapp_directionHint": {
+    "message": "AI 비서가 처리할 메시지를 제어합니다."
+  },
+  "whatsapp_processMyMessages": {
+    "message": "내 메시지 처리"
+  },
+  "whatsapp_processOthers": {
+    "message": "다른 사람의 메시지 처리"
+  },
+  "whatsapp_connectionFailed": {
+    "message": "연결 실패"
+  },
+  "whatsapp_disconnectFailed": {
+    "message": "연결 해제 실패"
+  },
+  "whatsapp_saveFailed": {
+    "message": "저장 실패"
+  },
+  "whatsapp_loadFailed": {
+    "message": "설정을 불러오지 못했습니다"
+  },
+  "cron_title": {
+    "message": "크론 작업"
+  },
+  "cron_description": {
+    "message": "AI 에이전트가 생성한 자동화된 작업을 관리합니다"
+  },
+  "cron_active": {
+    "message": "활성"
+  },
+  "cron_stopped": {
+    "message": "중지됨"
+  },
+  "cron_noJobs": {
+    "message": "아직 크론 작업이 없습니다. AI에게 작업 예약을 요청하세요."
+  },
+  "cron_runHistory": {
+    "message": "실행 기록"
+  },
+  "cron_noRuns": {
+    "message": "아직 실행된 내역이 없습니다"
+  },
+  "cron_next": {
+    "message": "다음: $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "cron_last": {
+    "message": "마지막: $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "cron_duration": {
+    "message": "소요 시간: $DURATION$",
+    "placeholders": {
+      "duration": {
+        "content": "$1"
+      }
+    }
+  },
+  "cron_onceAt": {
+    "message": "$TIME$에 한 번",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "cron_every": {
+    "message": "$INTERVAL$마다",
+    "placeholders": {
+      "interval": {
+        "content": "$1"
+      }
+    }
+  },
+  "usage_title": {
+    "message": "사용량"
+  },
+  "usage_description": {
+    "message": "모든 세션의 토큰 사용량"
+  },
+  "usage_sessions": {
+    "message": "세션"
+  },
+  "usage_totalTokens": {
+    "message": "총 토큰"
+  },
+  "usage_input": {
+    "message": "입력"
+  },
+  "usage_output": {
+    "message": "출력"
+  },
+  "usage_average": {
+    "message": "평균: 세션당 $COUNT$ 토큰",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "usage_sessionsByUsage": {
+    "message": "사용량별 세션"
+  },
+  "usage_compacted": {
+    "message": "$COUNT$회 압축됨",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "usage_moreSessionsCount": {
+    "message": "...외 $COUNT$개 세션",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_title": {
+    "message": "추천 액션"
+  },
+  "actions_description": {
+    "message": "빈 채팅 화면에 표시되는 스타터 프롬프트를 맞춤 설정하세요 (최대 $MAX$개)",
+    "placeholders": {
+      "max": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_heading": {
+    "message": "액션"
+  },
+  "actions_resetDefaults": {
+    "message": "기본값으로 재설정"
+  },
+  "actions_addAction": {
+    "message": "액션 추가"
+  },
+  "actions_noActions": {
+    "message": "구성된 추천 액션이 없습니다. 하나 추가하거나 기본값으로 재설정하세요."
+  },
+  "actions_actionNumber": {
+    "message": "액션 $NUMBER$",
+    "placeholders": {
+      "number": {
+        "content": "$1"
+      }
+    }
+  },
+  "actions_moveUp": {
+    "message": "위로 이동"
+  },
+  "actions_moveDown": {
+    "message": "아래로 이동"
+  },
+  "actions_remove": {
+    "message": "제거"
+  },
+  "actions_labelPlaceholder": {
+    "message": "버튼 레이블 (채팅 화면에 표시됨)"
+  },
+  "actions_promptPlaceholder": {
+    "message": "클릭 시 AI에게 전송되는 전체 프롬프트"
+  },
+  "tool_title": {
+    "message": "도구 설정"
+  },
+  "tool_description": {
+    "message": "AI 도구 활성화 또는 비활성화"
+  },
+  "tool_searchProvider": {
+    "message": "검색 제공자"
+  },
+  "tool_selectProvider": {
+    "message": "제공자 선택"
+  },
+  "tool_apiKey": {
+    "message": "API 키"
+  },
+  "tool_searchEngine": {
+    "message": "검색 엔진"
+  },
+  "tool_selectEngine": {
+    "message": "엔진 선택"
+  },
+  "tool_noApiKey": {
+    "message": "API 키가 필요하지 않습니다 — 브라우저 자동화를 사용합니다"
+  },
+  "tool_subTopics": {
+    "message": "하위 주제"
+  },
+  "tool_iterationsPerTopic": {
+    "message": "주제당 반복 횟수"
+  },
+  "tool_sourcesPerSearch": {
+    "message": "검색당 소스 수"
+  },
+  "tool_timeout": {
+    "message": "타임아웃 (초)"
+  },
+  "tool_clientId": {
+    "message": "클라이언트 ID"
+  },
+  "tool_connectGoogle": {
+    "message": "Google 계정 연결"
+  },
+  "tool_connecting": {
+    "message": "연결 중..."
+  },
+  "tool_connectedAs": {
+    "message": "연결됨:"
+  },
+  "tool_disconnect": {
+    "message": "연결 해제"
+  },
+  "tool_failedToConnect": {
+    "message": "연결에 실패했습니다"
+  },
+  "tool_googleServices": {
+    "message": "Google 서비스"
+  },
+  "tool_enableGoogleHint": {
+    "message": "이 도구들을 활성화하려면 Google 계정을 연결하세요"
+  },
+  "tab_chat": {
+    "message": "채팅"
+  },
+  "log_title": {
+    "message": "로그"
+  },
+  "log_description": {
+    "message": "디버깅을 위한 확장 프로그램 로그를 봅니다. 로그는 메모리에 저장되며 확장 프로그램 재시작 시 지워집니다."
+  },
+  "log_enableLogging": {
+    "message": "로깅 활성화"
+  },
+  "log_minLevel": {
+    "message": "최소 수준:"
+  },
+  "log_allLevels": {
+    "message": "모든 수준"
+  },
+  "log_allCategories": {
+    "message": "모든 카테고리"
+  },
+  "log_searchPlaceholder": {
+    "message": "메시지 검색..."
+  },
+  "log_live": {
+    "message": "실시간"
+  },
+  "log_stop": {
+    "message": "중지"
+  },
+  "log_clear": {
+    "message": "지우기"
+  },
+  "log_noEntries": {
+    "message": "로그 항목이 없습니다"
+  },
+  "log_noMatch": {
+    "message": "필터와 일치하는 항목이 없습니다"
+  },
+  "log_copyEntry": {
+    "message": "항목 복사"
+  },
+  "log_exportText": {
+    "message": "텍스트 내보내기"
+  },
+  "log_exportJson": {
+    "message": "JSON 내보내기"
+  },
+  "log_copyAll": {
+    "message": "모두 복사"
+  },
+  "log_copiedCount": {
+    "message": "$COUNT$개 항목을 클립보드에 복사했습니다",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "log_entriesCount": {
+    "message": "$COUNT$개 항목",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "log_droppedCount": {
+    "message": "$COUNT$개 삭제됨",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "agents_title": {
+    "message": "에이전트"
+  }
+}
