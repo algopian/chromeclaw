@@ -30,6 +30,11 @@ Object.defineProperty(globalThis, 'chrome', {
       onRemoved: { addListener: vi.fn() },
       onUpdated: { addListener: vi.fn() },
     },
+    tabGroups: {
+      query: vi.fn(() => Promise.resolve([])),
+      update: vi.fn(() => Promise.resolve(undefined)),
+      get: vi.fn(() => Promise.resolve(undefined)),
+    },
     runtime: { lastError: undefined, sendMessage: vi.fn(() => Promise.resolve()) },
     alarms: {
       create: vi.fn(),
