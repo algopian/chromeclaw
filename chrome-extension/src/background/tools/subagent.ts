@@ -3,6 +3,7 @@
 // Non-blocking: executeSpawnSubagent returns immediately; the actual run fires in the background.
 
 import { resolveDefaultModel, runAgent } from '../agents/agent-setup';
+import { makeConvertToLlm } from '../agents/message-adapter';
 import { createLogger } from '../logging/logger-buffer';
 import { createKeepAliveManager } from '../utils/keep-alive';
 import { buildSystemPrompt, resolveToolPromptHints, resolveToolListings } from '@extension/shared';
@@ -256,6 +257,7 @@ const runSubagentBackground = async (
       prompt: args.task,
       tools: filteredTools,
       signal: run.abortController.signal,
+      convertToLlm: makeConvertToLlm(model),
       chatId,
       onToolCallEnd: tc => {
         log.trace('Subagent tool started', {

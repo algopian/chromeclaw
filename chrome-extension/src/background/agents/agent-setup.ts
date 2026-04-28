@@ -4,8 +4,10 @@
 // Also re-exports headless LLM helpers (dbModelToChatModel, resolveDefaultModel, runHeadlessLLM).
 
 import { Agent } from './agent';
+import { makeConvertToLlm } from './message-adapter';
 import { chatModelToPiModel } from './model-adapter';
 import { createStreamFn } from './stream-bridge';
+import { setProviderTokenLimit } from '../context/provider-limit-cache';
 import { hasOversizedToolResults, truncateToolResults } from '../context/tool-result-truncation';
 import { createTransformContext } from '../context/transform';
 import {
@@ -13,10 +15,16 @@ import {
   isCompactionFailureError,
   parseProviderTokenLimit,
 } from '../errors/error-classification';
-import { setProviderTokenLimit } from '../context/provider-limit-cache';
 import { createLogger } from '../logging/logger-buffer';
 import { getAgentTools, getToolConfig, getImplementedToolNames } from '../tools';
-import { buildSystemPrompt, buildWebSystemPrompt, buildLocalSystemPrompt, resolveToolPromptHints, resolveToolListings } from '@extension/shared';
+import { IS_FIREFOX } from '@extension/env';
+import {
+  buildSystemPrompt,
+  buildWebSystemPrompt,
+  buildLocalSystemPrompt,
+  resolveToolPromptHints,
+  resolveToolListings,
+} from '@extension/shared';
 import {
   customModelsStorage,
   selectedModelStorage,
@@ -29,9 +37,14 @@ import {
   updateSessionTokens,
 } from '@extension/storage';
 import { nanoid } from 'nanoid';
-import { IS_FIREFOX } from '@extension/env';
 import type { ErrorCategory } from '../errors/error-classification';
-import type { ChatModel, ChatMessagePart, ModelApi, ModelProvider, ThinkingLevel } from '@extension/shared';
+import type {
+  ChatModel,
+  ChatMessagePart,
+  ModelApi,
+  ModelProvider,
+  ThinkingLevel,
+} from '@extension/shared';
 import type { DbChatModel, DbChat } from '@extension/storage';
 import type { AgentEvent, AgentMessage } from '@mariozechner/pi-agent-core';
 import type { AssistantMessage, ImageContent, Message, TextContent } from '@mariozechner/pi-ai';
@@ -42,7 +55,12 @@ const DEFAULT_TIMEOUT_SECONDS = 600;
 const MAX_RETRY_ATTEMPTS = 3;
 
 /** Tools allowed for local models — keeps context small for limited-context on-device models. */
-const LOCAL_TOOL_ALLOWLIST = new Set(['web_search', 'web_fetch', 'create_document', 'memory_search']);
+const LOCAL_TOOL_ALLOWLIST = new Set([
+  'web_search',
+  'web_fetch',
+  'create_document',
+  'memory_search',
+]);
 
 // ── Shared runAgent lifecycle ────────────
 
@@ -444,9 +462,7 @@ export const runAgent = async (opts: RunAgentOpts): Promise<RunAgentResult> => {
   const streamFn = createStreamFn(model, { chatId, thinkingLevel });
   let tools =
     toolsOverride ??
-    (model.supportsTools !== false
-      ? await getAgentTools({ headless: headlessTools, chatId })
-      : []);
+    (model.supportsTools !== false ? await getAgentTools({ headless: headlessTools, chatId }) : []);
 
   // Local models have limited context — restrict to a small, high-value tool set
   // to avoid blowing the token budget with tool schemas.
@@ -633,8 +649,12 @@ export const buildHeadlessSystemPrompt = async (
     : toolConfig.enabledTools;
 
   const promptConfig = {
-    mode: isLocal ? 'minimal' as const : 'full' as const,
-    tools: resolveToolListings(effectiveEnabledTools, isLocal ? [] : agent?.customTools, availableTools),
+    mode: isLocal ? ('minimal' as const) : ('full' as const),
+    tools: resolveToolListings(
+      effectiveEnabledTools,
+      isLocal ? [] : agent?.customTools,
+      availableTools,
+    ),
     toolPromptHints: resolveToolPromptHints(
       effectiveEnabledTools,
       isLocal ? [] : agent?.customTools,
@@ -653,7 +673,7 @@ export const buildHeadlessSystemPrompt = async (
     runtimeMeta: {
       modelName: model.name,
       currentDate: new Date().toISOString().split('T')[0],
-      browser: IS_FIREFOX ? 'firefox' as const : 'chrome' as const,
+      browser: IS_FIREFOX ? ('firefox' as const) : ('chrome' as const),
     },
   };
 
@@ -724,6 +744,7 @@ export const runHeadlessLLM = async (opts: {
       prompt: opts.message,
       headlessTools: true,
       signal: opts.signal,
+      convertToLlm: makeConvertToLlm(model),
       transformContext,
       onProviderLimitDetected: setProviderLimit,
       chatId,

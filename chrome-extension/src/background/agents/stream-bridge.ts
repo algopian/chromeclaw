@@ -11,13 +11,13 @@ import { requestLocalGeneration } from '../local-llm-bridge';
 import { createLogger } from '../logging/logger-buffer';
 import { getToolStrategy } from '../web-providers/tool-strategy';
 import { requestWebGeneration } from '../web-providers/web-llm-bridge';
-import type { WebProviderToolStrategy } from '../web-providers/tool-strategy';
-import type { WebProviderId } from '../web-providers/types';
 import {
   streamSimple,
   completeSimple,
   createAssistantMessageEventStream,
 } from '@mariozechner/pi-ai';
+import type { WebProviderToolStrategy } from '../web-providers/tool-strategy';
+import type { WebProviderId } from '../web-providers/types';
 import type { ChatModel, ThinkingLevel } from '@extension/shared';
 import type { StreamFn } from '@mariozechner/pi-agent-core';
 import type {
@@ -46,7 +46,10 @@ const setAzureApiVersion = (version: string | undefined): void => {
 };
 
 const _originalFetch = globalThis.fetch;
-globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  let finalInput: RequestInfo | URL = input;
+  const finalInit = init;
+
   if (_azureApiVersion) {
     try {
       const urlStr =
@@ -55,15 +58,48 @@ globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
       if (url.hostname.endsWith('.openai.azure.com') && !url.searchParams.has('api-version')) {
         url.searchParams.set('api-version', _azureApiVersion);
         if (typeof input === 'string' || input instanceof URL) {
-          return _originalFetch(url.toString(), init);
+          finalInput = url.toString();
+        } else {
+          finalInput = new Request(url.toString(), input);
         }
-        return _originalFetch(new Request(url.toString(), input), init);
       }
     } catch {
       // URL parse failed, pass through
     }
   }
-  return _originalFetch(input, init);
+
+  const urlForLog =
+    typeof finalInput === 'string'
+      ? finalInput
+      : finalInput instanceof URL
+        ? finalInput.href
+        : finalInput.url;
+  const isChatCompletions =
+    typeof urlForLog === 'string' && urlForLog.includes('/chat/completions');
+
+  const response = await _originalFetch(finalInput, finalInit);
+
+  if (isChatCompletions && !response.ok) {
+    try {
+      const cloned = response.clone();
+      const body = await cloned.text();
+      const bodyStr =
+        typeof (init?.body ?? finalInit?.body) === 'string'
+          ? ((init?.body ?? finalInit?.body) as string)
+          : undefined;
+      bridgeLog.error('Chat completions HTTP error', {
+        url: urlForLog,
+        status: response.status,
+        statusText: response.statusText,
+        responseBody: body.slice(0, 4000),
+        requestBody: bodyStr?.slice(0, 8000),
+      });
+    } catch {
+      // ignore logging failure
+    }
+  }
+
+  return response;
 };
 
 /**
@@ -164,7 +200,10 @@ const createProviderErrorStream = (
  * For cloud providers, streamSimple() already returns AssistantMessageEventStream.
  * For local/web models, routes to the offscreen document or tab-context bridge.
  */
-export const createStreamFn = (modelConfig: ChatModel, opts?: { chatId?: string; thinkingLevel?: ThinkingLevel }): StreamFn => {
+export const createStreamFn = (
+  modelConfig: ChatModel,
+  opts?: { chatId?: string; thinkingLevel?: ThinkingLevel },
+): StreamFn => {
   const { chatId, thinkingLevel } = opts ?? {};
   if (modelConfig.provider === 'web') {
     const webStrategy = modelConfig.webProviderId

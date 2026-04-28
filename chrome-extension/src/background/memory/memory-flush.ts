@@ -8,6 +8,7 @@
  */
 
 import { runAgent } from '../agents/agent-setup';
+import { makeConvertToLlm } from '../agents/message-adapter';
 import { estimateMessageTokens, shouldRunMemoryFlush } from '../context/compaction';
 import { createLogger } from '../logging/logger-buffer';
 import { getChat, getMessagesByChatId, updateMemoryFlush } from '@extension/storage';
@@ -75,7 +76,8 @@ const runMemoryFlushIfNeeded = async (params: MemoryFlushParams): Promise<void> 
   // 4. Estimate tokens from current messages (DbChatMessage → ChatMessage cast:
   //    parts share the same shape at runtime, DB type is just less specific)
   const totalTokens = messages.reduce(
-    (sum, m) => sum + estimateMessageTokens(m as unknown as ChatMessage), 0,
+    (sum, m) => sum + estimateMessageTokens(m as unknown as ChatMessage),
+    0,
   );
 
   // 5. Check shouldRunMemoryFlush (threshold only — cycle guard already checked above)
@@ -105,9 +107,10 @@ const runMemoryFlushIfNeeded = async (params: MemoryFlushParams): Promise<void> 
       systemPrompt: flushSystemPrompt,
       prompt: flushPrompt,
       headlessTools: true, // uses write + memory_search tools, no scheduler/research
+      convertToLlm: makeConvertToLlm(modelConfig),
     });
 
-    // 7. Update memoryFlushCompactionCount 
+    // 7. Update memoryFlushCompactionCount
     //    If the flush turn itself triggered compaction, the count was already
     //    incremented by transformContext — re-read to get the current value.
     let memoryFlushCompactionCount = chatRecord?.compactionCount ?? 0;
