@@ -18,8 +18,8 @@ import { mainWorldFetch } from './content-fetch-main';
 import { installRelay } from './content-fetch-relay';
 import { getPlugin } from './plugin-registry';
 import { getWebProvider } from './registry';
-import { getSseStreamAdapter } from './sse-stream-adapter';
 import { createSseParser } from './sse-parser';
+import { getSseStreamAdapter } from './sse-stream-adapter';
 import {
   getToolStrategy,
   getConversationId,
@@ -188,6 +188,13 @@ export const requestWebGeneration = (opts: {
         bridgeLog.debug('Parsed tool_call', { requestId, id: event.id, name: event.name });
       } else if (event.type === 'tool_call_malformed') {
         bridgeLog.warn('Malformed tool_call', { requestId, rawText: event.rawText.slice(0, 300) });
+      } else if (event.type === 'hallucinated_tool_response') {
+        bridgeLog.debug('Stripped hallucinated tool_response', {
+          requestId,
+          id: event.id,
+          name: event.name,
+          bytesDropped: event.bytesDropped,
+        });
       }
       switch (event.type) {
         case 'text':
@@ -260,6 +267,9 @@ export const requestWebGeneration = (opts: {
             partial,
           });
           break;
+        case 'hallucinated_tool_response':
+          // Already logged above — no stream event; the parser already dropped the content.
+          break;
       }
     }
   };
@@ -313,7 +323,10 @@ export const requestWebGeneration = (opts: {
             const delta = cachedProvider.parseSseDelta(parsed);
             const output = adapter.processEvent({ parsed, delta });
             if (output) {
-              bridgeLog.trace('SSE delta', { requestId, delta: output.feedText.slice(0, 500) });
+              bridgeLog.trace('SSE pre-parser delta', {
+                requestId,
+                delta: output.feedText.slice(0, 500),
+              });
               emitParsedEvents(xmlParser.feed(output.feedText));
             }
           } catch (adapterErr) {
@@ -395,7 +408,8 @@ export const requestWebGeneration = (opts: {
           if (plugin?.hooks?.onStreamDone) {
             getWebCredential(cachedProviderId)
               .then(cred => {
-                if (cred) plugin.hooks!.onStreamDone!({ providerId: cachedProviderId, credential: cred });
+                if (cred)
+                  plugin.hooks!.onStreamDone!({ providerId: cachedProviderId, credential: cred });
               })
               .catch(() => {
                 /* ignore */

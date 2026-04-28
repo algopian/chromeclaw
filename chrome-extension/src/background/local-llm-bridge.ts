@@ -157,6 +157,14 @@ export const requestLocalGeneration = (opts: {
             partial,
           });
           break;
+        case 'hallucinated_tool_response':
+          bridgeLog.debug('Stripped hallucinated tool_response', {
+            requestId,
+            id: event.id,
+            name: event.name,
+            bytesDropped: event.bytesDropped,
+          });
+          break;
       }
     }
   };

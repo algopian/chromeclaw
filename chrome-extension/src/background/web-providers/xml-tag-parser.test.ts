@@ -796,7 +796,44 @@ describe('hallucinated tool_response suppression', () => {
     );
     expect(events).toEqual([
       { type: 'text', text: 'Hello' },
+      {
+        type: 'hallucinated_tool_response',
+        id: 't1',
+        name: 'web_fetch',
+        bytesDropped: '\nSan Francisco: +55°F\n'.length,
+      },
       { type: 'text', text: '\nGoodbye' },
+    ]);
+  });
+
+  it('emits hallucinated_tool_response with attrs and bytesDropped when split across chunks', () => {
+    const parser = createXmlTagParser();
+    const e1 = parser.feed('Before<tool_response id="x9" name="list">partial1');
+    const e2 = parser.feed('partial2');
+    const e3 = parser.feed('final</tool_response>After');
+    const all = [...e1, ...e2, ...e3];
+    const hallucinated = all.filter(e => e.type === 'hallucinated_tool_response');
+    expect(hallucinated).toHaveLength(1);
+    expect(hallucinated[0]).toEqual({
+      type: 'hallucinated_tool_response',
+      id: 'x9',
+      name: 'list',
+      bytesDropped: 'partial1partial2final'.length,
+    });
+  });
+
+  it('emits hallucinated_tool_response on flush when stream ends mid-discard', () => {
+    const parser = createXmlTagParser();
+    parser.feed('<tool_response id="u1" name="search">unclosed fabricated body');
+    const flushed = parser.flush();
+    const hallucinated = flushed.filter(e => e.type === 'hallucinated_tool_response');
+    expect(hallucinated).toEqual([
+      {
+        type: 'hallucinated_tool_response',
+        id: 'u1',
+        name: 'search',
+        bytesDropped: 'unclosed fabricated body'.length,
+      },
     ]);
   });
 

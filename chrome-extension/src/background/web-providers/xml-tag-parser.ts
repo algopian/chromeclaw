@@ -13,7 +13,8 @@ type ParsedEvent =
   | { type: 'thinking_delta'; text: string }
   | { type: 'thinking_end' }
   | { type: 'tool_call'; id: string; name: string; arguments: Record<string, unknown> }
-  | { type: 'tool_call_malformed'; rawText: string };
+  | { type: 'tool_call_malformed'; rawText: string }
+  | { type: 'hallucinated_tool_response'; id?: string; name?: string; bytesDropped: number };
 
 // Pre-compiled case-insensitive regexes for tag matching
 const THINK_OPEN_RE = /<think>/i;
@@ -39,6 +40,10 @@ const createXmlTagParser = (): {
   let toolCallBuffer = '';
   /** Tag-level attributes from `<tool_call id="..." name="...">`, if present. */
   let toolCallAttrs: { id?: string; name?: string } | undefined;
+  /** Tag-level attributes from hallucinated `<tool_response id="..." name="...">`, if present. */
+  let toolResponseAttrs: { id?: string; name?: string } | undefined;
+  /** Byte count of content dropped while in `tool_response` discard state. */
+  let toolResponseDroppedBytes = 0;
 
   const stripSpecialTokens = (text: string): string => text.replace(/<\|[^|]+\|>/g, '');
 
@@ -130,8 +135,7 @@ const createXmlTagParser = (): {
       if (state === 'text') {
         const thinkIdx = buffer.search(THINK_OPEN_RE);
         // Match both <tool_call> and <tool_call id="..." name="..."> (case-insensitive)
-        const toolMatch =
-          buffer.match(TOOL_CALL_OPEN_START_RE) ?? buffer.match(TOOL_CALL_OPEN_RE);
+        const toolMatch = buffer.match(TOOL_CALL_OPEN_START_RE) ?? buffer.match(TOOL_CALL_OPEN_RE);
         const toolIdx = toolMatch ? buffer.indexOf(toolMatch[0]) : -1;
         // Detect hallucinated <tool_response> tags — consume and discard them
         const responseMatch = buffer.match(TOOL_RESPONSE_OPEN_RE);
@@ -153,6 +157,8 @@ const createXmlTagParser = (): {
         }
         if (responseIdx === 0 && responseMatch) {
           // Enter discard state — skip everything until </tool_response>
+          toolResponseAttrs = parseToolCallAttributes(responseMatch[0]);
+          toolResponseDroppedBytes = 0;
           state = 'tool_response';
           buffer = buffer.slice(responseMatch[0].length);
           continue;
@@ -164,7 +170,8 @@ const createXmlTagParser = (): {
         // tag well past 30 chars, so we use a larger limit (200) when the buffer
         // looks like a plausible tool_call or tool_response tag that hasn't received its closing >.
         if (buffer.startsWith('<') && !toolMatch && !responseMatch) {
-          const limit = TOOL_CALL_PREFIX_RE.test(buffer) || /^<tool_response/i.test(buffer) ? 200 : 30;
+          const limit =
+            TOOL_CALL_PREFIX_RE.test(buffer) || /^<tool_response/i.test(buffer) ? 200 : 30;
           if (isPlausibleTagPrefix(buffer) && buffer.length < limit) {
             break;
           }
@@ -297,9 +304,19 @@ const createXmlTagParser = (): {
         // Discard everything until </tool_response> — this is hallucinated content
         const end = buffer.search(TOOL_RESPONSE_CLOSE_RE);
         if (end >= 0) {
+          toolResponseDroppedBytes += end;
+          events.push({
+            type: 'hallucinated_tool_response',
+            id: toolResponseAttrs?.id,
+            name: toolResponseAttrs?.name,
+            bytesDropped: toolResponseDroppedBytes,
+          });
           buffer = buffer.slice(end + 16); // len('</tool_response>') — always 16
+          toolResponseAttrs = undefined;
+          toolResponseDroppedBytes = 0;
           state = 'text';
         } else {
+          toolResponseDroppedBytes += buffer.length;
           buffer = ''; // discard and wait for more data
         }
       }
@@ -337,7 +354,16 @@ const createXmlTagParser = (): {
       state = 'text';
     } else if (state === 'tool_response') {
       // Discard any remaining hallucinated tool_response content
+      toolResponseDroppedBytes += buffer.length;
+      events.push({
+        type: 'hallucinated_tool_response',
+        id: toolResponseAttrs?.id,
+        name: toolResponseAttrs?.name,
+        bytesDropped: toolResponseDroppedBytes,
+      });
       buffer = '';
+      toolResponseAttrs = undefined;
+      toolResponseDroppedBytes = 0;
       state = 'text';
     } else if (buffer) {
       const cleaned = stripSpecialTokens(buffer);
