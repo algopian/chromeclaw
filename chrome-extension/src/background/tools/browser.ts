@@ -77,7 +77,7 @@ const browserSchema = Type.Object({
   groupId: Type.Optional(
     Type.Number({
       description:
-        'Existing tab group ID. For "group_tabs", adds tabs to this group. Required for "update_tab_group".',
+        'Existing tab group ID. For "open", adds the new tab to this group. For "group_tabs", adds tabs to this group. Required for "update_tab_group".',
     }),
   ),
   title: Type.Optional(
@@ -854,6 +854,18 @@ const handleOpen = async (args: BrowserArgs): Promise<string> => {
   const tab = await chrome.tabs.create({ url: args.url, active: args.active ?? false });
   // Store the new tab ID so the caller can use it (e.g. for indicator highlight)
   if (tab.id != null) (args as Record<string, unknown>).tabId = tab.id;
+
+  // Optionally add the new tab to an existing group
+  if (args.groupId != null && tab.id != null) {
+    try {
+      await chrome.tabs.group({ tabIds: [tab.id], groupId: args.groupId });
+      const group = await chrome.tabGroups.get(args.groupId);
+      return `Opened tab [${tab.id}]: ${tab.url ?? args.url} → added to group [${args.groupId}] "${group.title || '(untitled)'}"`;
+    } catch {
+      return `Opened tab [${tab.id}]: ${tab.url ?? args.url} (warning: failed to add to group ${args.groupId})`;
+    }
+  }
+
   return `Opened tab [${tab.id}]: ${tab.url ?? args.url}`;
 };
 
