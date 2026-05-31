@@ -51,7 +51,7 @@ const waitForTabLoad = async (tabId: number, timeoutMs = NAVIGATE_TIMEOUT_MS): P
 // ---------------------------------------------------------------------------
 
 const handleTabs = async (): Promise<string> => {
-  const tabs = await chrome.tabs.query({});
+  const tabs = await chrome.tabs.query({ lastFocusedWindow: true });
   const lines = tabs.map(
     t => `[${t.id}] ${t.active ? '(active) ' : ''}${t.title ?? 'Untitled'} — ${t.url ?? ''}`,
   );

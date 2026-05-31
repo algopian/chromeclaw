@@ -44,6 +44,22 @@ const mockTabsGet = vi.fn<(tabId: number) => Promise<chrome.tabs.Tab>>(tabId =>
 );
 
 const mockWindowsUpdate = vi.fn(() => Promise.resolve());
+const mockWindowsGetLastFocused = vi.fn<() => Promise<chrome.windows.Window>>(() =>
+  Promise.resolve({ id: 1 } as chrome.windows.Window),
+);
+
+const mockTabsGroup = vi.fn<(opts: chrome.tabs.GroupOptions) => Promise<number>>(() =>
+  Promise.resolve(100),
+);
+const mockTabsUngroup = vi.fn<(tabIds: number | number[]) => Promise<void>>(() =>
+  Promise.resolve(),
+);
+const mockTabGroupsQuery = vi.fn<() => Promise<chrome.tabGroups.TabGroup[]>>(() =>
+  Promise.resolve([]),
+);
+const mockTabGroupsUpdate = vi.fn<() => Promise<chrome.tabGroups.TabGroup>>(() =>
+  Promise.resolve({ id: 100 } as chrome.tabGroups.TabGroup),
+);
 
 const mockScriptingExecuteScript = vi.fn((_injection?: unknown) =>
   Promise.resolve([{ result: 'Hello world page text' }]),
@@ -85,6 +101,8 @@ Object.defineProperty(globalThis, 'chrome', {
       update: mockTabsUpdate,
       remove: mockTabsRemove,
       get: mockTabsGet,
+      group: mockTabsGroup,
+      ungroup: mockTabsUngroup,
       onRemoved: {
         addListener: (fn: (tabId: number) => void) => {
           tabsOnRemovedListeners.push(fn);
@@ -102,6 +120,11 @@ Object.defineProperty(globalThis, 'chrome', {
     },
     windows: {
       update: mockWindowsUpdate,
+      getLastFocused: mockWindowsGetLastFocused,
+    },
+    tabGroups: {
+      query: mockTabGroupsQuery,
+      update: mockTabGroupsUpdate,
     },
     scripting: {
       executeScript: mockScriptingExecuteScript,
@@ -2930,3 +2953,87 @@ describe('browserToolDef.formatResult', () => {
     expect(result.content[0].text).toBe('Open tabs (2):\n[1] Tab One');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cross-window guard for group_tabs / ungroup_tabs / list_tab_groups
+// ---------------------------------------------------------------------------
+describe('cross-window tab-group guard', () => {
+  // Focused window is window 1. Tabs 10/11 live in it; 20/21 live in window 2.
+  const tabWindowMap: Record<number, number> = { 10: 1, 11: 1, 20: 2, 21: 2 };
+
+  beforeEach(() => {
+    mockWindowsGetLastFocused.mockResolvedValue({ id: 1 } as chrome.windows.Window);
+    // Focused-window resolution via active tab in the last-focused window.
+    mockTabsQuery.mockResolvedValue([
+      { id: 10, title: 'A', url: 'https://a.com', active: true, windowId: 1 } as chrome.tabs.Tab,
+    ]);
+    mockTabsGet.mockImplementation((tabId: number) =>
+      Promise.resolve({
+        id: tabId,
+        title: 'T',
+        url: 'https://t.com',
+        windowId: tabWindowMap[tabId] ?? 1,
+      } as chrome.tabs.Tab),
+    );
+  });
+
+  it('group_tabs only groups tabs in the focused window and skips cross-window tabs', async () => {
+    const result = await mod.executeBrowser({
+      action: 'group_tabs',
+      tabIds: [10, 11, 20, 21],
+    } as BrowserArgs);
+
+    expect(mockTabsGroup).toHaveBeenCalledTimes(1);
+    expect(mockTabsGroup).toHaveBeenCalledWith({ tabIds: [10, 11] });
+    expect(result).toContain('Grouped 2 tab(s)');
+    expect(result).toContain('Skipped 2 tab(s) in other windows: 20, 21');
+  });
+
+  it('group_tabs errors when no requested tab is in the focused window', async () => {
+    const result = await mod.executeBrowser({
+      action: 'group_tabs',
+      tabIds: [20, 21],
+    } as BrowserArgs);
+
+    expect(mockTabsGroup).not.toHaveBeenCalled();
+    expect(result).toContain('none of the requested tab(s) are in the current window');
+    expect(result).toContain('skipped 2 tab(s) in other windows: 20, 21');
+  });
+
+  it('ungroup_tabs only ungroups tabs in the focused window', async () => {
+    const result = await mod.executeBrowser({
+      action: 'ungroup_tabs',
+      tabIds: [10, 20],
+    } as BrowserArgs);
+
+    expect(mockTabsUngroup).toHaveBeenCalledTimes(1);
+    expect(mockTabsUngroup).toHaveBeenCalledWith([10]);
+    expect(result).toContain('Ungrouped 1 tab(s)');
+    expect(result).toContain('Skipped 1 tab(s) in other windows: 20');
+  });
+
+  it('falls back to windows.getLastFocused when no active tab is found', async () => {
+    mockTabsQuery.mockResolvedValue([]);
+    mockWindowsGetLastFocused.mockResolvedValue({ id: 1 } as chrome.windows.Window);
+
+    const result = await mod.executeBrowser({
+      action: 'group_tabs',
+      tabIds: [10, 20],
+    } as BrowserArgs);
+
+    expect(mockWindowsGetLastFocused).toHaveBeenCalled();
+    expect(mockTabsGroup).toHaveBeenCalledWith({ tabIds: [10] });
+    expect(result).toContain('Skipped 1 tab(s) in other windows: 20');
+  });
+
+  it('list_tab_groups scopes the query to the focused window', async () => {
+    mockTabGroupsQuery.mockResolvedValue([
+      { id: 100, title: 'G', color: 'blue', collapsed: false } as chrome.tabGroups.TabGroup,
+    ]);
+
+    await mod.executeBrowser({ action: 'list_tab_groups' } as BrowserArgs);
+
+    expect(mockTabGroupsQuery).toHaveBeenCalledWith({ windowId: 1 });
+  });
+});
+

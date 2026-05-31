@@ -824,7 +824,10 @@ const ensureTabActive = async (tabId: number): Promise<void> => {
 };
 
 const handleTabs = async (): Promise<string> => {
-  const tabs = await chrome.tabs.query({});
+  // Scope discovery to the user's currently focused window only. The agent
+  // attaches the debugger per tabId returned here, so limiting the listing to
+  // the focused window prevents cross-window debugger attachment.
+  const tabs = await chrome.tabs.query({ lastFocusedWindow: true });
   // Build a map of group ID → group info for annotation. Chrome: tabGroups API;
   // may be unavailable in Firefox or if permission missing — fail silently.
   const groupMap = new Map<number, chrome.tabGroups.TabGroup>();
@@ -1273,10 +1276,77 @@ const resolveTabIds = (args: BrowserArgs): number[] | null => {
   return null;
 };
 
+// Resolve the windowId of the user's currently focused normal browser window.
+// Primary path uses the active tab of the last-focused window. When focus is
+// ambiguous (DevTools window, popup, minimized, no active tab), it falls back to
+// chrome.windows.getLastFocused so the cross-window guard stays armed instead of
+// silently disabling. Returns null only if both paths fail.
+const getFocusedWindowId = async (): Promise<number | null> => {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    if (tab?.windowId != null) return tab.windowId;
+  } catch {
+    // fall through to the window-based fallback
+  }
+  try {
+    const win = await chrome.windows.getLastFocused({ windowTypes: ['normal'] });
+    return win?.id ?? null;
+  } catch {
+    return null;
+  }
+};
+
+// Partition the requested tabIds into those belonging to the focused window and
+// those in other windows. chrome.tabs.group() physically moves cross-window tabs
+// into a single window as a side effect, so we filter them out to keep the user's
+// other windows intact. If the focused window cannot be resolved, no filtering is
+// applied (returns all as in-window) to avoid breaking single-window usage.
+const partitionByFocusedWindow = async (
+  tabIds: number[],
+): Promise<{ inWindow: number[]; crossWindow: number[] }> => {
+  const focusedWindowId = await getFocusedWindowId();
+  if (focusedWindowId == null) return { inWindow: tabIds, crossWindow: [] };
+  const inWindow: number[] = [];
+  const crossWindow: number[] = [];
+  await Promise.all(
+    tabIds.map(async id => {
+      try {
+        const tab = await chrome.tabs.get(id);
+        if (tab.windowId === focusedWindowId) inWindow.push(id);
+        else crossWindow.push(id);
+      } catch {
+        // Tab no longer exists — drop it (neither in-window nor actionable).
+      }
+    }),
+  );
+  return { inWindow, crossWindow };
+};
+
+// Trailing note appended to a success message listing tabs skipped because they
+// live in other windows. Empty string when nothing was skipped.
+const formatSkipped = (crossWindow: number[]): string =>
+  crossWindow.length > 0
+    ? ` Skipped ${crossWindow.length} tab(s) in other windows: ${crossWindow.join(', ')}.`
+    : '';
+
+// Error returned when none of the requested tabs are in the focused window.
+const noTabsInWindowError = (crossWindow: number[]): string =>
+  `Error: none of the requested tab(s) are in the current window${
+    crossWindow.length > 0
+      ? ` (skipped ${crossWindow.length} tab(s) in other windows: ${crossWindow.join(', ')})`
+      : ''
+  }.`;
+
 const handleGroupTabs = async (args: BrowserArgs): Promise<string> => {
-  const tabIds = resolveTabIds(args);
-  if (!tabIds) {
+  const requestedTabIds = resolveTabIds(args);
+  if (!requestedTabIds) {
     return 'Error: "tabIds" (or "tabId") is required for the "group_tabs" action.';
+  }
+  // chrome.tabs.group() moves cross-window tabs into one window as a side effect.
+  // Filter to the focused window so other windows' tabs are never pulled in.
+  const { inWindow: tabIds, crossWindow } = await partitionByFocusedWindow(requestedTabIds);
+  if (tabIds.length === 0) {
+    return noTabsInWindowError(crossWindow);
   }
   try {
     const groupOptions: chrome.tabs.GroupOptions = { tabIds };
@@ -1288,7 +1358,7 @@ const handleGroupTabs = async (args: BrowserArgs): Promise<string> => {
       if (args.color != null) updateProps.color = args.color;
       await chrome.tabGroups.update(groupId, updateProps);
     }
-    return `Grouped ${tabIds.length} tab(s) into group [${groupId}]${args.title ? ` "${args.title}"` : ''}${args.color ? ` (${args.color})` : ''}.`;
+    return `Grouped ${tabIds.length} tab(s) into group [${groupId}]${args.title ? ` "${args.title}"` : ''}${args.color ? ` (${args.color})` : ''}.${formatSkipped(crossWindow)}`;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return `Error grouping tabs: ${msg}`;
@@ -1296,13 +1366,21 @@ const handleGroupTabs = async (args: BrowserArgs): Promise<string> => {
 };
 
 const handleUngroupTabs = async (args: BrowserArgs): Promise<string> => {
-  const tabIds = resolveTabIds(args);
-  if (!tabIds) {
+  const requestedTabIds = resolveTabIds(args);
+  if (!requestedTabIds) {
     return 'Error: "tabIds" (or "tabId") is required for the "ungroup_tabs" action.';
+  }
+  // Unlike group(), ungroup() does NOT move tabs across windows, so there is no
+  // side-effect to prevent here. We still scope to the focused window as an
+  // intentional policy: the agent should only manipulate the user's current
+  // window and never reach into groups in other windows.
+  const { inWindow: tabIds, crossWindow } = await partitionByFocusedWindow(requestedTabIds);
+  if (tabIds.length === 0) {
+    return noTabsInWindowError(crossWindow);
   }
   try {
     await chrome.tabs.ungroup(tabIds);
-    return `Ungrouped ${tabIds.length} tab(s).`;
+    return `Ungrouped ${tabIds.length} tab(s).${formatSkipped(crossWindow)}`;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return `Error ungrouping tabs: ${msg}`;
@@ -1311,7 +1389,12 @@ const handleUngroupTabs = async (args: BrowserArgs): Promise<string> => {
 
 const handleListTabGroups = async (): Promise<string> => {
   try {
-    const groups = await chrome.tabGroups.query({});
+    // Scope to the focused window so the agent cannot obtain groupIds from other
+    // windows (which it could otherwise feed back into group_tabs).
+    const focusedWindowId = await getFocusedWindowId();
+    const query: chrome.tabGroups.QueryInfo =
+      focusedWindowId != null ? { windowId: focusedWindowId } : {};
+    const groups = await chrome.tabGroups.query(query);
     if (groups.length === 0) return 'No tab groups.';
     const lines = groups.map(
       g => `[${g.id}] "${g.title ?? ''}" — ${g.color}${g.collapsed ? ' (collapsed)' : ''}`,
