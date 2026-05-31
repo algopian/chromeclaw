@@ -9,6 +9,7 @@ import {
   SelectValue,
   Textarea,
 } from './ui';
+import { useInputHistory } from '../hooks';
 import { cn } from '../utils';
 import { useT } from '@extension/i18n';
 import { SendIcon, SquareIcon } from 'lucide-react';
@@ -69,6 +70,8 @@ const ChatInput = ({
   const [slashSelectedIndex, setSlashSelectedIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const history = useInputHistory();
 
   const slashCommands = useMemo(() => getSlashCommands(), []);
 
@@ -191,6 +194,7 @@ const ChatInput = ({
     }
     const trimmed = input.trim();
     if (!trimmed && attachments.length === 0) return;
+    if (trimmed) history.record(trimmed);
     onSubmit(trimmed, attachments.length > 0 ? attachments : undefined);
     setAttachments([]);
   };
@@ -199,6 +203,20 @@ const ChatInput = ({
     (cmd: SlashCommandDef) => {
       setInput(`/${cmd.name}`);
       textareaRef.current?.focus();
+    },
+    [setInput],
+  );
+
+  const applyHistoryValue = useCallback(
+    (value: string) => {
+      setInput(value);
+      // Move the caret to the end after the value updates.
+      requestAnimationFrame(() => {
+        const el = textareaRef.current;
+        if (el) {
+          el.selectionStart = el.selectionEnd = el.value.length;
+        }
+      });
     },
     [setInput],
   );
@@ -231,10 +249,37 @@ const ChatInput = ({
         return;
       }
     }
+    // History navigation (only when the slash menu is closed). ArrowUp recalls
+    // older entries from the top line; ArrowDown recalls newer entries from the
+    // bottom line, so multi-line editing is not hijacked.
+    if (!showSlashMenu && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      const el = e.currentTarget;
+      const caretAtStart = el.selectionStart === 0 && el.selectionEnd === 0;
+      const caretAtEnd =
+        el.selectionStart === el.value.length && el.selectionEnd === el.value.length;
+      if (e.key === 'ArrowUp' && (caretAtStart || history.isNavigating())) {
+        const value = history.previous();
+        if (value !== null) {
+          e.preventDefault();
+          applyHistoryValue(value);
+          return;
+        }
+      }
+      if (e.key === 'ArrowDown' && (caretAtEnd || history.isNavigating())) {
+        const value = history.next();
+        if (value !== null) {
+          e.preventDefault();
+          applyHistoryValue(value);
+          return;
+        }
+      }
+    }
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
-      if (!isStreaming && (input.trim() || attachments.length > 0) && !isUploading) {
-        onSubmit(input.trim(), attachments.length > 0 ? attachments : undefined);
+      const trimmed = input.trim();
+      if (!isStreaming && (trimmed || attachments.length > 0) && !isUploading) {
+        if (trimmed) history.record(trimmed);
+        onSubmit(trimmed, attachments.length > 0 ? attachments : undefined);
         setAttachments([]);
       }
     }
@@ -302,7 +347,10 @@ const ChatInput = ({
             'outline-hidden w-full resize-none rounded-none border-none bg-transparent p-3 shadow-none ring-0',
             'focus-visible:ring-0',
           )}
-          onChange={e => setInput(e.target.value)}
+          onChange={e => {
+            history.resetCursor();
+            setInput(e.target.value);
+          }}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           placeholder={t('chat_placeholder')}

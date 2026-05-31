@@ -7,6 +7,7 @@ This is the agent's entry point. Read this first on every invocation.
 | Phase | Status | Todo File | Requirement File | Tasks | Done |
 |-------|--------|-----------|------------------|-------|------|
 | 5 | ACTIVE | todo/active/phase-05-tab-grouping.md | — | 11 | 0 |
+| 6 | ACTIVE | todo/active/phase-06-input-history.md | requirements/r19-input-history.md | 4 | 0 |
 
 ## Completed (do not read)
 
