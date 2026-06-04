@@ -1,6 +1,6 @@
 {
   "name": "@extension/full-page-chat",
-  "version": "1.9.5",
+  "version": "2.2.0",
   "description": "chrome extension - full page chat",
   "type": "module",
   "private": true,
