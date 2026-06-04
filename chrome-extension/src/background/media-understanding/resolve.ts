@@ -1,8 +1,11 @@
 import { DEFAULT_LOCAL_MODEL } from './defaults';
 import { getProvider } from './providers';
+import { createLogger } from '../logging/logger-buffer';
 import { sttConfigStorage, customModelsStorage } from '@extension/storage';
 import type { MediaEngine, TranscribeOptions } from './types';
 import type { SttConfig } from '@extension/storage';
+
+const log = createLogger('media');
 
 /** Pick the best engine based on config and available credentials. */
 const resolveTranscription = async (audio: ArrayBuffer, mimeType: string): Promise<string> => {
@@ -24,20 +27,43 @@ const resolveTranscription = async (audio: ArrayBuffer, mimeType: string): Promi
     options.apiKey = await resolveOpenAIKey(config);
     options.model = config.openai.model;
     options.baseUrl = config.openai.baseUrl;
+    options.apiVersion = config.openai.apiVersion;
   } else {
     options.model = config.localModel || DEFAULT_LOCAL_MODEL;
   }
 
-  console.debug('[media-understanding] resolveTranscription', {
+  log.debug('resolveTranscription', {
     engine,
     configEngine: config.engine,
     language: config.language,
     localModel: config.localModel,
     optionsModel: options.model,
     optionsLanguage: options.language,
+    baseUrl: engine === 'openai' ? config.openai.baseUrl : undefined,
+    apiVersion: engine === 'openai' ? config.openai.apiVersion : undefined,
+    hasKey: engine === 'openai' ? Boolean(options.apiKey) : undefined,
   });
 
-  return provider.transcribe(audio, mimeType, options);
+  try {
+    return await provider.transcribe(audio, mimeType, options);
+  } catch (err) {
+    // In auto mode, a cloud (openai) failure should fall back to local Whisper
+    // once before surfacing the error. When the user explicitly picked `openai`,
+    // propagate so a misconfigured endpoint surfaces loudly.
+    if (config.engine === 'auto' && engine === 'openai') {
+      const local = getProvider('transformers');
+      if (local) {
+        log.warn('openai STT failed, falling back to transformers', {
+          error: String(err),
+        });
+        return local.transcribe(audio, mimeType, {
+          language: config.language,
+          model: config.localModel || DEFAULT_LOCAL_MODEL,
+        });
+      }
+    }
+    throw err;
+  }
 };
 
 /** Auto-detect the best available engine. */

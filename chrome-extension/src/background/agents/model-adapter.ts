@@ -15,10 +15,15 @@ interface ResolvedModel {
   azureApiVersion?: string;
 }
 
-/** Detect Azure OpenAI endpoints (https://{resource}.openai.azure.com/...) */
-const isAzureOpenAIEndpoint = (baseUrl: string): boolean => {
+/**
+ * Detect Azure OpenAI endpoints. Covers both the classic
+ * `{resource}.openai.azure.com` host and the Cognitive Services host
+ * `{resource}.cognitiveservices.azure.com` used by some Azure OpenAI resources.
+ */
+export const isAzureOpenAIEndpoint = (baseUrl: string): boolean => {
   try {
-    return new URL(baseUrl).hostname.endsWith('.openai.azure.com');
+    const { hostname } = new URL(baseUrl);
+    return hostname.endsWith('.openai.azure.com') || hostname.endsWith('.cognitiveservices.azure.com');
   } catch {
     return false;
   }

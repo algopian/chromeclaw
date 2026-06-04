@@ -65,6 +65,20 @@ const TYPING_INTERVAL_MS = 4000;
 const DRAFT_EDIT_INTERVAL_MS = 500;
 const DRAFT_INITIAL_THRESHOLD = 20;
 
+/**
+ * Map a transcription failure to a short, user-safe reason. Never includes raw
+ * keys, tokens, or endpoint URLs — only a coarse category and, for HTTP errors,
+ * the numeric status code (which the provider embeds as `(NNN)`).
+ */
+const describeTranscriptionError = (err: unknown): string => {
+  const message = err instanceof Error ? err.message : String(err);
+  if (/disabled/i.test(message)) return 'transcription is turned off in settings';
+  if (/no api key/i.test(message)) return 'no speech-to-text API key is configured';
+  const status = message.match(/\((\d{3})\)/)?.[1];
+  if (status) return `the speech-to-text service returned an error (${status})`;
+  return 'the speech-to-text service was unreachable';
+};
+
 // ── R5: Per-chat mutex to prevent concurrent handling of messages for the same chat ──
 const chatLocks = new Map<string, Promise<void>>();
 const withChatLock = (chatId: string, fn: () => Promise<void>): Promise<void> => {
@@ -223,17 +237,32 @@ const handleChannelMessageInner = async (
           try {
             const fileInfo = await getFile(botToken, msg.mediaFileId);
             const audioBuffer = await downloadFile(botToken, fileInfo.filePath);
-            const transcript = await resolveTranscription(
-              audioBuffer,
-              msg.mediaMimeType ?? 'audio/ogg',
-            );
+            let transcript: string;
+            try {
+              transcript = await resolveTranscription(audioBuffer, msg.mediaMimeType ?? 'audio/ogg');
+            } catch (err) {
+              channelLog.error('Voice transcription failed', {
+                error: String(err),
+                mimeType: msg.mediaMimeType,
+                fileId: msg.mediaFileId,
+              });
+              await adapter.sendMessage({
+                to: msg.channelChatId,
+                text: `Sorry, I could not transcribe your voice message — ${describeTranscriptionError(err)}. Please try sending text instead.`,
+              });
+              return;
+            }
             userText = transcript;
             channelLog.info('Voice transcribed', { transcriptPreview: transcript.slice(0, 80) });
           } catch (err) {
-            channelLog.error('Voice transcription failed', { error: String(err) });
+            channelLog.error('Voice download failed', {
+              error: String(err),
+              mimeType: msg.mediaMimeType,
+              fileId: msg.mediaFileId,
+            });
             await adapter.sendMessage({
               to: msg.channelChatId,
-              text: 'Sorry, I could not transcribe your voice message. Please try sending text instead.',
+              text: 'Sorry, I could not download your voice message. Please try again or send text instead.',
             });
             return;
           }

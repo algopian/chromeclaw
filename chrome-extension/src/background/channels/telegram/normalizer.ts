@@ -15,10 +15,24 @@ const normalizeTelegramUpdate = (update: TgUpdate): NormalizedUpdate | null => {
   // Must have a sender
   if (!msg.from) return null;
 
-  // Support text messages and voice messages
+  // Resolve audio-bearing media: voice notes, audio files, round video notes,
+  // and audio documents (e.g. forwarded .ogg/.mp3 sent as a file). Pick the first
+  // present source. Telegram only guarantees a mime_type on some of these, so fall
+  // back to audio/ogg for voice notes (always Opus/OGG) where it may be omitted.
+  const audioMedia: { file_id: string; mime_type?: string; fallbackMime?: string } | null = msg.voice
+    ? { file_id: msg.voice.file_id, mime_type: msg.voice.mime_type, fallbackMime: 'audio/ogg' }
+    : msg.audio
+      ? { file_id: msg.audio.file_id, mime_type: msg.audio.mime_type }
+      : msg.video_note
+        ? { file_id: msg.video_note.file_id, mime_type: 'video/mp4' }
+        : msg.document && msg.document.mime_type?.startsWith('audio/')
+          ? { file_id: msg.document.file_id, mime_type: msg.document.mime_type }
+          : null;
+
+  // Support text messages and audio media
   const hasText = !!msg.text;
-  const hasVoice = !!msg.voice;
-  if (!hasText && !hasVoice) return null;
+  const hasAudioMedia = !!audioMedia;
+  if (!hasText && !hasAudioMedia) return null;
 
   return {
     message: {
@@ -31,8 +45,11 @@ const normalizeTelegramUpdate = (update: TgUpdate): NormalizedUpdate | null => {
       timestamp: msg.date * 1000,
       chatType: msg.chat.type === 'private' ? 'direct' : 'group',
       replyToId: msg.reply_to_message ? String(msg.reply_to_message.message_id) : undefined,
-      ...(msg.voice
-        ? { mediaFileId: msg.voice.file_id, mediaMimeType: msg.voice.mime_type ?? 'audio/ogg' }
+      ...(audioMedia
+        ? {
+            mediaFileId: audioMedia.file_id,
+            mediaMimeType: audioMedia.mime_type ?? audioMedia.fallbackMime ?? 'application/octet-stream',
+          }
         : {}),
     },
     offset: update.update_id,

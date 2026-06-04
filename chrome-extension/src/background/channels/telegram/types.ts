@@ -28,6 +28,30 @@ interface TgVoice {
   file_size?: number;
 }
 
+interface TgAudio {
+  file_id: string;
+  file_unique_id: string;
+  duration: number;
+  mime_type?: string;
+  file_size?: number;
+}
+
+interface TgVideoNote {
+  file_id: string;
+  file_unique_id: string;
+  duration: number;
+  length: number;
+  file_size?: number;
+}
+
+interface TgDocument {
+  file_id: string;
+  file_unique_id: string;
+  file_name?: string;
+  mime_type?: string;
+  file_size?: number;
+}
+
 interface TgFile {
   file_id: string;
   file_unique_id: string;
@@ -42,6 +66,9 @@ interface TgMessage {
   date: number;
   text?: string;
   voice?: TgVoice;
+  audio?: TgAudio;
+  video_note?: TgVideoNote;
+  document?: TgDocument;
   reply_to_message?: TgMessage;
 }
 
@@ -80,6 +107,9 @@ export type {
   TgUser,
   TgChat,
   TgVoice,
+  TgAudio,
+  TgVideoNote,
+  TgDocument,
   TgFile,
   TgMessage,
   TgUpdate,

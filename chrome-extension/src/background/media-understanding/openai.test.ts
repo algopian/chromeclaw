@@ -162,4 +162,114 @@ describe('openai provider — transcribe', () => {
     const body = call[1].body as FormData;
     expect(body.get('language')).toBeNull();
   });
+
+  describe('Azure OpenAI endpoints', () => {
+    const azureBase =
+      'https://my-res.cognitiveservices.azure.com/openai/deployments/whisper';
+
+    it('uses api-key header (not Bearer) for Azure hosts', async () => {
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ text: 'azure' }),
+      });
+
+      await openaiProvider.transcribe(audio, 'audio/ogg', { ...options, baseUrl: azureBase });
+
+      const call = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(call[1].headers['api-key']).toBe('sk-test-key');
+      expect(call[1].headers.Authorization).toBeUndefined();
+    });
+
+    it('appends default api-version query param for Azure hosts', async () => {
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ text: 'azure' }),
+      });
+
+      await openaiProvider.transcribe(audio, 'audio/ogg', { ...options, baseUrl: azureBase });
+
+      const url = new URL((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]);
+      expect(url.searchParams.get('api-version')).toBe('2024-06-01');
+    });
+
+    it('uses the provided apiVersion when set', async () => {
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ text: 'azure' }),
+      });
+
+      await openaiProvider.transcribe(audio, 'audio/ogg', {
+        ...options,
+        baseUrl: azureBase,
+        apiVersion: '2025-01-01',
+      });
+
+      const url = new URL((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]);
+      expect(url.searchParams.get('api-version')).toBe('2025-01-01');
+    });
+
+    it('does not double-append api-version already present in base URL', async () => {
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ text: 'azure' }),
+      });
+
+      await openaiProvider.transcribe(audio, 'audio/ogg', {
+        ...options,
+        baseUrl: `${azureBase}?api-version=2023-09-01`,
+        apiVersion: '2025-01-01',
+      });
+
+      const url = new URL((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]);
+      expect(url.searchParams.getAll('api-version')).toEqual(['2023-09-01']);
+    });
+
+    it('matches classic .openai.azure.com hosts too', async () => {
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ text: 'azure' }),
+      });
+
+      await openaiProvider.transcribe(audio, 'audio/ogg', {
+        ...options,
+        baseUrl: 'https://my-res.openai.azure.com/openai/deployments/whisper',
+      });
+
+      const call = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(call[1].headers['api-key']).toBe('sk-test-key');
+      const url = new URL(call[0]);
+      expect(url.searchParams.get('api-version')).toBe('2024-06-01');
+    });
+
+    it('does not double-append /audio/transcriptions when base URL already targets it', async () => {
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ text: 'azure' }),
+      });
+
+      await openaiProvider.transcribe(audio, 'audio/ogg', {
+        ...options,
+        baseUrl: `${azureBase}/audio/transcriptions`,
+      });
+
+      const url = new URL((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]);
+      expect(url.pathname).toBe('/openai/deployments/whisper/audio/transcriptions');
+      expect(url.searchParams.get('api-version')).toBe('2024-06-01');
+    });
+
+    it('does not append /audio/transcriptions when base URL targets /audio/translations', async () => {
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ text: 'azure' }),
+      });
+
+      await openaiProvider.transcribe(audio, 'audio/ogg', {
+        ...options,
+        baseUrl: `${azureBase}/audio/translations`,
+      });
+
+      const url = new URL((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]);
+      expect(url.pathname).toBe('/openai/deployments/whisper/audio/translations');
+    });
+  });
 });

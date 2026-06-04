@@ -16,6 +16,10 @@ vi.mock('@extension/storage', () => ({
   customModelsStorage: {
     get: vi.fn(),
   },
+  logConfigStorage: {
+    get: vi.fn().mockResolvedValue({ enabled: false, level: 'info' }),
+    subscribe: vi.fn(),
+  },
 }));
 
 // Mock the provider registry
@@ -163,6 +167,53 @@ describe('resolveTranscription', () => {
       language: 'ja',
       model: 'tiny',
     });
+  });
+
+  it('auto + openai throws -> falls back to transformers', async () => {
+    mockSttConfig.get.mockResolvedValue({
+      ...defaultConfig,
+      engine: 'auto',
+      openai: { apiKey: 'sk-test', model: 'whisper-1', baseUrl: 'https://api.openai.com/v1' },
+    });
+    const openaiTranscribe = vi.fn().mockRejectedValue(new Error('OpenAI STT failed (404): nope'));
+    const localTranscribe = vi.fn().mockResolvedValue('local fallback');
+    mockGetProvider.mockImplementation((engineId: string) =>
+      engineId === 'openai'
+        ? { id: 'openai', transcribe: openaiTranscribe }
+        : engineId === 'transformers'
+          ? { id: 'transformers', transcribe: localTranscribe }
+          : undefined,
+    );
+
+    const result = await resolveTranscription(audio, 'audio/ogg');
+    expect(result).toBe('local fallback');
+    expect(openaiTranscribe).toHaveBeenCalled();
+    expect(localTranscribe).toHaveBeenCalledWith(audio, 'audio/ogg', {
+      language: 'en',
+      model: 'tiny',
+    });
+  });
+
+  it('explicit openai throws -> propagates (no fallback)', async () => {
+    mockSttConfig.get.mockResolvedValue({
+      ...defaultConfig,
+      engine: 'openai',
+      openai: { apiKey: 'sk-test', model: 'whisper-1', baseUrl: 'https://api.openai.com/v1' },
+    });
+    const openaiTranscribe = vi.fn().mockRejectedValue(new Error('OpenAI STT failed (404): nope'));
+    const localTranscribe = vi.fn().mockResolvedValue('local fallback');
+    mockGetProvider.mockImplementation((engineId: string) =>
+      engineId === 'openai'
+        ? { id: 'openai', transcribe: openaiTranscribe }
+        : engineId === 'transformers'
+          ? { id: 'transformers', transcribe: localTranscribe }
+          : undefined,
+    );
+
+    await expect(resolveTranscription(audio, 'audio/ogg')).rejects.toThrow(
+      'OpenAI STT failed (404): nope',
+    );
+    expect(localTranscribe).not.toHaveBeenCalled();
   });
 
   it('throws when engine is off', async () => {

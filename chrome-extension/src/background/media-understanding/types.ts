@@ -5,6 +5,8 @@ interface TranscribeOptions {
   baseUrl?: string;
   model?: string;
   language?: string;
+  /** Azure OpenAI api-version query param; only used for Azure endpoints. */
+  apiVersion?: string;
 }
 
 interface MediaProvider {

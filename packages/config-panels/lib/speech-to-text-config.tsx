@@ -420,6 +420,19 @@ const SpeechToTextConfig = () => {
                   value={config.openai.baseUrl}
                 />
               </div>
+              <div className="grid gap-2">
+                <Label htmlFor="stt-api-version">API Version</Label>
+                <Input
+                  id="stt-api-version"
+                  onChange={e => handleOpenAIFieldChange('apiVersion', e.target.value)}
+                  placeholder="2024-06-01"
+                  value={config.openai.apiVersion ?? ''}
+                />
+                <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                  <InfoIcon className="size-3" />
+                  Required for Azure OpenAI endpoints; ignored by standard OpenAI
+                </p>
+              </div>
             </div>
           )}
 
