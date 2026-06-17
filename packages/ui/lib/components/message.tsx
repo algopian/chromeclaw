@@ -10,6 +10,7 @@ import { MessageReasoning } from './message-reasoning';
 import { PreviewAttachment } from './preview-attachment';
 import { SearchResults, parseSearchResults } from './search-results';
 import { isDocumentToolCall } from '../artifact-stream';
+import { imageContentToSrc } from '../image-src';
 import { cn } from '../utils';
 import { useState, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
@@ -148,12 +149,7 @@ const PreviewMessage = ({ message, isLoading, setMessages, onEditSubmit }: Previ
                     <img
                       alt={part.filename ?? 'image'}
                       className="max-h-96 max-w-full rounded-lg object-contain"
-                      src={
-                        (part.data ?? part.url).startsWith('data:') ||
-                        (part.data ?? part.url).startsWith('http')
-                          ? (part.data ?? part.url)
-                          : `data:image/png;base64,${part.data ?? part.url}`
-                      }
+                      src={imageContentToSrc(part.data ?? part.url)}
                     />
                   </div>
                 );

@@ -1,3 +1,4 @@
+import { imageContentToSrc } from '../../image-src';
 import { cn } from '../../utils';
 
 type ImageEditorProps = {
@@ -17,10 +18,7 @@ const ImageEditor = ({ content, title, status, isCurrentVersion, isInline }: Ima
     );
   }
 
-  const src =
-    content.startsWith('data:') || content.startsWith('http')
-      ? content
-      : `data:image/png;base64,${content}`;
+  const src = imageContentToSrc(content);
 
   return (
     <div

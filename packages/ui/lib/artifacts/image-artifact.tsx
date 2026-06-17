@@ -10,6 +10,7 @@
 import { Artifact } from '../components/create-artifact';
 import { ImageEditor } from '../components/editors/image-editor';
 import { CopyIcon, RedoIcon, UndoIcon } from '../components/icons';
+import { imageContentToSrc } from '../image-src';
 import { toast } from 'sonner';
 
 export const imageArtifact = new Artifact({
@@ -58,7 +59,7 @@ export const imageArtifact = new Artifact({
       description: 'Copy image to clipboard',
       onClick: ({ content }) => {
         const img = new Image();
-        img.src = `data:image/png;base64,${content}`;
+        img.src = imageContentToSrc(content);
 
         img.onload = () => {
           const canvas = document.createElement('canvas');
