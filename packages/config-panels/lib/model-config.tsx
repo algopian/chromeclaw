@@ -62,6 +62,7 @@ const defaultModelIds: Record<string, string> = {
   anthropic: 'claude-sonnet-4-5',
   google: 'gemini-2.0-flash',
   openrouter: 'openai/gpt-4o',
+  requesty: 'openai/gpt-4o-mini',
   custom: '',
   azure: '',
   'openai-codex': 'gpt-5.3-codex',
@@ -96,6 +97,7 @@ const providers = [
   { value: 'anthropic', label: 'Anthropic' },
   { value: 'google', label: 'Google' },
   { value: 'openrouter', label: 'OpenRouter' },
+  { value: 'requesty', label: 'Requesty' },
   { value: 'azure', label: 'Azure OpenAI' },
   { value: 'openai-codex', label: 'OpenAI Codex (ChatGPT)' },
   { value: 'custom', label: 'OpenAI Compatible' },
@@ -266,7 +268,7 @@ const ModelConfig = () => {
           next.modelId = defaultModelIds[value] ?? '';
         }
         // Clear api when switching to non-OpenAI-compatible providers
-        if (!['openai', 'custom', 'openrouter', 'azure'].includes(value)) {
+        if (!['openai', 'custom', 'openrouter', 'requesty', 'azure'].includes(value)) {
           next.api = undefined;
         }
         // Azure provider: set Responses API as default
@@ -825,7 +827,7 @@ const ModelConfig = () => {
                     </div>
                   )}
 
-                  {['openai', 'custom', 'openrouter', 'azure'].includes(editForm.provider) && (
+                  {['openai', 'custom', 'openrouter', 'requesty', 'azure'].includes(editForm.provider) && (
                     <div className="grid gap-2">
                       <Label htmlFor="model-api">{t('model_apiFormat')}</Label>
                       <Select

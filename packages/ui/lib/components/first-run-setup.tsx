@@ -95,6 +95,12 @@ const providers = [
     defaultModel: 'openai/gpt-4o',
     defaultBase: 'https://openrouter.ai/api/v1',
   },
+  {
+    value: 'requesty',
+    label: 'Requesty',
+    defaultModel: 'openai/gpt-4o-mini',
+    defaultBase: 'https://router.requesty.ai/v1',
+  },
   { value: 'custom', label: 'OpenAI Compatible', defaultModel: '', defaultBase: '' },
 ];
 
