@@ -105,6 +105,7 @@ type ModelProvider =
   | 'anthropic'
   | 'google'
   | 'openrouter'
+  | 'requesty'
   | 'custom'
   | 'azure'
   | 'openai-codex'
