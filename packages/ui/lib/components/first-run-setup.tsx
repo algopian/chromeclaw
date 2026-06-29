@@ -21,6 +21,7 @@ import {
   WEB_PROVIDER_OPTIONS,
   useWebProviderAuth,
   parseAgentBackup,
+  PROVIDER_DEFAULT_BASE_URLS,
 } from '@extension/shared';
 import {
   customModelsStorage,
@@ -93,13 +94,13 @@ const providers = [
     value: 'openrouter',
     label: 'OpenRouter',
     defaultModel: 'openai/gpt-4o',
-    defaultBase: 'https://openrouter.ai/api/v1',
+    defaultBase: PROVIDER_DEFAULT_BASE_URLS.openrouter,
   },
   {
     value: 'requesty',
     label: 'Requesty',
     defaultModel: 'openai/gpt-4o-mini',
-    defaultBase: 'https://router.requesty.ai/v1',
+    defaultBase: PROVIDER_DEFAULT_BASE_URLS.requesty,
   },
   { value: 'custom', label: 'OpenAI Compatible', defaultModel: '', defaultBase: '' },
 ];

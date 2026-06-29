@@ -112,6 +112,20 @@ type ModelProvider =
   | 'local'
   | 'web';
 
+/**
+ * Default API base URLs per provider — single source of truth shared by the
+ * background model adapter, the first-run setup, and the model config dialog.
+ * Note: for `openrouter` and `requesty` the adapter applies these
+ * unconditionally; any base URL the user enters for those providers is ignored.
+ */
+const PROVIDER_DEFAULT_BASE_URLS = {
+  openai: 'https://api.openai.com/v1',
+  anthropic: 'https://api.anthropic.com',
+  google: 'https://generativelanguage.googleapis.com',
+  openrouter: 'https://openrouter.ai/api/v1',
+  requesty: 'https://router.requesty.ai/v1',
+} as const;
+
 /** Routing mode for model requests */
 type RoutingMode = 'direct';
 
@@ -488,6 +502,7 @@ export type {
 };
 
 export {
+  PROVIDER_DEFAULT_BASE_URLS,
   WEB_PROVIDER_OPTIONS,
   isTextPart,
   isReasoningPart,
