@@ -1,8 +1,7 @@
 import { Button } from './ui';
-import { Waveform } from './waveform';
 import { cn } from '../utils';
 import { useT } from '@extension/i18n';
-import { LoaderIcon, MicIcon } from 'lucide-react';
+import { LoaderIcon, MicIcon, SquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -23,6 +22,12 @@ type MicButtonProps = {
    * just surfaces the generic error toast.
    */
   onPermissionNeeded?: () => void;
+  /**
+   * Called with the live capture stream when recording starts and `null` when
+   * it stops (or on unmount). Lets the parent render a waveform in the footer
+   * bar rather than on the button itself.
+   */
+  onStreamChange?: (stream: MediaStream | null) => void;
   disabled?: boolean;
 };
 
@@ -46,18 +51,22 @@ const blobToBase64 = (blob: Blob): Promise<string> =>
  * click again to stop; the recorded clip is emitted as base64 through `onAudio`.
  * Always stops the mic track on stop/error/unmount so no capture indicator lingers.
  */
-const MicButton = ({ onAudio, onPermissionNeeded, disabled }: MicButtonProps) => {
+const MicButton = ({ onAudio, onPermissionNeeded, onStreamChange, disabled }: MicButtonProps) => {
   const t = useT();
   const [state, setState] = useState<MicState>('idle');
-  const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
+  // Keep the latest callback in a ref so the record/stop callbacks stay stable
+  // and the unmount cleanup can always reach the current handler.
+  const onStreamChangeRef = useRef(onStreamChange);
+  onStreamChangeRef.current = onStreamChange;
+
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach(track => track.stop());
     streamRef.current = null;
-    setActiveStream(null);
+    onStreamChangeRef.current?.(null);
   }, []);
 
   // Safety net: tear down capture if unmounted mid-recording.
@@ -67,6 +76,7 @@ const MicButton = ({ onAudio, onPermissionNeeded, disabled }: MicButtonProps) =>
       if (rec && rec.state === 'recording') rec.stop();
       streamRef.current?.getTracks().forEach(track => track.stop());
       streamRef.current = null;
+      onStreamChangeRef.current?.(null);
     },
     [],
   );
@@ -75,7 +85,7 @@ const MicButton = ({ onAudio, onPermissionNeeded, disabled }: MicButtonProps) =>
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      setActiveStream(stream);
+      onStreamChangeRef.current?.(stream);
       chunksRef.current = [];
 
       const recorder = new MediaRecorder(stream);
@@ -158,7 +168,7 @@ const MicButton = ({ onAudio, onPermissionNeeded, disabled }: MicButtonProps) =>
       {state === 'processing' ? (
         <LoaderIcon className="size-4 animate-spin" />
       ) : isRecording ? (
-        <Waveform stream={activeStream} />
+        <SquareIcon className="size-4 fill-current" />
       ) : (
         <MicIcon className="size-4" />
       )}

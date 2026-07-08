@@ -10,6 +10,7 @@ import {
   SelectValue,
   Textarea,
 } from './ui';
+import { Waveform } from './waveform';
 import { useInputHistory } from '../hooks';
 import { cn } from '../utils';
 import { useT } from '@extension/i18n';
@@ -78,6 +79,7 @@ const ChatInput = ({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
   const [slashSelectedIndex, setSlashSelectedIndex] = useState(0);
+  const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -478,11 +480,15 @@ const ChatInput = ({
                 </SelectContent>
               </Select>
             )}
+            {recordingStream && (
+              <Waveform barCount={9} className="h-5 w-16 text-red-500" stream={recordingStream} />
+            )}
             {showMic && (
               <MicButton
                 disabled={isStreaming}
                 onAudio={handleDictation}
                 onPermissionNeeded={handleMicPermission}
+                onStreamChange={setRecordingStream}
               />
             )}
             {showSend && (
