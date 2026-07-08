@@ -218,6 +218,42 @@
   "chat_placeholder": {
     "message": "Que souhaitez-vous savoir ?"
   },
+  "chat_mic_start": {
+    "message": "Enregistrer la voix"
+  },
+  "chat_mic_stop": {
+    "message": "Arrêter l'enregistrement"
+  },
+  "chat_mic_error": {
+    "message": "Échec de la transcription vocale. Veuillez réessayer."
+  },
+  "chat_mic_permission": {
+    "message": "Permission du microphone requise. Ouverture d'une fenêtre pour autoriser l'accès..."
+  },
+  "stt_engine_gemini_web": {
+    "message": "Gemini (navigateur, sans clé API)"
+  },
+  "stt_engine_gemini_web_desc": {
+    "message": "Transcrit à l'aide de votre session web Gemini connectée — aucune clé API requise."
+  },
+  "stt_web_login": {
+    "message": "Connexion"
+  },
+  "stt_web_logout": {
+    "message": "Déconnexion"
+  },
+  "stt_web_status_logged_in": {
+    "message": "Connecté"
+  },
+  "stt_web_status_expired": {
+    "message": "Session expirée"
+  },
+  "stt_web_status_not_logged_in": {
+    "message": "Non connecté"
+  },
+  "stt_web_status_checking": {
+    "message": "Vérification…"
+  },
   "chat_modelSelect": {
     "message": "Modèle"
   },
@@ -1340,6 +1376,7 @@
   "agents_title": {
     "message": "Agents"
   },
+  "tab_speech": { "message": "Voix" },
   "tab_community": { "message": "Communauté" },
   "community_title": { "message": "Communauté" },
   "community_description": { "message": "Rejoignez notre communauté pour partager vos retours, obtenir de l'aide et discuter d'idées avec d'autres utilisateurs." },

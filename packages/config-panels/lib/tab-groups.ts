@@ -12,6 +12,7 @@ import {
   BotIcon,
   MessagesSquareIcon,
   MessageCircleIcon,
+  AudioLinesIcon,
 } from 'lucide-react';
 
 type ConfigTabId =
@@ -19,6 +20,7 @@ type ConfigTabId =
   | 'model'
   | 'tool'
   | 'actions'
+  | 'speech'
   | 'skills'
   | 'agents'
   | 'channels'
@@ -56,6 +58,7 @@ const getConfigTabGroups = (): ConfigTabGroup[] => [
     tabs: [
       { id: 'general', label: t('tab_general'), icon: SettingsIcon },
       { id: 'model', label: t('tab_models'), icon: BrainCircuitIcon },
+      { id: 'speech', label: t('tab_speech'), icon: AudioLinesIcon },
       { id: 'actions', label: t('tab_actions'), icon: LightbulbIcon },
       { id: 'logs', label: t('tab_logs'), icon: ScrollTextIcon },
       { id: 'community', label: t('tab_community'), icon: MessageCircleIcon },

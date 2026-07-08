@@ -218,6 +218,42 @@
   "chat_placeholder": {
     "message": "你想了解什么？"
   },
+  "chat_mic_start": {
+    "message": "录制语音"
+  },
+  "chat_mic_stop": {
+    "message": "停止录制"
+  },
+  "chat_mic_error": {
+    "message": "语音转录失败，请重试。"
+  },
+  "chat_mic_permission": {
+    "message": "需要麦克风权限。正在打开窗口以允许访问..."
+  },
+  "stt_engine_gemini_web": {
+    "message": "Gemini（浏览器，无需 API 密钥）"
+  },
+  "stt_engine_gemini_web_desc": {
+    "message": "使用你已登录的 Gemini 网页会话进行转录 — 无需 API 密钥。"
+  },
+  "stt_web_login": {
+    "message": "登录"
+  },
+  "stt_web_logout": {
+    "message": "退出"
+  },
+  "stt_web_status_logged_in": {
+    "message": "已登录"
+  },
+  "stt_web_status_expired": {
+    "message": "会话已过期"
+  },
+  "stt_web_status_not_logged_in": {
+    "message": "未登录"
+  },
+  "stt_web_status_checking": {
+    "message": "检查中…"
+  },
   "chat_modelSelect": {
     "message": "模型"
   },
@@ -1340,6 +1376,7 @@
   "agents_title": {
     "message": "智能体"
   },
+  "tab_speech": { "message": "语音" },
   "tab_community": { "message": "社区" },
   "community_title": { "message": "社区" },
   "community_description": { "message": "加入我们的社区，分享反馈、获取帮助，与其他用户交流想法。" },

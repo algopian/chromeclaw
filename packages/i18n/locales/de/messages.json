@@ -218,6 +218,42 @@
   "chat_placeholder": {
     "message": "Was möchtest du wissen?"
   },
+  "chat_mic_start": {
+    "message": "Sprache aufnehmen"
+  },
+  "chat_mic_stop": {
+    "message": "Aufnahme stoppen"
+  },
+  "chat_mic_error": {
+    "message": "Sprachtranskription fehlgeschlagen. Bitte versuche es erneut."
+  },
+  "chat_mic_permission": {
+    "message": "Mikrofonberechtigung erforderlich. Es wird ein Fenster geöffnet, um den Zugriff zu erlauben..."
+  },
+  "stt_engine_gemini_web": {
+    "message": "Gemini (Browser, kein API-Schlüssel)"
+  },
+  "stt_engine_gemini_web_desc": {
+    "message": "Transkribiert über deine angemeldete Gemini-Websitzung – kein API-Schlüssel erforderlich."
+  },
+  "stt_web_login": {
+    "message": "Anmelden"
+  },
+  "stt_web_logout": {
+    "message": "Abmelden"
+  },
+  "stt_web_status_logged_in": {
+    "message": "Angemeldet"
+  },
+  "stt_web_status_expired": {
+    "message": "Sitzung abgelaufen"
+  },
+  "stt_web_status_not_logged_in": {
+    "message": "Nicht angemeldet"
+  },
+  "stt_web_status_checking": {
+    "message": "Wird gepr\u00fcft\u2026"
+  },
   "chat_modelSelect": {
     "message": "Modell"
   },
@@ -1340,6 +1376,7 @@
   "agents_title": {
     "message": "Agenten"
   },
+  "tab_speech": { "message": "Sprache" },
   "tab_community": { "message": "Community" },
   "community_title": { "message": "Community" },
   "community_description": { "message": "Tritt unserer Community bei, um Feedback zu teilen, Hilfe zu erhalten und Ideen mit anderen Nutzern auszutauschen." },

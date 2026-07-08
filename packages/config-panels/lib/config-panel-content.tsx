@@ -24,6 +24,10 @@ const ConfigPanelContent = ({ activeTab, onOpenSession }: { activeTab: ConfigTab
       <>
         <ToolConfig />
         <EmbeddingConfigPanel />
+      </>
+    )}
+    {activeTab === 'speech' && (
+      <>
         <SpeechToTextConfig />
         <TextToSpeechConfig />
       </>

@@ -218,6 +218,42 @@
   "chat_placeholder": {
     "message": "What would you like to know?"
   },
+  "chat_mic_start": {
+    "message": "Record voice"
+  },
+  "chat_mic_stop": {
+    "message": "Stop recording"
+  },
+  "chat_mic_error": {
+    "message": "Voice transcription failed. Please try again."
+  },
+  "chat_mic_permission": {
+    "message": "Microphone permission needed. Opening a window to allow access…"
+  },
+  "stt_engine_gemini_web": {
+    "message": "Gemini (browser, no API key)"
+  },
+  "stt_engine_gemini_web_desc": {
+    "message": "Transcribes using your logged-in Gemini web session — no API key required."
+  },
+  "stt_web_login": {
+    "message": "Login"
+  },
+  "stt_web_logout": {
+    "message": "Logout"
+  },
+  "stt_web_status_logged_in": {
+    "message": "Signed in"
+  },
+  "stt_web_status_expired": {
+    "message": "Session expired"
+  },
+  "stt_web_status_not_logged_in": {
+    "message": "Not signed in"
+  },
+  "stt_web_status_checking": {
+    "message": "Checking\u2026"
+  },
   "chat_modelSelect": {
     "message": "Model"
   },
@@ -985,6 +1021,9 @@
   },
   "tab_community": {
     "message": "Community"
+  },
+  "tab_speech": {
+    "message": "Speech"
   },
   "firstRun_agentCreature": {
     "message": "Creature"

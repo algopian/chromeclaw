@@ -218,6 +218,42 @@
   "chat_placeholder": {
     "message": "무엇을 알고 싶으신가요?"
   },
+  "chat_mic_start": {
+    "message": "음성 녹음"
+  },
+  "chat_mic_stop": {
+    "message": "녹음 중지"
+  },
+  "chat_mic_error": {
+    "message": "음성 전사에 실패했습니다. 다시 시도해 주세요."
+  },
+  "chat_mic_permission": {
+    "message": "마이크 권한이 필요합니다. 접근을 허용하는 창을 열고 있습니다..."
+  },
+  "stt_engine_gemini_web": {
+    "message": "Gemini (브라우저, API 키 불필요)"
+  },
+  "stt_engine_gemini_web_desc": {
+    "message": "로그인된 Gemini 웹 세션을 사용하여 전사합니다 — API 키가 필요하지 않습니다."
+  },
+  "stt_web_login": {
+    "message": "로그인"
+  },
+  "stt_web_logout": {
+    "message": "로그아웃"
+  },
+  "stt_web_status_logged_in": {
+    "message": "로그인됨"
+  },
+  "stt_web_status_expired": {
+    "message": "세션 만료됨"
+  },
+  "stt_web_status_not_logged_in": {
+    "message": "로그인되지 않음"
+  },
+  "stt_web_status_checking": {
+    "message": "확인 중…"
+  },
   "chat_modelSelect": {
     "message": "모델"
   },
@@ -982,6 +1018,9 @@
   },
   "tab_logs": {
     "message": "로그"
+  },
+  "tab_speech": {
+    "message": "음성"
   },
   "tab_community": {
     "message": "커뮤니티"

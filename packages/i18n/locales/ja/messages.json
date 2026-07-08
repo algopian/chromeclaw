@@ -218,6 +218,42 @@
   "chat_placeholder": {
     "message": "何について知りたいですか？"
   },
+  "chat_mic_start": {
+    "message": "音声を録音"
+  },
+  "chat_mic_stop": {
+    "message": "録音を停止"
+  },
+  "chat_mic_error": {
+    "message": "音声の文字起こしに失敗しました。もう一度お試しください。"
+  },
+  "chat_mic_permission": {
+    "message": "マイクの許可が必要です。アクセスを許可するウィンドウを開いています..."
+  },
+  "stt_engine_gemini_web": {
+    "message": "Gemini（ブラウザ、APIキー不要）"
+  },
+  "stt_engine_gemini_web_desc": {
+    "message": "ログイン中の Gemini ウェブセッションを使用して文字起こしします。APIキーは不要です。"
+  },
+  "stt_web_login": {
+    "message": "ログイン"
+  },
+  "stt_web_logout": {
+    "message": "ログアウト"
+  },
+  "stt_web_status_logged_in": {
+    "message": "ログイン済み"
+  },
+  "stt_web_status_expired": {
+    "message": "セッション期限切れ"
+  },
+  "stt_web_status_not_logged_in": {
+    "message": "未ログイン"
+  },
+  "stt_web_status_checking": {
+    "message": "確認中…"
+  },
   "chat_modelSelect": {
     "message": "モデル"
   },
@@ -1340,6 +1376,7 @@
   "agents_title": {
     "message": "エージェント"
   },
+  "tab_speech": { "message": "音声" },
   "tab_community": { "message": "コミュニティ" },
   "community_title": { "message": "コミュニティ" },
   "community_description": { "message": "コミュニティに参加して、フィードバックの共有、ヘルプの取得、他のユーザーとのアイデア交換をしましょう。" },

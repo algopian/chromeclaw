@@ -218,6 +218,42 @@
   "chat_placeholder": {
     "message": "Что бы вы хотели узнать?"
   },
+  "chat_mic_start": {
+    "message": "Записать голос"
+  },
+  "chat_mic_stop": {
+    "message": "Остановить запись"
+  },
+  "chat_mic_error": {
+    "message": "Не удалось расшифровать голос. Пожалуйста, попробуйте снова."
+  },
+  "chat_mic_permission": {
+    "message": "Требуется разрешение микрофона. Открывается окно для предоставления доступа..."
+  },
+  "stt_engine_gemini_web": {
+    "message": "Gemini (браузер, без API-ключа)"
+  },
+  "stt_engine_gemini_web_desc": {
+    "message": "Расшифровывает с помощью вашей активной веб-сессии Gemini — API-ключ не требуется."
+  },
+  "stt_web_login": {
+    "message": "Войти"
+  },
+  "stt_web_logout": {
+    "message": "Выйти"
+  },
+  "stt_web_status_logged_in": {
+    "message": "Авторизован"
+  },
+  "stt_web_status_expired": {
+    "message": "Сессия истекла"
+  },
+  "stt_web_status_not_logged_in": {
+    "message": "Не авторизован"
+  },
+  "stt_web_status_checking": {
+    "message": "Проверка…"
+  },
   "chat_modelSelect": {
     "message": "Модель"
   },
@@ -1340,6 +1376,7 @@
   "agents_title": {
     "message": "Агенты"
   },
+  "tab_speech": { "message": "Речь" },
   "tab_community": { "message": "Сообщество" },
   "community_title": { "message": "Сообщество" },
   "community_description": { "message": "Присоединяйтесь к нашему сообществу, чтобы делиться отзывами, получать помощь и обсуждать идеи с другими пользователями." },

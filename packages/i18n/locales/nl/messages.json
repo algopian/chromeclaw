@@ -218,6 +218,42 @@
   "chat_placeholder": {
     "message": "Wat wil je weten?"
   },
+  "chat_mic_start": {
+    "message": "Spraak opnemen"
+  },
+  "chat_mic_stop": {
+    "message": "Opname stoppen"
+  },
+  "chat_mic_error": {
+    "message": "Spraaktranscriptie mislukt. Probeer het opnieuw."
+  },
+  "chat_mic_permission": {
+    "message": "Microfoontoestemming vereist. Er wordt een venster geopend om toegang te verlenen..."
+  },
+  "stt_engine_gemini_web": {
+    "message": "Gemini (browser, geen API-sleutel)"
+  },
+  "stt_engine_gemini_web_desc": {
+    "message": "Transcribeert via je aangemelde Gemini-websessie — geen API-sleutel vereist."
+  },
+  "stt_web_login": {
+    "message": "Inloggen"
+  },
+  "stt_web_logout": {
+    "message": "Uitloggen"
+  },
+  "stt_web_status_logged_in": {
+    "message": "Ingelogd"
+  },
+  "stt_web_status_expired": {
+    "message": "Sessie verlopen"
+  },
+  "stt_web_status_not_logged_in": {
+    "message": "Niet ingelogd"
+  },
+  "stt_web_status_checking": {
+    "message": "Controleren…"
+  },
   "chat_modelSelect": {
     "message": "Model"
   },
@@ -1340,6 +1376,7 @@
   "agents_title": {
     "message": "Agenten"
   },
+  "tab_speech": { "message": "Spraak" },
   "tab_community": { "message": "Community" },
   "community_title": { "message": "Community" },
   "community_description": { "message": "Word lid van onze community om feedback te delen, hulp te krijgen en ideeën te bespreken met andere gebruikers." },

@@ -218,6 +218,42 @@
   "chat_placeholder": {
     "message": "你想了解什麼？"
   },
+  "chat_mic_start": {
+    "message": "錄製語音"
+  },
+  "chat_mic_stop": {
+    "message": "停止錄製"
+  },
+  "chat_mic_error": {
+    "message": "語音轉錄失敗，請重試。"
+  },
+  "chat_mic_permission": {
+    "message": "需要麥克風權限。正在開啟視窗以允許存取..."
+  },
+  "stt_engine_gemini_web": {
+    "message": "Gemini（瀏覽器，免 API 金鑰）"
+  },
+  "stt_engine_gemini_web_desc": {
+    "message": "使用你已登入的 Gemini 網頁工作階段進行轉錄 — 無需 API 金鑰。"
+  },
+  "stt_web_login": {
+    "message": "登入"
+  },
+  "stt_web_logout": {
+    "message": "登出"
+  },
+  "stt_web_status_logged_in": {
+    "message": "已登入"
+  },
+  "stt_web_status_expired": {
+    "message": "工作階段已過期"
+  },
+  "stt_web_status_not_logged_in": {
+    "message": "未登入"
+  },
+  "stt_web_status_checking": {
+    "message": "檢查中…"
+  },
   "chat_modelSelect": {
     "message": "模型"
   },
@@ -1340,6 +1376,7 @@
   "agents_title": {
     "message": "代理"
   },
+  "tab_speech": { "message": "語音" },
   "tab_community": { "message": "社群" },
   "community_title": { "message": "社群" },
   "community_description": { "message": "加入我們的社群，分享回饋、取得協助，與其他使用者交流想法。" },
