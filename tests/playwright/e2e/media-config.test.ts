@@ -30,10 +30,7 @@ test.describe('Media Configuration @phase-9', () => {
     await page.close();
   });
 
-  test('Engine selector shows default Local (Transformers) value', async ({
-    context,
-    extensionId,
-  }) => {
+  test('Engine selector shows default Whisper (Local) value', async ({ context, extensionId }) => {
     const page = await context.newPage();
     await openOptions(page, extensionId);
 
@@ -42,10 +39,10 @@ test.describe('Media Configuration @phase-9', () => {
     // Wait for Media Configuration to load
     await expect(page.locator('text=Media Configuration')).toBeVisible({ timeout: 10000 });
 
-    // Engine selector should show "Local (Transformers)" by default
+    // Engine selector should show "Whisper (Local)" by default
     const engineTrigger = page.locator('#stt-engine');
     await expect(engineTrigger).toBeVisible();
-    await expect(engineTrigger).toContainText('Local (Transformers)');
+    await expect(engineTrigger).toContainText('Whisper (Local)');
 
     await page.close();
   });
@@ -108,7 +105,7 @@ test.describe('Media Configuration @phase-9', () => {
 
     // Switch back to Local
     await page.locator('#stt-engine').click();
-    await page.locator('[role="option"]', { hasText: 'Local (Transformers)' }).click();
+    await page.locator('[role="option"]', { hasText: 'Whisper (Local)' }).click();
     await expect(page.locator('#stt-api-key')).not.toBeVisible();
 
     // Switch to OpenAI again

@@ -37,7 +37,7 @@ import type { SttConfig } from '@extension/storage';
 
 const engineOptions = [
   { value: 'off', label: 'Off' },
-  { value: 'transformers', label: 'Local (Transformers)' },
+  { value: 'transformers', label: 'Whisper (Local)' },
   { value: 'openai', label: 'OpenAI' },
   { value: 'gemini-web', label: 'Gemini (browser, no API key)' },
 ] as const;
