@@ -37,6 +37,11 @@ import type { LLMRequestMessage, LogCategory } from '@extension/shared';
 // ── Loggers ─────────────────────────────────
 const cronLog = createLogger('cron');
 const slashCmdLog = createLogger('slash-cmd');
+const mediaLog = createLogger('media');
+
+// Tracks the open mic-permission popup so repeat clicks focus it instead of
+// spawning duplicate windows.
+let micPermissionWindowId: number | null = null;
 
 const cronService = new CronService({
   log: cronLog,
@@ -229,6 +234,68 @@ const messageHandlers: Record<string, MessageHandler> = {
     const { requestModelDownload } = await import('./media-understanding');
     const downloadId = await requestModelDownload(request.model as string);
     return { downloadId };
+  },
+
+  TRANSCRIBE_DICTATION: async request => {
+    const { resolveTranscription } = await import('./media-understanding');
+    const base64 = request.audio as string;
+    const mimeType = (request.mimeType as string) || 'audio/webm';
+    try {
+      // Decode inside the try so a malformed-base64 DOMException is logged too,
+      // not just failures from resolveTranscription.
+      const bin = atob(base64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      mediaLog.info('TRANSCRIBE_DICTATION received', { mimeType, bytes: bytes.length });
+      const transcript = await resolveTranscription(bytes.buffer, mimeType);
+      mediaLog.info('TRANSCRIBE_DICTATION succeeded', { length: transcript.length });
+      return { transcript };
+    } catch (err) {
+      mediaLog.error('TRANSCRIBE_DICTATION failed', {
+        mimeType,
+        base64Length: base64?.length ?? 0,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
+  },
+
+  // Opens a normal popup window that requests microphone permission. The side
+  // panel's getUserMedia prompt is unreliable (shows "Permission dismissed"),
+  // but a top-level window prompts reliably and the grant persists to the
+  // extension origin, so the side-panel mic works afterwards.
+  OPEN_MIC_PERMISSION: async () => {
+    // Focus an already-open popup instead of spawning a duplicate.
+    if (micPermissionWindowId !== null) {
+      try {
+        await chrome.windows.update(micPermissionWindowId, { focused: true });
+        mediaLog.info('OPEN_MIC_PERMISSION focused existing window', {
+          windowId: micPermissionWindowId,
+        });
+        return { windowId: micPermissionWindowId };
+      } catch {
+        // Window was closed out from under us — fall through and create a new one.
+        micPermissionWindowId = null;
+      }
+    }
+    try {
+      const url = chrome.runtime.getURL('mic-permission.html');
+      const win = await chrome.windows.create({
+        url,
+        type: 'popup',
+        width: 420,
+        height: 320,
+        focused: true,
+      });
+      micPermissionWindowId = win.id ?? null;
+      mediaLog.info('OPEN_MIC_PERMISSION opened window', { windowId: micPermissionWindowId });
+      return { windowId: micPermissionWindowId };
+    } catch (err) {
+      mediaLog.error('OPEN_MIC_PERMISSION failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
   },
 
   TTS_DOWNLOAD_MODEL: async request => {
@@ -497,6 +564,11 @@ chrome.runtime.onMessage.addListener(
     return false;
   },
 );
+
+// Clear the mic-permission popup tracker when the user closes that window.
+chrome.windows.onRemoved.addListener(windowId => {
+  if (windowId === micPermissionWindowId) micPermissionWindowId = null;
+});
 
 const streamKeepAlive = createKeepAliveManager('keep-alive');
 

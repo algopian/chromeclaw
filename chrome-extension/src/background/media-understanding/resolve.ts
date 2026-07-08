@@ -1,6 +1,8 @@
 import { DEFAULT_LOCAL_MODEL } from './defaults';
 import { getProvider } from './providers';
 import { createLogger } from '../logging/logger-buffer';
+import { checkWebAuth } from '../web-providers/auth';
+import { getSpeechPlugin } from '../web-providers/speech/plugin-registry';
 import { sttConfigStorage, customModelsStorage } from '@extension/storage';
 import type { MediaEngine, TranscribeOptions } from './types';
 import type { SttConfig } from '@extension/storage';
@@ -28,13 +30,27 @@ const resolveTranscription = async (audio: ArrayBuffer, mimeType: string): Promi
     options.model = config.openai.model;
     options.baseUrl = config.openai.baseUrl;
     options.apiVersion = config.openai.apiVersion;
+  } else if (engine === 'gemini-web') {
+    // Pre-flight auth gate: check session BEFORE recording/injecting.
+    // Fail fast with an actionable message if not logged in.
+    const plugin = getSpeechPlugin('gemini-web');
+    if (plugin) {
+      const authStatus = await checkWebAuth(plugin.definition);
+      if (authStatus === 'not-logged-in' || authStatus === 'expired') {
+        throw new Error(
+          'Sign in to Gemini to use browser STT. ' +
+            'Open Settings → Speech-to-Text and click Login.',
+        );
+      }
+    }
   } else {
     options.model = config.localModel || DEFAULT_LOCAL_MODEL;
   }
 
-  log.debug('resolveTranscription', {
+  log.info('resolveTranscription: engine selected', {
     engine,
     configEngine: config.engine,
+    bytes: audio.byteLength,
     language: config.language,
     localModel: config.localModel,
     optionsModel: options.model,
@@ -62,6 +78,11 @@ const resolveTranscription = async (audio: ArrayBuffer, mimeType: string): Promi
         });
       }
     }
+    log.error('transcription failed', {
+      engine,
+      configEngine: config.engine,
+      error: err instanceof Error ? err.message : String(err),
+    });
     throw err;
   }
 };

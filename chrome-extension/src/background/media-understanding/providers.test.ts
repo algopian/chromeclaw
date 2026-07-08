@@ -13,12 +13,18 @@ vi.mock('./providers/transformers', () => ({
   transformersProvider: { id: 'transformers', transcribe: vi.fn() },
 }));
 
+// gemini-web pulls in the web-providers speech bridge (chrome.scripting) — mock
+// it out so the registry can be imported in a plain vitest environment.
+vi.mock('./providers/gemini-web', () => ({
+  geminiWebProvider: { id: 'gemini-web', transcribe: vi.fn() },
+}));
+
 const { getProvider, PROVIDERS } = await import('./providers');
 
 describe('STT provider registry', () => {
-  it('registers openai and transformers providers', () => {
-    expect(PROVIDERS).toHaveLength(2);
-    expect(PROVIDERS.map(p => p.id).sort()).toEqual(['openai', 'transformers']);
+  it('registers openai, transformers and gemini-web providers', () => {
+    expect(PROVIDERS).toHaveLength(3);
+    expect(PROVIDERS.map(p => p.id).sort()).toEqual(['gemini-web', 'openai', 'transformers']);
   });
 
   it('getProvider("openai") returns the openai provider', () => {
@@ -32,6 +38,13 @@ describe('STT provider registry', () => {
     const provider = getProvider('transformers');
     expect(provider).toBeDefined();
     expect(provider!.id).toBe('transformers');
+    expect(typeof provider!.transcribe).toBe('function');
+  });
+
+  it('getProvider("gemini-web") returns the gemini-web provider', () => {
+    const provider = getProvider('gemini-web');
+    expect(provider).toBeDefined();
+    expect(provider!.id).toBe('gemini-web');
     expect(typeof provider!.transcribe).toBe('function');
   });
 

@@ -49,7 +49,7 @@ describe('SpeechToTextConfig — SttConfig defaults', () => {
   });
 
   it('defaultSttConfig engine is a valid engine type', () => {
-    const validEngines = ['off', 'openai', 'transformers'];
+    const validEngines = ['off', 'openai', 'transformers', 'gemini-web'];
     expect(validEngines).toContain(defaultSttConfig.engine);
   });
 });
@@ -286,7 +286,7 @@ describe('SpeechToTextConfig — off engine', () => {
   });
 
   it('valid engines list includes off', () => {
-    const validEngines: SttConfig['engine'][] = ['off', 'openai', 'transformers'];
+    const validEngines: SttConfig['engine'][] = ['off', 'openai', 'transformers', 'gemini-web'];
     expect(validEngines).toContain('off');
   });
 });
@@ -311,10 +311,17 @@ describe('SpeechToTextConfig — visibility when engine is off', () => {
   });
 
   it('isEnabled is true for non-off engines', () => {
-    const engines: SttConfig['engine'][] = ['openai', 'transformers'];
+    const engines: SttConfig['engine'][] = ['openai', 'transformers', 'gemini-web'];
     for (const engine of engines) {
       const isEnabled = engine !== 'off';
       expect(isEnabled).toBe(true);
     }
+  });
+
+  it('gemini-web shows neither OpenAI nor local-model fields but is enabled', () => {
+    const engine: SttConfig['engine'] = 'gemini-web';
+    expect(engine === 'openai').toBe(false);
+    expect(engine === 'transformers').toBe(false);
+    expect(engine !== 'off').toBe(true);
   });
 });

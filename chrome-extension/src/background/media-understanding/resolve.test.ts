@@ -4,6 +4,8 @@ import {
   resolveOpenAIKey,
   detectBestEngine,
 } from './resolve';
+import { checkWebAuth } from '../web-providers/auth';
+import { getSpeechPlugin } from '../web-providers/speech/plugin-registry';
 import { sttConfigStorage, customModelsStorage } from '@extension/storage';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SttConfig } from '@extension/storage';
@@ -27,9 +29,21 @@ vi.mock('./providers', () => ({
   getProvider: vi.fn(),
 }));
 
+// Mock the web-providers auth check
+vi.mock('../web-providers/auth', () => ({
+  checkWebAuth: vi.fn(),
+}));
+
+// Mock the speech plugin registry
+vi.mock('../web-providers/speech/plugin-registry', () => ({
+  getSpeechPlugin: vi.fn(),
+}));
+
 const mockSttConfig = sttConfigStorage as unknown as { get: ReturnType<typeof vi.fn> };
 const mockModels = customModelsStorage as unknown as { get: ReturnType<typeof vi.fn> };
 const mockGetProvider = getProvider as unknown as ReturnType<typeof vi.fn>;
+const mockCheckWebAuth = checkWebAuth as unknown as ReturnType<typeof vi.fn>;
+const mockGetSpeechPlugin = getSpeechPlugin as unknown as ReturnType<typeof vi.fn>;
 
 const defaultConfig: SttConfig = {
   engine: 'transformers',
@@ -116,6 +130,25 @@ describe('resolveTranscription', () => {
       language: 'en',
       model: 'tiny',
     });
+  });
+
+  it('explicit gemini-web engine uses gemini-web provider with only language', async () => {
+    mockSttConfig.get.mockResolvedValue({
+      ...defaultConfig,
+      engine: 'gemini-web',
+      // Even if an OpenAI key is present it must not leak into the options.
+      openai: { apiKey: 'sk-should-not-be-used', model: 'whisper-1', baseUrl: 'https://api.openai.com/v1' },
+      language: 'fr',
+    });
+    const mockTranscribe = createMockProvider('gemini-web', 'gemini transcript');
+
+    const result = await resolveTranscription(audio, 'audio/ogg');
+    expect(result).toBe('gemini transcript');
+    // Zero-token engine: no apiKey, no model — only the language.
+    expect(mockTranscribe).toHaveBeenCalledWith(audio, 'audio/ogg', { language: 'fr' });
+    const passedOptions = mockTranscribe.mock.calls[0][2];
+    expect(passedOptions).not.toHaveProperty('apiKey');
+    expect(passedOptions).not.toHaveProperty('model');
   });
 
   it('custom localModel passes through to transformers provider', async () => {
@@ -287,5 +320,80 @@ describe('detectBestEngine', () => {
     mockModels.get.mockResolvedValue([]);
     const engine = await detectBestEngine(defaultConfig);
     expect(engine).toBe('transformers');
+  });
+
+  it('never auto-selects gemini-web (session-riding engine is opt-in only)', async () => {
+    // With a key → openai; without → transformers. gemini-web must never be the
+    // auto choice because it silently rides the user's logged-in Gemini session.
+    mockModels.get.mockResolvedValue([{ provider: 'openai', apiKey: 'sk-test' }]);
+    expect(await detectBestEngine(defaultConfig)).not.toBe('gemini-web');
+    mockModels.get.mockResolvedValue([]);
+    expect(await detectBestEngine(defaultConfig)).not.toBe('gemini-web');
+  });
+});
+
+describe('gemini-web pre-flight auth gate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const geminiConfig: SttConfig = {
+    ...defaultConfig,
+    engine: 'gemini-web',
+    language: 'en',
+  };
+
+  const fakePlugin = {
+    definition: {
+      id: 'gemini-web',
+      name: 'Gemini (browser session)',
+      cookieDomain: '.google.com',
+      sessionIndicators: ['__Secure-1PSID', 'SAPISID'],
+      loginUrl: 'https://gemini.google.com',
+    },
+  };
+
+  it('rejects with actionable message when not logged in', async () => {
+    mockSttConfig.get.mockResolvedValue(geminiConfig);
+    mockGetSpeechPlugin.mockReturnValue(fakePlugin);
+    mockCheckWebAuth.mockResolvedValue('not-logged-in');
+    createMockProvider('gemini-web', 'should not reach');
+
+    await expect(resolveTranscription(audio, 'audio/ogg')).rejects.toThrow(
+      'Sign in to Gemini to use browser STT',
+    );
+  });
+
+  it('rejects with actionable message when session expired', async () => {
+    mockSttConfig.get.mockResolvedValue(geminiConfig);
+    mockGetSpeechPlugin.mockReturnValue(fakePlugin);
+    mockCheckWebAuth.mockResolvedValue('expired');
+    createMockProvider('gemini-web', 'should not reach');
+
+    await expect(resolveTranscription(audio, 'audio/ogg')).rejects.toThrow(
+      'Sign in to Gemini to use browser STT',
+    );
+  });
+
+  it('proceeds to transcription when logged in', async () => {
+    mockSttConfig.get.mockResolvedValue(geminiConfig);
+    mockGetSpeechPlugin.mockReturnValue(fakePlugin);
+    mockCheckWebAuth.mockResolvedValue('logged-in');
+    const mockTranscribe = createMockProvider('gemini-web', 'gemini result');
+
+    const result = await resolveTranscription(audio, 'audio/ogg');
+    expect(result).toBe('gemini result');
+    expect(mockTranscribe).toHaveBeenCalled();
+  });
+
+  it('proceeds when speech plugin is not registered (no gate)', async () => {
+    mockSttConfig.get.mockResolvedValue(geminiConfig);
+    mockGetSpeechPlugin.mockReturnValue(undefined);
+    const mockTranscribe = createMockProvider('gemini-web', 'no-gate result');
+
+    const result = await resolveTranscription(audio, 'audio/ogg');
+    expect(result).toBe('no-gate result');
+    expect(mockCheckWebAuth).not.toHaveBeenCalled();
+    expect(mockTranscribe).toHaveBeenCalled();
   });
 });

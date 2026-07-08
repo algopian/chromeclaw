@@ -29,7 +29,9 @@ export const installRelay = (
       data.type === 'WEB_LLM_DONE' ||
       data.type === 'WEB_LLM_ERROR' ||
       data.type === 'WEB_LLM_METADATA' ||
-      data.type === 'WEB_LLM_RETRY_REFRESH'
+      data.type === 'WEB_LLM_RETRY_REFRESH' ||
+      data.type === 'SPEECH_RESULT' ||
+      data.type === 'SPEECH_DIAG'
     ) {
       chrome.runtime.sendMessage(data);
     }

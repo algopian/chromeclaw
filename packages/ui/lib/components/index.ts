@@ -64,6 +64,8 @@ export { PreviewAttachment } from './preview-attachment';
 export type { PreviewAttachmentProps } from './preview-attachment';
 export { AttachmentsButton } from './attachments-button';
 export type { AttachmentsButtonProps } from './attachments-button';
+export { MicButton } from './mic-button';
+export type { MicButtonProps } from './mic-button';
 
 // Data stream
 export { DataStreamProvider, useDataStream } from './data-stream-provider';

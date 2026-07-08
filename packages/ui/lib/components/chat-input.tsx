@@ -1,4 +1,5 @@
 import { AttachmentsButton } from './attachments-button';
+import { MicButton } from './mic-button';
 import { PreviewAttachment } from './preview-attachment';
 import {
   Button,
@@ -12,12 +13,12 @@ import {
 import { useInputHistory } from '../hooks';
 import { cn } from '../utils';
 import { useT } from '@extension/i18n';
-import { SendIcon, SquareIcon } from 'lucide-react';
+import { useStorage, getSlashCommands } from '@extension/shared';
+import { sttConfigStorage } from '@extension/storage';
+import { SendIcon, SquareIcon, Check } from 'lucide-react';
+import { Select as SelectPrimitive } from 'radix-ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Check } from 'lucide-react';
-import { Select as SelectPrimitive } from 'radix-ui';
-import { getSlashCommands } from '@extension/shared';
 import type {
   Attachment,
   ChatModel,
@@ -25,7 +26,14 @@ import type {
   ThinkingLevel,
   StreamingStatus,
 } from '@extension/shared';
-import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent } from 'react';
+import type {
+  ChangeEvent,
+  ClipboardEvent,
+  Dispatch,
+  FormEvent,
+  KeyboardEvent,
+  SetStateAction,
+} from 'react';
 
 const THINKING_LEVEL_I18N = {
   fast: { label: 'chat_thinkLevelFast', desc: 'chat_thinkLevelFastDesc' },
@@ -38,7 +46,7 @@ const ACCEPTED_FILE_TYPES = 'image/*,.pdf,.txt,.md,.csv';
 
 type ChatInputProps = {
   input: string;
-  setInput: (value: string) => void;
+  setInput: Dispatch<SetStateAction<string>>;
   onSubmit: (content: string, attachments?: Attachment[]) => void;
   status: StreamingStatus;
   stop: () => void;
@@ -65,6 +73,8 @@ const ChatInput = ({
   supportedThinkingLevels,
 }: ChatInputProps) => {
   const t = useT();
+  const sttConfig = useStorage(sttConfigStorage);
+  const micEnabled = sttConfig.engine !== 'off';
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
   const [slashSelectedIndex, setSlashSelectedIndex] = useState(0);
@@ -184,6 +194,47 @@ const ChatInput = ({
 
   const removeAttachment = useCallback((index: number) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handleDictation = useCallback(
+    async (base64: string, mimeType: string) => {
+      try {
+        const response = (await chrome.runtime.sendMessage({
+          type: 'TRANSCRIBE_DICTATION',
+          audio: base64,
+          mimeType,
+        })) as { transcript?: string; error?: string } | undefined;
+
+        if (!response || response.error) {
+          console.error('[dictation] transcription failed', {
+            mimeType,
+            error: response?.error,
+            hasResponse: Boolean(response),
+          });
+          toast.error(response?.error || t('chat_mic_error'));
+          return;
+        }
+
+        const transcript = (response.transcript ?? '').trim();
+        if (!transcript) return;
+        setInput(prev => (prev.trim() ? `${prev.trimEnd()} ${transcript}` : transcript));
+        textareaRef.current?.focus();
+      } catch (err) {
+        console.error('[dictation] TRANSCRIBE_DICTATION message failed', err);
+        toast.error(t('chat_mic_error'));
+      }
+    },
+    [setInput, t],
+  );
+
+  // The side panel can't reliably prompt for mic permission, so when the mic
+  // button reports it's missing, ask the background to open a dedicated
+  // permission popup window. The grant persists to the extension origin, so the
+  // next dictation attempt in the side panel works.
+  const handleMicPermission = useCallback(() => {
+    chrome.runtime.sendMessage({ type: 'OPEN_MIC_PERMISSION' }).catch(err => {
+      console.error('[dictation] OPEN_MIC_PERMISSION message failed', err);
+    });
   }, []);
 
   const handleSubmit = (e: FormEvent) => {
@@ -365,6 +416,13 @@ const ChatInput = ({
               disabled={isStreaming}
               onClick={() => fileInputRef.current?.click()}
             />
+            {micEnabled && (
+              <MicButton
+                disabled={isStreaming}
+                onAudio={handleDictation}
+                onPermissionNeeded={handleMicPermission}
+              />
+            )}
             {models.length > 0 && (
               <Select onValueChange={onModelChange} value={selectedModelId}>
                 <SelectTrigger

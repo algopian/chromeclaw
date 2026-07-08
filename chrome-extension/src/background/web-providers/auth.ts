@@ -8,6 +8,13 @@ import { webCredentialsStorage } from '@extension/storage';
 import type { WebProviderDefinition, WebAuthStatus } from './types';
 import type { WebProviderCredential } from '@extension/storage';
 
+/** Minimal subset of WebProviderDefinition needed for auth checks. */
+interface WebAuthable {
+  id: string;
+  cookieDomain: string;
+  sessionIndicators: string[];
+}
+
 const authLog = createLogger('web-auth');
 
 /** Poll interval for checking session cookies after login tab opens. */
@@ -20,7 +27,7 @@ const LOGIN_TIMEOUT_MS = 5 * 60 * 1_000; // 5 minutes
  * For localStorage-based providers (e.g. Kimi, GLM Intl) where session
  * indicators won't appear in cookies, falls back to stored credentials.
  */
-const checkWebAuth = async (provider: WebProviderDefinition): Promise<WebAuthStatus> => {
+const checkWebAuth = async (provider: WebAuthable): Promise<WebAuthStatus> => {
   try {
     const cookies = await chrome.cookies.getAll({ domain: provider.cookieDomain });
     const cookieMap = Object.fromEntries(cookies.map(c => [c.name, c.value]));
@@ -223,3 +230,4 @@ export {
   clearWebCredential,
   testWebConnection,
 };
+export type { WebAuthable };

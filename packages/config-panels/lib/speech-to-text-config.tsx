@@ -1,3 +1,5 @@
+import { useT } from '@extension/i18n';
+import { useWebAuth } from '@extension/shared';
 import { defaultSttConfig, sttConfigStorage } from '@extension/storage';
 import {
   Button,
@@ -24,22 +26,38 @@ import {
   HardDriveIcon,
   InfoIcon,
   LoaderIcon,
+  LogInIcon,
+  LogOutIcon,
   MicIcon,
   Trash2Icon,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { WebAuthDefinition } from '@extension/shared';
 import type { SttConfig } from '@extension/storage';
 
 const engineOptions = [
   { value: 'off', label: 'Off' },
   { value: 'transformers', label: 'Local (Transformers)' },
   { value: 'openai', label: 'OpenAI' },
+  { value: 'gemini-web', label: 'Gemini (browser, no API key)' },
 ] as const;
 
 const engineDescriptions: Record<string, string> = {
   off: 'Audio transcription is disabled',
   openai: "Uses OpenAI's Whisper API for high-accuracy cloud transcription",
   transformers: 'Runs a transformer model locally via ONNX — no data leaves your browser',
+  'gemini-web':
+    'Transcribes using your logged-in Gemini web session — no API key required. Requires an active gemini.google.com login. May stop working without notice.',
+};
+
+/** Auth definitions for speech engines backed by a browser session. */
+const speechWebAuthDefinitions: Record<string, WebAuthDefinition> = {
+  'gemini-web': {
+    id: 'gemini-web',
+    cookieDomain: '.google.com',
+    sessionIndicators: ['__Secure-1PSID', 'SAPISID'],
+    loginUrl: 'https://gemini.google.com',
+  },
 };
 
 const localModelOptions = [
@@ -149,6 +167,7 @@ const deleteCachedModel = async (model: string): Promise<void> => {
 };
 
 const SpeechToTextConfig = () => {
+  const t = useT();
   const [config, setConfig] = useState<SttConfig | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress>({
@@ -163,6 +182,20 @@ const SpeechToTextConfig = () => {
   );
   const [uploadError, setUploadError] = useState<string | undefined>();
   const folderInputRef = useRef<HTMLInputElement>(null);
+
+  // Auth hook for speech-web engines (e.g. gemini-web)
+  const webAuthDef = config ? speechWebAuthDefinitions[config.engine] : undefined;
+  const {
+    status: authStatus,
+    loginLoading,
+    error: authError,
+    login,
+    logout,
+  } = useWebAuth({
+    definition: webAuthDef,
+    recheckKey: config?.engine,
+  });
+  const showWebAuthSection = config?.engine === 'gemini-web';
 
   const refreshCachedModels = useCallback(async () => {
     const models = await listCachedModels();
@@ -382,6 +415,64 @@ const SpeechToTextConfig = () => {
             </Select>
             <p className="text-muted-foreground text-xs">{engineDescriptions[config.engine]}</p>
           </div>
+
+          {showWebAuthSection && (
+            <div className="grid gap-2 pl-8">
+              <div className="flex items-center gap-3">
+                <span className="text-sm">
+                  {authStatus === 'checking' && (
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <LoaderIcon className="size-3.5 animate-spin" />
+                      {t('stt_web_status_checking')}
+                    </span>
+                  )}
+                  {authStatus === 'logged-in' && (
+                    <span className="flex items-center gap-1.5 text-green-600">
+                      <CheckCircle2Icon className="size-3.5" />
+                      {t('stt_web_status_logged_in')}
+                    </span>
+                  )}
+                  {authStatus === 'expired' && (
+                    <span className="flex items-center gap-1.5 text-amber-600">
+                      <AlertCircleIcon className="size-3.5" />
+                      {t('stt_web_status_expired')}
+                    </span>
+                  )}
+                  {authStatus === 'not-logged-in' && (
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <AlertCircleIcon className="size-3.5" />
+                      {t('stt_web_status_not_logged_in')}
+                    </span>
+                  )}
+                </span>
+
+                {(authStatus === 'not-logged-in' || authStatus === 'expired') && (
+                  <Button disabled={loginLoading} onClick={login} size="sm" variant="outline">
+                    {loginLoading ? (
+                      <LoaderIcon className="mr-1.5 size-3.5 animate-spin" />
+                    ) : (
+                      <LogInIcon className="mr-1.5 size-3.5" />
+                    )}
+                    {loginLoading ? 'Signing in\u2026' : t('stt_web_login')}
+                  </Button>
+                )}
+
+                {authStatus === 'logged-in' && (
+                  <Button onClick={logout} size="sm" variant="ghost">
+                    <LogOutIcon className="mr-1.5 size-3.5" />
+                    {t('stt_web_logout')}
+                  </Button>
+                )}
+              </div>
+
+              {authError && (
+                <p className="flex items-center gap-1.5 text-xs text-red-600">
+                  <AlertCircleIcon className="size-3" />
+                  {authError}
+                </p>
+              )}
+            </div>
+          )}
 
           {isEnabled && <h3 className="text-sm font-medium">Audio Transcription</h3>}
 
