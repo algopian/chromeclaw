@@ -103,6 +103,13 @@ const ChatInput = ({
 
   const showThinkingLevel = supportedThinkingLevels && supportedThinkingLevels.length > 0;
 
+  const hasContent = input.trim().length > 0 || attachments.length > 0;
+  // Mic is offered whenever STT is on and we're not mid-stream.
+  const showMic = micEnabled && !isStreaming;
+  // With the mic available and an empty draft, the mic is the sole control;
+  // as soon as there's content (or no mic, or a stream is running) show Send.
+  const showSend = !showMic || hasContent;
+
   const processFile = useCallback(
     (file: File): Promise<Attachment | null> =>
       new Promise(resolve => {
@@ -416,13 +423,6 @@ const ChatInput = ({
               disabled={isStreaming}
               onClick={() => fileInputRef.current?.click()}
             />
-            {micEnabled && (
-              <MicButton
-                disabled={isStreaming}
-                onAudio={handleDictation}
-                onPermissionNeeded={handleMicPermission}
-              />
-            )}
             {models.length > 0 && (
               <Select onValueChange={onModelChange} value={selectedModelId}>
                 <SelectTrigger
@@ -478,14 +478,25 @@ const ChatInput = ({
                 </SelectContent>
               </Select>
             )}
-            <Button
-              className="shrink-0 gap-1.5 rounded-lg"
-              disabled={isUploading || (!isStreaming && !input.trim() && attachments.length === 0)}
-              size="icon"
-              type="submit"
-              variant="default">
-              {isStreaming ? <SquareIcon className="size-4" /> : <SendIcon className="size-4" />}
-            </Button>
+            {showMic && (
+              <MicButton
+                disabled={isStreaming}
+                onAudio={handleDictation}
+                onPermissionNeeded={handleMicPermission}
+              />
+            )}
+            {showSend && (
+              <Button
+                className="shrink-0 gap-1.5 rounded-lg"
+                disabled={
+                  isUploading || (!isStreaming && !input.trim() && attachments.length === 0)
+                }
+                size="icon"
+                type="submit"
+                variant="default">
+                {isStreaming ? <SquareIcon className="size-4" /> : <SendIcon className="size-4" />}
+              </Button>
+            )}
           </div>
         </div>
       </form>

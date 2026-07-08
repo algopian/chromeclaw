@@ -1,7 +1,8 @@
 import { Button } from './ui';
+import { Waveform } from './waveform';
 import { cn } from '../utils';
 import { useT } from '@extension/i18n';
-import { LoaderIcon, MicIcon, SquareIcon } from 'lucide-react';
+import { LoaderIcon, MicIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -48,6 +49,7 @@ const blobToBase64 = (blob: Blob): Promise<string> =>
 const MicButton = ({ onAudio, onPermissionNeeded, disabled }: MicButtonProps) => {
   const t = useT();
   const [state, setState] = useState<MicState>('idle');
+  const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -55,6 +57,7 @@ const MicButton = ({ onAudio, onPermissionNeeded, disabled }: MicButtonProps) =>
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach(track => track.stop());
     streamRef.current = null;
+    setActiveStream(null);
   }, []);
 
   // Safety net: tear down capture if unmounted mid-recording.
@@ -72,6 +75,7 @@ const MicButton = ({ onAudio, onPermissionNeeded, disabled }: MicButtonProps) =>
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+      setActiveStream(stream);
       chunksRef.current = [];
 
       const recorder = new MediaRecorder(stream);
@@ -154,7 +158,7 @@ const MicButton = ({ onAudio, onPermissionNeeded, disabled }: MicButtonProps) =>
       {state === 'processing' ? (
         <LoaderIcon className="size-4 animate-spin" />
       ) : isRecording ? (
-        <SquareIcon className="size-4" />
+        <Waveform stream={activeStream} />
       ) : (
         <MicIcon className="size-4" />
       )}
