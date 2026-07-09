@@ -6,7 +6,8 @@
  * each, selects finals by protobuf field 5, and concatenates in order.
  */
 import { describe, expect, it } from 'vitest';
-import { decodeResultB64Url } from './gemini-speech-protobuf';
+import { decodeResult as assembleTranscript } from './gemini-web.speech';
+import { decodeResultB64Url, fromBase64Url, toBase64 } from './gemini-speech-protobuf';
 
 // ── Captured wire data (standard base64, as the server sends) ────────────────
 // From a real backchannel-results.txt capture. Wire uses standard base64 with
@@ -135,7 +136,6 @@ describe('speech-bridge decode — final selection by protobuf field 5', () => {
     expect(result.finalCount).toBe(2);
     expect(result.transcript).toBe('hello world Weather tomorrow.');
   });
-
   it('filters out interims (isFinal=false) from the transcript', () => {
     const { payloads } = extractPayloads(DOWNLINK_MIXED);
     const result = decodeAndConcatenate(payloads);
@@ -160,5 +160,64 @@ describe('speech-bridge decode — final selection by protobuf field 5', () => {
     const result = decodeAndConcatenate([FINAL_PAYLOAD_HELLO]);
     expect(result.finalCount).toBe(1);
     expect(result.transcript).toBe('hello world');
+  });
+});
+
+// ── Live wire shape regression — drives the REAL exported assembler ──────────
+// The blocks above replicate the assembly logic locally; they never exercised
+// the shipped `decodeResult`, so the finals-only bug slipped through. These
+// tests import the real assembler and reproduce the field shape seen in
+// production: the server streams the transcript on INTERIM frames (isFinal=0,
+// cumulative) and closes with a bare `{isFinal:1}` marker that carries no text.
+//
+// Fixtures are derived from the captured payloads by flipping ONLY the field-5
+// (isFinal) varint at byte index 1 (byte 0 is the 0x28 field-5 tag) — so no
+// protobuf is hand-rolled; the transcript bytes are the captured ones.
+const flipIsFinalToInterim = (b64: string): string =>
+  toBase64(Uint8Array.from(fromBase64Url(b64), (b, i) => (i === 1 ? 0 : b)));
+
+const WEATHER_AS_INTERIM = flipIsFinalToInterim(FINAL_PAYLOAD_WEATHER);
+const HELLO_AS_INTERIM = flipIsFinalToInterim(FINAL_PAYLOAD_HELLO);
+// Bare end marker: field-5 tag + varint 1, no transcript payload (first 2 bytes).
+const BARE_FINAL_MARKER = toBase64(fromBase64Url(FINAL_PAYLOAD_WEATHER).slice(0, 2));
+
+describe('assembleTranscript (real decodeResult) — live frame shapes', () => {
+  it('sanity: derived interim carries text but is not final', () => {
+    const d = decodeResultB64Url(WEATHER_AS_INTERIM);
+    expect(d.isFinal).toBe(false);
+    expect(d.transcript).toBe('Weather tomorrow.');
+  });
+
+  it('sanity: derived bare marker is final with no text', () => {
+    const d = decodeResultB64Url(BARE_FINAL_MARKER);
+    expect(d.isFinal).toBe(true);
+    expect(d.transcript).toBe('');
+  });
+
+  it('recovers text from cumulative interims + bare final marker (the bug)', () => {
+    // Regression: the shipped finals-only assembly returned '' for this input,
+    // which is exactly the reported "dictates nothing, no error" failure.
+    expect(assembleTranscript([WEATHER_AS_INTERIM, BARE_FINAL_MARKER])).toBe('Weather tomorrow.');
+  });
+
+  it('takes the LAST interim when several accumulate before the marker', () => {
+    // Interims are cumulative, so the final utterance is the last non-empty one.
+    expect(assembleTranscript([HELLO_AS_INTERIM, WEATHER_AS_INTERIM, BARE_FINAL_MARKER])).toBe(
+      'Weather tomorrow.',
+    );
+  });
+
+  it('still prefers text-carrying finals when present (captured fixture shape)', () => {
+    expect(assembleTranscript([FINAL_PAYLOAD_HELLO, FINAL_PAYLOAD_WEATHER])).toBe(
+      'hello world Weather tomorrow.',
+    );
+  });
+
+  it('throws when no frame is final (unchanged contract)', () => {
+    expect(() => assembleTranscript([WEATHER_AS_INTERIM])).toThrow(/none were final/);
+  });
+
+  it('returns empty on a genuine no-speech ack (bare marker only)', () => {
+    expect(assembleTranscript([BARE_FINAL_MARKER])).toBe('');
   });
 });

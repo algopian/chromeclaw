@@ -28,7 +28,9 @@ const F_AUDIO_DATA = 293101; // { 1: <container bytes> }
 const F_CLIENT = 294000; // { 2: "bard-web-frontend", 8: "Web" }
 const F_LANG_B = 294500; // { 1: { 10: <lang> }, 5: 1, 40: 1, 52: 1 }
 
-// Response field path: field 5 = isFinal; field 1253625 → 1 → 7 → 3 → 1 = text.
+// Response field path: field 5 = result-state enum; field 1253625 → 1 → <alt>
+// → 3 → 1 = text, where <alt> is the hypothesis slot (7 for single-shot finals,
+// 3/5 for streamed short-clip hypotheses — scanned, not hardcoded).
 const F_IS_FINAL = 5;
 const F_RESULT = 1253625;
 
@@ -236,6 +238,10 @@ const parseFields = (buf: Uint8Array): ProtoField[] => {
 const findLen = (fields: ProtoField[], field: number): Uint8Array | undefined =>
   fields.find(f => f.field === field && f.bytes)?.bytes;
 
+/** All length-delimited children (any field number), in wire order. */
+const allLen = (fields: ProtoField[]): Uint8Array[] =>
+  fields.filter(f => f.bytes).map(f => f.bytes!);
+
 interface DecodedResult {
   isFinal: boolean;
   transcript: string;
@@ -243,9 +249,13 @@ interface DecodedResult {
 
 /**
  * Decode a response frame (the base64 payload inside a `[[2|3, ["…"]]]` downlink
- * array). Walks field 5 (isFinal) and the transcript path
- * 1253625 → 1 → 7 → 3 → 1. Returns an empty transcript when the path is absent
- * (e.g. interim frames that only carry timing metadata under field 2).
+ * array). Field 5 is a result-state enum; the transcript lives at
+ * 1253625 → 1 → <alt> → 3 → 1, where <alt> is a hypothesis slot whose field
+ * number varies by frame shape (7 for single-shot finals, 3/5 for streamed
+ * short-clip hypotheses). Rather than hardcode <alt>, every length-delimited
+ * child under 1253625 → 1 is scanned and the first that yields text via the
+ * stable → 3 → 1 tail is returned. Returns an empty transcript when no
+ * hypothesis carries text (e.g. interim/timing-only frames or end markers).
  */
 const decodeResult = (bytes: Uint8Array): DecodedResult => {
   const top = parseFields(bytes);
@@ -256,12 +266,18 @@ const decodeResult = (bytes: Uint8Array): DecodedResult => {
   if (resultBytes) {
     const l1 = findLen(parseFields(resultBytes), 1);
     if (l1) {
-      const l7 = findLen(parseFields(l1), 7);
-      if (l7) {
-        const l3 = findLen(parseFields(l7), 3);
-        if (l3) {
-          const l1b = findLen(parseFields(l3), 1);
-          if (l1b) transcript = new TextDecoder().decode(l1b);
+      // Scan each hypothesis slot under → 1 (field number varies: 3/5/7/…),
+      // applying the stable → 3 → 1 tail. Take the first non-empty transcript.
+      for (const alt of allLen(parseFields(l1))) {
+        const l3 = findLen(parseFields(alt), 3);
+        if (!l3) continue;
+        const l1b = findLen(parseFields(l3), 1);
+        if (l1b) {
+          const text = new TextDecoder().decode(l1b);
+          if (text) {
+            transcript = text;
+            break;
+          }
         }
       }
     }

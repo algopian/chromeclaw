@@ -74,12 +74,23 @@ const decodeResult = (payloads: string[]): string => {
     );
   }
 
-  // Server acknowledged but detected no speech (e.g. silence / too short).
-  const text = finals
+  // Preferred shape: the final frame(s) carry the transcript text (one final per
+  // stabilized segment). Concatenate them in stream order.
+  const finalText = finals
     .map(f => f.transcript)
     .filter(Boolean)
     .join(' ');
-  return text;
+  if (finalText) return finalText;
+
+  // Observed live shape: the server streams the transcript on interim frames
+  // (isFinal=0, cumulative) and closes with a bare `{isFinal:1}` end marker that
+  // carries no text. Fall back to the last non-empty transcript across all
+  // frames — interims are cumulative, so the last one is the full utterance.
+  // A still-empty result is a genuine no-speech ack (silence / too short).
+  for (let i = decoded.length - 1; i >= 0; i--) {
+    if (decoded[i].transcript) return decoded[i].transcript;
+  }
+  return '';
 };
 
 const geminiWebSpeechPlugin: SpeechWebProviderPlugin = {
@@ -89,4 +100,4 @@ const geminiWebSpeechPlugin: SpeechWebProviderPlugin = {
   channelClient: speechMainWorldChannel,
 };
 
-export { geminiWebSpeechPlugin };
+export { geminiWebSpeechPlugin, decodeResult };

@@ -26,6 +26,11 @@ const CONFIG_EN_B64URL =
 const FINAL_FRAME_B64URL = 'KAHKj-QEEwoROg8aDQoLaGVsbG8gd29ybGQ';
 // An interim frame: only timing metadata under field 2, no transcript path.
 const INTERIM_FRAME_B64URL = 'EHs';
+// A real captured streamed short-clip result frame carrying "Oh." — its
+// transcript sits under 1253625 → 1 → 3 → 3 → 1 (hypothesis slot 3, NOT the
+// single-shot slot 7), and field 5 = 2 (a result-state enum value, not a
+// boolean). This is the production shape that previously decoded to ''.
+const STREAMED_OH_B64URL = 'KALKj-QEIgogCAEaDQgAEIDyVxoFCgNPaC4qDQgAEIDyVxoFCgNPaC4';
 
 describe('speech-protobuf — config frame encoder', () => {
   it('reproduces the captured English config frame byte-for-byte', () => {
@@ -117,6 +122,15 @@ describe('speech-protobuf — response decoder', () => {
     const result = decodeResultB64Url(INTERIM_FRAME_B64URL);
     expect(result.isFinal).toBe(false);
     expect(result.transcript).toBe('');
+  });
+
+  it('decodes a streamed short-clip transcript from hypothesis slot 3 (not 7)', () => {
+    // Regression for the production "dictates nothing" bug: the codec used to
+    // hardcode the hypothesis slot as field 7, so this real captured frame
+    // (transcript under → 1 → 3 → 3 → 1) decoded to '' and dictation returned
+    // an empty string with no error.
+    const result = decodeResultB64Url(STREAMED_OH_B64URL);
+    expect(result.transcript).toBe('Oh.');
   });
 
   it('never throws on truncated / garbage input', () => {

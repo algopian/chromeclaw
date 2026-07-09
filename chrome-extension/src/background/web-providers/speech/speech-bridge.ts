@@ -80,12 +80,11 @@ const transcribeViaSpeechPlugin = (
           return;
         }
 
+        const stringPayloads = payloads.filter((p): p is string => typeof p === 'string');
         log.info(`${plugin.definition.name} STT response received`, {
           requestId,
           payloadCount: payloads.length,
-          payloadLengths: payloads
-            .filter((p): p is string => typeof p === 'string')
-            .map(p => p.length),
+          payloadLengths: stringPayloads.map(p => p.length),
         });
 
         try {
