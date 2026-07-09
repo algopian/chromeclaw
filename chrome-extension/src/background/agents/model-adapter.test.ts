@@ -9,6 +9,13 @@ vi.mock('@extension/shared', () => ({
     if (id === 'gpt-4o') return 128000;
     return 8192;
   }),
+  PROVIDER_DEFAULT_BASE_URLS: {
+    openai: 'https://api.openai.com/v1',
+    anthropic: 'https://api.anthropic.com',
+    google: 'https://generativelanguage.googleapis.com',
+    openrouter: 'https://openrouter.ai/api/v1',
+    requesty: 'https://router.requesty.ai/v1',
+  },
 }));
 
 import { chatModelToPiModel } from './model-adapter';

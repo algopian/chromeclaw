@@ -3,7 +3,7 @@
  * along with resolved apiKey and headers for streaming.
  */
 
-import { getModelContextLimit } from '@extension/shared';
+import { getModelContextLimit, PROVIDER_DEFAULT_BASE_URLS } from '@extension/shared';
 import type { Api, Model } from '@mariozechner/pi-ai';
 import type { ChatModel } from '@extension/shared';
 import { normalizeModelCompat } from './model-compat';
@@ -29,13 +29,7 @@ export const isAzureOpenAIEndpoint = (baseUrl: string): boolean => {
   }
 };
 
-const DEFAULT_BASE_URLS: Record<string, string> = {
-  openai: 'https://api.openai.com/v1',
-  anthropic: 'https://api.anthropic.com',
-  google: 'https://generativelanguage.googleapis.com',
-  openrouter: 'https://openrouter.ai/api/v1',
-  requesty: 'https://router.requesty.ai/v1',
-};
+const DEFAULT_BASE_URLS = PROVIDER_DEFAULT_BASE_URLS;
 
 export const chatModelToPiModel = (config: ChatModel): ResolvedModel => {
   let api: Api;

@@ -1,3 +1,4 @@
+import { getBaseUrlPlaceholder, isFixedBaseUrlProvider } from './model-base-url';
 import { WEBGPU_MODELS_ENABLED } from '@extension/env';
 import { t, useT } from '@extension/i18n';
 import { WEB_PROVIDER_OPTIONS, useWebProviderAuth } from '@extension/shared';
@@ -799,16 +800,18 @@ const ModelConfig = () => {
                         {editForm.provider === 'azure' ? 'Azure Endpoint' : t('firstRun_baseUrl')}
                       </Label>
                       <Input
+                        disabled={isFixedBaseUrlProvider(editForm.provider)}
                         id="model-baseurl"
                         onChange={e => handleFormChange('baseUrl', e.target.value)}
-                        placeholder={
-                          editForm.provider === 'azure'
-                            ? 'https://{resource}.openai.azure.com/openai'
-                            : 'https://api.openai.com/v1'
-                        }
+                        placeholder={getBaseUrlPlaceholder(editForm.provider)}
                         type="url"
                         value={editForm.baseUrl ?? ''}
                       />
+                      {isFixedBaseUrlProvider(editForm.provider) && (
+                        <p className="text-muted-foreground text-xs">
+                          This provider uses a fixed endpoint; the base URL can't be changed.
+                        </p>
+                      )}
                     </div>
                   )}
 
