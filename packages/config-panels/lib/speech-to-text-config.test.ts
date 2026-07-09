@@ -4,6 +4,7 @@
  */
 import { defaultSttConfig } from '@extension/storage';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { formatKeyCode } from './format-key-code.js';
 import type { SttConfig } from '@extension/storage';
 
 // Mock sttConfigStorage
@@ -29,6 +30,7 @@ beforeEach(() => {
     openai: { apiKey: '', model: 'whisper-1', baseUrl: 'https://api.openai.com/v1' },
     language: 'en',
     localModel: 'tiny',
+    hotkey: 'AltRight',
   };
   mockSet.mockClear();
   vi.useFakeTimers();
@@ -46,6 +48,7 @@ describe('SpeechToTextConfig — SttConfig defaults', () => {
     expect(defaultSttConfig.openai.baseUrl).toBe('https://api.openai.com/v1');
     expect(defaultSttConfig.language).toBe('en');
     expect(defaultSttConfig.localModel).toBe('tiny');
+    expect(defaultSttConfig.hotkey).toBe('AltRight');
   });
 
   it('defaultSttConfig engine is a valid engine type', () => {
@@ -74,6 +77,7 @@ describe('SpeechToTextConfig — engine change saves immediately', () => {
       openai: { apiKey: 'sk-test', model: 'whisper-1', baseUrl: 'https://api.openai.com/v1' },
       language: 'en',
       localModel: 'base.en',
+      hotkey: 'AltRight',
     };
 
     const { sttConfigStorage } = await import('@extension/storage');
@@ -200,6 +204,7 @@ describe('SpeechToTextConfig — config shape validation', () => {
       openai: { apiKey: 'sk-abc', model: 'whisper-1', baseUrl: 'https://api.openai.com/v1' },
       language: 'fr',
       localModel: 'tiny',
+      hotkey: 'AltRight',
     };
 
     await sttConfigStorage.set(updated);
@@ -209,6 +214,7 @@ describe('SpeechToTextConfig — config shape validation', () => {
       openai: { apiKey: 'sk-abc', model: 'whisper-1', baseUrl: 'https://api.openai.com/v1' },
       language: 'fr',
       localModel: 'tiny',
+      hotkey: 'AltRight',
     });
   });
 
@@ -218,6 +224,7 @@ describe('SpeechToTextConfig — config shape validation', () => {
       openai: { apiKey: '', model: 'whisper-1', baseUrl: 'https://api.openai.com/v1' },
       language: 'en',
       localModel: 'small.en',
+      hotkey: 'AltRight',
     };
 
     const { sttConfigStorage } = await import('@extension/storage');
@@ -232,6 +239,7 @@ describe('SpeechToTextConfig — config shape validation', () => {
       openai: { apiKey: 'sk-test', model: 'whisper-1', baseUrl: 'https://custom.api.com/v1' },
       language: 'de',
       localModel: 'base.en',
+      hotkey: 'AltRight',
     };
 
     const { sttConfigStorage } = await import('@extension/storage');
@@ -323,5 +331,66 @@ describe('SpeechToTextConfig — visibility when engine is off', () => {
     expect(engine === 'openai').toBe(false);
     expect(engine === 'transformers').toBe(false);
     expect(engine !== 'off').toBe(true);
+  });
+});
+
+describe('SpeechToTextConfig — hotkey change saves immediately', () => {
+  it('saves new hotkey value immediately via sttConfigStorage.set', async () => {
+    const { sttConfigStorage } = await import('@extension/storage');
+    const config = await sttConfigStorage.get();
+    expect(config.hotkey).toBe('AltRight');
+
+    // Mirrors handleHotkeyKeyDown: set with the captured KeyboardEvent.code.
+    const updated: SttConfig = { ...config, hotkey: 'KeyK' };
+    await sttConfigStorage.set(updated);
+
+    expect(mockSet).toHaveBeenCalledTimes(1);
+    expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({ hotkey: 'KeyK' }));
+  });
+
+  it('preserves other config fields when changing hotkey', async () => {
+    const { sttConfigStorage } = await import('@extension/storage');
+    const config = await sttConfigStorage.get();
+
+    const updated: SttConfig = { ...config, hotkey: 'Space' };
+    await sttConfigStorage.set(updated);
+
+    expect(mockSet).toHaveBeenCalledWith(
+      expect.objectContaining({ hotkey: 'Space', engine: 'transformers', language: 'en' }),
+    );
+  });
+});
+
+describe('formatKeyCode', () => {
+  it('formats sided modifier codes as "<Side> <Name>"', () => {
+    expect(formatKeyCode('AltRight')).toBe('Right Alt');
+    expect(formatKeyCode('AltLeft')).toBe('Left Alt');
+    expect(formatKeyCode('ControlLeft')).toBe('Left Ctrl');
+    expect(formatKeyCode('ShiftRight')).toBe('Right Shift');
+    expect(formatKeyCode('MetaLeft')).toBe('Left Meta');
+  });
+
+  it('formats letter and digit codes to the bare character', () => {
+    expect(formatKeyCode('KeyK')).toBe('K');
+    expect(formatKeyCode('KeyZ')).toBe('Z');
+    expect(formatKeyCode('Digit1')).toBe('1');
+    expect(formatKeyCode('Digit0')).toBe('0');
+  });
+
+  it('formats named keys via the friendly map', () => {
+    expect(formatKeyCode('Space')).toBe('Space');
+    expect(formatKeyCode('Enter')).toBe('Enter');
+    expect(formatKeyCode('Escape')).toBe('Esc');
+    expect(formatKeyCode('Backquote')).toBe('`');
+    expect(formatKeyCode('CapsLock')).toBe('Caps Lock');
+  });
+
+  it('returns empty string for empty input', () => {
+    expect(formatKeyCode('')).toBe('');
+  });
+
+  it('returns unknown codes unchanged', () => {
+    expect(formatKeyCode('F13')).toBe('F13');
+    expect(formatKeyCode('NumpadEnter')).toBe('NumpadEnter');
   });
 });

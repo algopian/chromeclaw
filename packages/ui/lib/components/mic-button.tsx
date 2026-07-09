@@ -1,3 +1,4 @@
+import { shouldHotkeyStart, shouldHotkeyStop } from './hotkey-match';
 import { Button } from './ui';
 import { useT } from '@extension/i18n';
 import { LoaderIcon, MicIcon, SquareIcon } from 'lucide-react';
@@ -27,6 +28,16 @@ type MicButtonProps = {
    * bar rather than on the button itself.
    */
   onStreamChange?: (stream: MediaStream | null) => void;
+  /**
+   * `KeyboardEvent.code` (e.g. `AltRight`) for push-to-talk dictation: hold to
+   * record, release to stop + transcribe (no toggle). Empty/undefined disables
+   * the shortcut. The listeners are bound to `window` only while this button is
+   * mounted, so they are naturally inert whenever the mic button itself is
+   * hidden. A fresh keydown while focus is in an editable field is ignored so a
+   * letter-key hotkey never arms the mic mid-typing; the matching keyup always
+   * stops an armed recording regardless of where focus has moved.
+   */
+  hotkey?: string;
   disabled?: boolean;
 };
 
@@ -46,11 +57,29 @@ const blobToBase64 = (blob: Blob): Promise<string> =>
   });
 
 /**
+ * True when a keyboard event originated from a field where the user is typing
+ * (input, textarea, or contenteditable). Used to suppress a printable-key
+ * hotkey while typing; a lone-modifier hotkey is allowed through upstream.
+ */
+const isEditableTarget = (target: EventTarget | null): boolean => {
+  const el = target as HTMLElement | null;
+  if (!el || typeof el.tagName !== 'string') return false;
+  const tag = el.tagName.toLowerCase();
+  return tag === 'input' || tag === 'textarea' || el.isContentEditable === true;
+};
+
+/**
  * Chat-input microphone toggle. Click to record via getUserMedia + MediaRecorder,
  * click again to stop; the recorded clip is emitted as base64 through `onAudio`.
  * Always stops the mic track on stop/error/unmount so no capture indicator lingers.
  */
-const MicButton = ({ onAudio, onPermissionNeeded, onStreamChange, disabled }: MicButtonProps) => {
+const MicButton = ({
+  onAudio,
+  onPermissionNeeded,
+  onStreamChange,
+  hotkey,
+  disabled,
+}: MicButtonProps) => {
   const t = useT();
   const [state, setState] = useState<MicState>('idle');
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -149,6 +178,52 @@ const MicButton = ({ onAudio, onPermissionNeeded, onStreamChange, disabled }: Mi
     if (state === 'recording') stopRecording();
     else if (state === 'idle') startRecording();
   }, [state, startRecording, stopRecording]);
+
+  // Keep the hotkey-relevant values in a ref so the window listeners can bind
+  // once (on mount) yet always read the current guard state and handlers,
+  // instead of re-binding on every state change.
+  const hotkeyStateRef = useRef({ hotkey, disabled, state, startRecording, stopRecording });
+  hotkeyStateRef.current = { hotkey, disabled, state, startRecording, stopRecording };
+
+  useEffect(() => {
+    // Push-to-talk: hold the hotkey to record, release to stop + transcribe.
+    const onKeyDown = (event: KeyboardEvent) => {
+      const {
+        hotkey: code,
+        disabled: isDisabled,
+        state: micState,
+        startRecording: start,
+      } = hotkeyStateRef.current;
+      // A fresh press of the hotkey arms the mic. Auto-repeat from holding the
+      // key must not re-fire; a printable-key hotkey pressed inside a text field
+      // is ignored so the user can still type it (a lone modifier is allowed).
+      if (
+        shouldHotkeyStart(code, event, {
+          disabled: isDisabled,
+          processing: micState === 'processing',
+          recording: micState === 'recording',
+          editableTarget: isEditableTarget(event.target),
+        })
+      ) {
+        event.preventDefault();
+        start();
+      }
+    };
+    const onKeyUp = (event: KeyboardEvent) => {
+      const { hotkey: code, state: micState, stopRecording: stop } = hotkeyStateRef.current;
+      // Releasing the hotkey stops an armed recording, wherever focus now sits.
+      if (shouldHotkeyStop(code, event, { recording: micState === 'recording' })) {
+        event.preventDefault();
+        stop();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }, []);
 
   const isRecording = state === 'recording';
   const label = isRecording ? t('chat_mic_stop') : t('chat_mic_start');

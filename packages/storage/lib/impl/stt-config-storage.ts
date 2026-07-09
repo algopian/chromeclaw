@@ -7,6 +7,8 @@ interface SttConfig {
   openai: { apiKey: string; model: string; baseUrl: string; apiVersion?: string };
   language: string;
   localModel: string;
+  /** `KeyboardEvent.code` for push-to-talk dictation: hold to record, release to stop (e.g. `AltRight`). Empty disables the shortcut. */
+  hotkey: string;
 }
 
 const defaultSttConfig: SttConfig = {
@@ -19,6 +21,7 @@ const defaultSttConfig: SttConfig = {
   },
   language: 'en',
   localModel: 'tiny',
+  hotkey: 'AltRight',
 };
 
 const rawSttConfigStorage = createStorage<SttConfig>('stt-config', defaultSttConfig, {

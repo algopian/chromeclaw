@@ -254,6 +254,18 @@
   "stt_web_status_checking": {
     "message": "확인 중…"
   },
+  "stt_hotkey_label": {
+    "message": "녹음 단축키"
+  },
+  "stt_hotkey_hint": {
+    "message": "클릭한 다음 키를 누르세요. 그 키를 누르고 있는 동안 받아쓰기하고, 놓으면 중지합니다."
+  },
+  "stt_hotkey_prompt": {
+    "message": "키를 누르세요…"
+  },
+  "stt_hotkey_unset": {
+    "message": "설정 안 됨"
+  },
   "chat_modelSelect": {
     "message": "모델"
   },

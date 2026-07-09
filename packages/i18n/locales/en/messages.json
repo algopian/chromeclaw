@@ -254,6 +254,18 @@
   "stt_web_status_checking": {
     "message": "Checking\u2026"
   },
+  "stt_hotkey_label": {
+    "message": "Record shortcut"
+  },
+  "stt_hotkey_hint": {
+    "message": "Click, then press a key. Hold that key to dictate; release to stop."
+  },
+  "stt_hotkey_prompt": {
+    "message": "Press a key…"
+  },
+  "stt_hotkey_unset": {
+    "message": "Not set"
+  },
   "chat_modelSelect": {
     "message": "Model"
   },

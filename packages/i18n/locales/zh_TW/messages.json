@@ -254,6 +254,18 @@
   "stt_web_status_checking": {
     "message": "檢查中…"
   },
+  "stt_hotkey_label": {
+    "message": "錄音快速鍵"
+  },
+  "stt_hotkey_hint": {
+    "message": "點擊後按住一個鍵進行聽寫，放開即停止。"
+  },
+  "stt_hotkey_prompt": {
+    "message": "請按一個鍵…"
+  },
+  "stt_hotkey_unset": {
+    "message": "未設定"
+  },
   "chat_modelSelect": {
     "message": "模型"
   },

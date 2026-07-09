@@ -1,3 +1,4 @@
+import { formatKeyCode } from './format-key-code.js';
 import { useT } from '@extension/i18n';
 import { useWebAuth } from '@extension/shared';
 import { defaultSttConfig, sttConfigStorage } from '@extension/storage';
@@ -25,6 +26,7 @@ import {
   FolderOpenIcon,
   HardDriveIcon,
   InfoIcon,
+  KeyboardIcon,
   LoaderIcon,
   LogInIcon,
   LogOutIcon,
@@ -177,6 +179,7 @@ const SpeechToTextConfig = () => {
   });
   const [cachedModels, setCachedModels] = useState<CachedModel[]>([]);
   const [deletingModel, setDeletingModel] = useState<string | null>(null);
+  const [capturingHotkey, setCapturingHotkey] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'importing' | 'complete' | 'error'>(
     'idle',
   );
@@ -270,6 +273,25 @@ const SpeechToTextConfig = () => {
       }, 500);
       return next;
     });
+  }, []);
+
+  // Capture a single keypress and persist it as the record hotkey immediately.
+  // Escape cancels without changing the shortcut. Modifier keys are valid
+  // shortcuts here (Right Alt is the default), so we do not skip them.
+  const handleHotkeyKeyDown = useCallback((event: React.KeyboardEvent) => {
+    event.preventDefault();
+    if (event.key === 'Escape') {
+      setCapturingHotkey(false);
+      return;
+    }
+    const code = event.code;
+    setConfig(prev => {
+      if (!prev) return null;
+      const next = { ...prev, hotkey: code };
+      sttConfigStorage.set(next);
+      return next;
+    });
+    setCapturingHotkey(false);
   }, []);
 
   const handleLocalModelChange = useCallback((model: string) => {
@@ -699,6 +721,28 @@ const SpeechToTextConfig = () => {
               <p className="text-muted-foreground text-xs">
                 ISO 639-1 code. Pick from the list or type a language code.
               </p>
+            </div>
+          )}
+
+          {isEnabled && (
+            <div className="grid gap-2">
+              <Label htmlFor="stt-hotkey">{t('stt_hotkey_label')}</Label>
+              <Button
+                className="w-fit gap-2"
+                data-testid="stt-hotkey-capture"
+                id="stt-hotkey"
+                onBlur={() => setCapturingHotkey(false)}
+                onClick={() => setCapturingHotkey(true)}
+                onKeyDown={capturingHotkey ? handleHotkeyKeyDown : undefined}
+                size="sm"
+                type="button"
+                variant="outline">
+                <KeyboardIcon className="size-4" />
+                {capturingHotkey
+                  ? t('stt_hotkey_prompt')
+                  : formatKeyCode(config.hotkey) || t('stt_hotkey_unset')}
+              </Button>
+              <p className="text-muted-foreground text-xs">{t('stt_hotkey_hint')}</p>
             </div>
           )}
 

@@ -74,4 +74,50 @@ describe('createMergingStorage', () => {
     storage.subscribe(listener);
     expect(raw.subscribe).toHaveBeenCalledWith(listener);
   });
+
+  it('merges defaults into getSnapshot for configs that predate a new key', () => {
+    // Reactive path (useStorage → useSyncExternalStore) must backfill new keys
+    // the same way get() does, or an old persisted config yields undefined.
+    const defaults = { a: 1, b: 'hello', c: true };
+    const raw = fakeRawStorage({ a: 42 } as typeof defaults);
+    const storage = createMergingStorage(raw, defaults);
+
+    expect(storage.getSnapshot()).toEqual({ a: 42, b: 'hello', c: true });
+  });
+
+  it('deep-merges nested keys in getSnapshot', () => {
+    const defaults = {
+      engine: 'kokoro' as const,
+      openai: { model: 'tts-1', voice: 'nova' },
+    };
+    const stored = { engine: 'kokoro' as const, openai: undefined } as unknown as typeof defaults;
+    const raw = fakeRawStorage(stored);
+    const storage = createMergingStorage(raw, defaults, ['openai']);
+
+    expect(storage.getSnapshot()?.openai).toEqual({ model: 'tts-1', voice: 'nova' });
+  });
+
+  it('returns null from getSnapshot before the raw cache is populated', () => {
+    const defaults = { a: 1 };
+    const raw = fakeRawStorage(null as unknown as typeof defaults);
+    const storage = createMergingStorage(raw, defaults);
+
+    expect(storage.getSnapshot()).toBeNull();
+  });
+
+  it('returns a referentially stable getSnapshot until the raw value changes', async () => {
+    // useSyncExternalStore infinite-loops unless getSnapshot is stable between
+    // changes; the merged object must be memoized on the raw snapshot identity.
+    const defaults = { a: 1, b: 2 };
+    const raw = fakeRawStorage({ a: 42 } as typeof defaults);
+    const storage = createMergingStorage(raw, defaults);
+
+    const first = storage.getSnapshot();
+    expect(storage.getSnapshot()).toBe(first);
+
+    await storage.set({ a: 7 } as typeof defaults);
+    const afterSet = storage.getSnapshot();
+    expect(afterSet).not.toBe(first);
+    expect(afterSet).toEqual({ a: 7, b: 2 });
+  });
 });

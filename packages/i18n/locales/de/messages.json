@@ -254,6 +254,18 @@
   "stt_web_status_checking": {
     "message": "Wird gepr\u00fcft\u2026"
   },
+  "stt_hotkey_label": {
+    "message": "Aufnahme-Tastenkürzel"
+  },
+  "stt_hotkey_hint": {
+    "message": "Klicken, dann eine Taste drücken. Diese Taste zum Diktieren gedrückt halten; zum Stoppen loslassen."
+  },
+  "stt_hotkey_prompt": {
+    "message": "Taste drücken…"
+  },
+  "stt_hotkey_unset": {
+    "message": "Nicht festgelegt"
+  },
   "chat_modelSelect": {
     "message": "Modell"
   },

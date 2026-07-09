@@ -254,6 +254,18 @@
   "stt_web_status_checking": {
     "message": "Controleren…"
   },
+  "stt_hotkey_label": {
+    "message": "Opname-sneltoets"
+  },
+  "stt_hotkey_hint": {
+    "message": "Klik en druk op een toets. Houd die toets ingedrukt om te dicteren; laat los om te stoppen."
+  },
+  "stt_hotkey_prompt": {
+    "message": "Druk op een toets…"
+  },
+  "stt_hotkey_unset": {
+    "message": "Niet ingesteld"
+  },
   "chat_modelSelect": {
     "message": "Model"
   },

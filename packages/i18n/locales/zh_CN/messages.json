@@ -254,6 +254,18 @@
   "stt_web_status_checking": {
     "message": "检查中…"
   },
+  "stt_hotkey_label": {
+    "message": "录音快捷键"
+  },
+  "stt_hotkey_hint": {
+    "message": "点击后按住一个键进行听写，松开即停止。"
+  },
+  "stt_hotkey_prompt": {
+    "message": "请按一个键…"
+  },
+  "stt_hotkey_unset": {
+    "message": "未设置"
+  },
   "chat_modelSelect": {
     "message": "模型"
   },

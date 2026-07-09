@@ -254,6 +254,18 @@
   "stt_web_status_checking": {
     "message": "Проверка…"
   },
+  "stt_hotkey_label": {
+    "message": "Горячая клавиша записи"
+  },
+  "stt_hotkey_hint": {
+    "message": "Нажмите, затем нажмите клавишу. Удерживайте эту клавишу для диктовки; отпустите, чтобы остановить."
+  },
+  "stt_hotkey_prompt": {
+    "message": "Нажмите клавишу…"
+  },
+  "stt_hotkey_unset": {
+    "message": "Не задано"
+  },
   "chat_modelSelect": {
     "message": "Модель"
   },

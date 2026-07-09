@@ -254,6 +254,18 @@
   "stt_web_status_checking": {
     "message": "Vérification…"
   },
+  "stt_hotkey_label": {
+    "message": "Raccourci d'enregistrement"
+  },
+  "stt_hotkey_hint": {
+    "message": "Cliquez, puis appuyez sur une touche. Maintenez cette touche pour dicter ; relâchez pour arrêter."
+  },
+  "stt_hotkey_prompt": {
+    "message": "Appuyez sur une touche…"
+  },
+  "stt_hotkey_unset": {
+    "message": "Non défini"
+  },
   "chat_modelSelect": {
     "message": "Modèle"
   },

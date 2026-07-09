@@ -490,6 +490,7 @@ const ChatInput = ({
             {showMic && (
               <MicButton
                 disabled={isStreaming}
+                hotkey={sttConfig.hotkey}
                 onAudio={handleDictation}
                 onPermissionNeeded={handleMicPermission}
                 onStreamChange={setRecordingStream}

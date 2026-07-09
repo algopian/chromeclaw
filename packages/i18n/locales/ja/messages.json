@@ -254,6 +254,18 @@
   "stt_web_status_checking": {
     "message": "確認中…"
   },
+  "stt_hotkey_label": {
+    "message": "録音ショートカット"
+  },
+  "stt_hotkey_hint": {
+    "message": "クリックしてキーを押してください。そのキーを押している間だけ音声入力し、離すと停止します。"
+  },
+  "stt_hotkey_prompt": {
+    "message": "キーを押してください…"
+  },
+  "stt_hotkey_unset": {
+    "message": "未設定"
+  },
   "chat_modelSelect": {
     "message": "モデル"
   },

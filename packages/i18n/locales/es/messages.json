@@ -254,6 +254,18 @@
   "stt_web_status_checking": {
     "message": "Comprobando\u2026"
   },
+  "stt_hotkey_label": {
+    "message": "Atajo de grabación"
+  },
+  "stt_hotkey_hint": {
+    "message": "Haz clic y pulsa una tecla. Mantén pulsada esa tecla para dictar; suéltala para detener."
+  },
+  "stt_hotkey_prompt": {
+    "message": "Pulsa una tecla…"
+  },
+  "stt_hotkey_unset": {
+    "message": "Sin asignar"
+  },
   "chat_modelSelect": {
     "message": "Modelo"
   },
