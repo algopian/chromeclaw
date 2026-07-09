@@ -481,7 +481,11 @@ const ChatInput = ({
               </Select>
             )}
             {recordingStream && (
-              <Waveform barCount={9} className="h-5 w-16 text-red-500" stream={recordingStream} />
+              <Waveform
+                barCount={9}
+                className="text-foreground h-5 w-16"
+                stream={recordingStream}
+              />
             )}
             {showMic && (
               <MicButton

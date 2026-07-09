@@ -1,5 +1,4 @@
 import { Button } from './ui';
-import { cn } from '../utils';
 import { useT } from '@extension/i18n';
 import { LoaderIcon, MicIcon, SquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -157,14 +156,14 @@ const MicButton = ({ onAudio, onPermissionNeeded, onStreamChange, disabled }: Mi
   return (
     <Button
       aria-label={label}
-      className={cn('size-8', isRecording && 'text-red-500')}
+      className="shrink-0 gap-1.5 rounded-lg"
       data-testid="mic-button"
       disabled={disabled || state === 'processing'}
       onClick={handleClick}
       size="icon"
       title={label}
       type="button"
-      variant="ghost">
+      variant="default">
       {state === 'processing' ? (
         <LoaderIcon className="size-4 animate-spin" />
       ) : isRecording ? (
