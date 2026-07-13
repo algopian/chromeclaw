@@ -121,6 +121,10 @@ const SessionSection = ({
                 <button
                   className="min-w-0 flex-1 truncate text-left"
                   onClick={() => onSelectChat(chat)}
+                  onDoubleClick={() => {
+                    setRenameValue(displayTitle);
+                    setRenamingId(chat.id);
+                  }}
                   type="button">
                   {truncateTitle(displayTitle)}
                 </button>
