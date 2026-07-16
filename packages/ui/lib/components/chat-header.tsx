@@ -11,7 +11,7 @@ import {
 } from './ui';
 import { useT } from '@extension/i18n';
 import { Maximize2Icon, SettingsIcon, UserIcon } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import type { AgentSwitcherAgent } from './agent-switcher';
 import type { ChatModel } from '@extension/shared';
 
@@ -35,6 +35,7 @@ type ChatHeaderProps = {
   agents?: AgentSwitcherAgent[];
   activeAgentId?: string;
   onAgentChange?: (agentId: string) => void;
+  onRenameTitle?: (title: string) => void;
 };
 
 const PureChatHeader = ({
@@ -47,8 +48,31 @@ const PureChatHeader = ({
   agents,
   activeAgentId,
   onAgentChange,
+  onRenameTitle,
 }: ChatHeaderProps) => {
   const t = useT();
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isRenaming) {
+      renameInputRef.current?.focus();
+      renameInputRef.current?.select();
+    }
+  }, [isRenaming]);
+
+  const startRename = () => {
+    if (!onRenameTitle || !chatTitle) return;
+    setRenameValue(chatTitle);
+    setIsRenaming(true);
+  };
+
+  const commitRename = () => {
+    setIsRenaming(false);
+    const next = renameValue.trim();
+    if (next && next !== chatTitle) onRenameTitle?.(next);
+  };
   return (
   <header className="bg-background sticky top-0 z-10 flex items-center gap-2 border-b px-2 py-1.5">
     {onOpenSidebar && (
@@ -78,7 +102,33 @@ const PureChatHeader = ({
       <span className="sr-only sm:not-sr-only">{t('session_newSession')}</span>
     </Button>
 
-    {chatTitle && <span className="min-w-0 flex-1 truncate text-sm font-medium">{chatTitle}</span>}
+    {chatTitle &&
+      (isRenaming ? (
+        <input
+          ref={renameInputRef}
+          className="bg-background border-input focus:ring-ring min-w-0 flex-1 rounded border px-1.5 py-0.5 text-sm outline-none focus:ring-1"
+          onBlur={commitRename}
+          onChange={e => setRenameValue(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              commitRename();
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              setRenameValue('');
+              setIsRenaming(false);
+            }
+          }}
+          type="text"
+          value={renameValue}
+        />
+      ) : (
+        <span
+          className="min-w-0 flex-1 truncate text-sm font-medium"
+          onDoubleClick={startRename}>
+          {chatTitle}
+        </span>
+      ))}
 
     {model && (
       <Badge className="hidden shrink-0 sm:flex" variant="secondary">

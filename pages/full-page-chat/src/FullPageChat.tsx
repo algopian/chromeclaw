@@ -18,6 +18,7 @@ import {
   listAgents,
   updateAgent,
   getAgent,
+  updateChatTitle,
 } from '@extension/storage';
 import { ConfigPanelContent } from '@extension/config-panels';
 import {
@@ -562,6 +563,14 @@ const FullPageChat = () => {
               onModelChange={handleModelChange}
               onNewChat={handleNewChat}
               onOpenSidebar={() => setSidebarOpen(prev => !prev)}
+              onRenameChat={
+                chatId
+                  ? title => {
+                      updateChatTitle(chatId, title);
+                      setChatTitle(title);
+                    }
+                  : undefined
+              }
               onStopSubagent={stopSubagent}
               onStreamComplete={handleStreamComplete}
               selectedModel={selectedModel}

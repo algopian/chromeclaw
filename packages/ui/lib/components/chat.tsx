@@ -29,6 +29,7 @@ type ChatProps = {
   onAgentChange?: (agentId: string) => void;
   activeSubagents?: SubagentProgressInfo[];
   onStopSubagent?: (runId: string) => void;
+  onRenameChat?: (title: string) => void;
 };
 
 const Chat = ({
@@ -48,6 +49,7 @@ const Chat = ({
   onAgentChange,
   activeSubagents,
   onStopSubagent,
+  onRenameChat,
 }: ChatProps) => {
   // Track accumulated token usage for context status badge
   const usageRef = useRef({
@@ -281,6 +283,7 @@ const Chat = ({
           onAgentChange={onAgentChange}
           onNewChat={onNewChat}
           onOpenSidebar={onOpenSidebar}
+          onRenameTitle={onRenameChat}
         />
 
         <Messages

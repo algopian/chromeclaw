@@ -18,6 +18,7 @@ import {
   listAgents,
   updateAgent,
   getAgent,
+  updateChatTitle,
 } from '@extension/storage';
 import {
   Chat,
@@ -621,6 +622,14 @@ const SidePanel = () => {
         onModelChange={handleModelChange}
         onNewChat={handleNewChat}
         onOpenSidebar={() => setSidebarOpen(true)}
+        onRenameChat={
+          chatId
+            ? title => {
+                updateChatTitle(chatId, title);
+                setChatTitle(title);
+              }
+            : undefined
+        }
         onStopSubagent={stopSubagent}
         onStreamComplete={handleStreamComplete}
         selectedModel={selectedModel}
