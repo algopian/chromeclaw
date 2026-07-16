@@ -232,7 +232,8 @@ const messageHandlers: Record<string, MessageHandler> = {
 
   STT_DOWNLOAD_MODEL: async request => {
     const { requestModelDownload } = await import('./media-understanding');
-    const downloadId = await requestModelDownload(request.model as string);
+    const engine = request.engine === 'sensevoice' ? 'sensevoice' : 'transformers';
+    const downloadId = await requestModelDownload(request.model as string, engine);
     return { downloadId };
   },
 

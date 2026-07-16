@@ -17,6 +17,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  WebAuthRow,
 } from '@extension/ui';
 import {
   AlertCircleIcon,
@@ -28,8 +29,6 @@ import {
   InfoIcon,
   KeyboardIcon,
   LoaderIcon,
-  LogInIcon,
-  LogOutIcon,
   MicIcon,
   Trash2Icon,
 } from 'lucide-react';
@@ -39,6 +38,7 @@ import type { SttConfig } from '@extension/storage';
 
 const engineOptions = [
   { value: 'off', label: 'Off' },
+  { value: 'sensevoice', label: 'SenseVoice (Local)' },
   { value: 'transformers', label: 'Whisper (Local)' },
   { value: 'openai', label: 'OpenAI' },
   { value: 'gemini-web', label: 'Gemini (browser, no API key)' },
@@ -48,6 +48,8 @@ const engineDescriptions: Record<string, string> = {
   off: 'Audio transcription is disabled',
   openai: "Uses OpenAI's Whisper API for high-accuracy cloud transcription",
   transformers: 'Runs a transformer model locally via ONNX — no data leaves your browser',
+  sensevoice:
+    'Runs the multilingual SenseVoice model locally (zh/yue/en/ja/ko) via WASM — no data leaves your browser. Downloads a ~239 MB model on first use.',
   'gemini-web':
     'Transcribes using your logged-in Gemini web session — no API key required. Requires an active gemini.google.com login. May stop working without notice.',
 };
@@ -94,6 +96,7 @@ const languageOptions = [
 ] as const;
 
 const TRANSFORMERS_CACHE_NAME = 'transformers-cache';
+const SENSEVOICE_CACHE_NAME = 'sensevoice-cache';
 
 interface DownloadProgress {
   downloadId: string | null;
@@ -168,6 +171,27 @@ const deleteCachedModel = async (model: string): Promise<void> => {
   }
 };
 
+/** Total bytes cached for the local SenseVoice model + tokens. */
+const getSenseVoiceCacheSize = async (): Promise<number> => {
+  try {
+    const cache = await caches.open(SENSEVOICE_CACHE_NAME);
+    const keys = await cache.keys();
+    let total = 0;
+    for (const request of keys) {
+      const response = await cache.match(request);
+      total += response ? parseInt(response.headers.get('content-length') ?? '0', 10) : 0;
+    }
+    return total;
+  } catch {
+    return 0;
+  }
+};
+
+/** Delete all cached SenseVoice assets. */
+const clearSenseVoiceCache = async (): Promise<void> => {
+  await caches.delete(SENSEVOICE_CACHE_NAME);
+};
+
 const SpeechToTextConfig = () => {
   const t = useT();
   const [config, setConfig] = useState<SttConfig | null>(null);
@@ -178,6 +202,7 @@ const SpeechToTextConfig = () => {
     percent: 0,
   });
   const [cachedModels, setCachedModels] = useState<CachedModel[]>([]);
+  const [senseVoiceCacheBytes, setSenseVoiceCacheBytes] = useState(0);
   const [deletingModel, setDeletingModel] = useState<string | null>(null);
   const [capturingHotkey, setCapturingHotkey] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'importing' | 'complete' | 'error'>(
@@ -203,6 +228,7 @@ const SpeechToTextConfig = () => {
   const refreshCachedModels = useCallback(async () => {
     const models = await listCachedModels();
     setCachedModels(models);
+    setSenseVoiceCacheBytes(await getSenseVoiceCacheSize());
   }, []);
 
   useEffect(() => {
@@ -337,6 +363,40 @@ const SpeechToTextConfig = () => {
     }
   }, [config]);
 
+  const handleDownloadSenseVoice = useCallback(async () => {
+    setDownloadProgress({ downloadId: null, status: 'downloading', percent: 0 });
+    try {
+      const response = (await chrome.runtime.sendMessage({
+        type: 'STT_DOWNLOAD_MODEL',
+        engine: 'sensevoice',
+        model: 'sensevoice',
+      })) as { downloadId?: string; error?: string };
+
+      if (response?.downloadId) {
+        setDownloadProgress(prev => ({ ...prev, downloadId: response.downloadId! }));
+      } else {
+        setDownloadProgress({
+          downloadId: null,
+          status: 'error',
+          percent: 0,
+          error: response?.error ?? 'Failed to start download',
+        });
+      }
+    } catch (err) {
+      setDownloadProgress({
+        downloadId: null,
+        status: 'error',
+        percent: 0,
+        error: err instanceof Error ? err.message : 'Failed to start download',
+      });
+    }
+  }, []);
+
+  const handleClearSenseVoiceCache = useCallback(async () => {
+    await clearSenseVoiceCache();
+    await refreshCachedModels();
+  }, [refreshCachedModels]);
+
   const handleDeleteModel = useCallback(
     async (model: string) => {
       setDeletingModel(model);
@@ -406,6 +466,8 @@ const SpeechToTextConfig = () => {
   const isEnabled = config.engine !== 'off';
   const showOpenAIFields = config.engine === 'openai';
   const showLocalModelFields = config.engine === 'transformers';
+  const showSenseVoiceFields = config.engine === 'sensevoice';
+  const senseVoiceCached = senseVoiceCacheBytes > 0;
   const selectedModelCached = cachedModels.some(m => m.model === (config.localModel || 'tiny'));
 
   return (
@@ -439,61 +501,23 @@ const SpeechToTextConfig = () => {
           </div>
 
           {showWebAuthSection && (
-            <div className="grid gap-2 pl-8">
-              <div className="flex items-center gap-3">
-                <span className="text-sm">
-                  {authStatus === 'checking' && (
-                    <span className="text-muted-foreground flex items-center gap-1.5">
-                      <LoaderIcon className="size-3.5 animate-spin" />
-                      {t('stt_web_status_checking')}
-                    </span>
-                  )}
-                  {authStatus === 'logged-in' && (
-                    <span className="flex items-center gap-1.5 text-green-600">
-                      <CheckCircle2Icon className="size-3.5" />
-                      {t('stt_web_status_logged_in')}
-                    </span>
-                  )}
-                  {authStatus === 'expired' && (
-                    <span className="flex items-center gap-1.5 text-amber-600">
-                      <AlertCircleIcon className="size-3.5" />
-                      {t('stt_web_status_expired')}
-                    </span>
-                  )}
-                  {authStatus === 'not-logged-in' && (
-                    <span className="text-muted-foreground flex items-center gap-1.5">
-                      <AlertCircleIcon className="size-3.5" />
-                      {t('stt_web_status_not_logged_in')}
-                    </span>
-                  )}
-                </span>
-
-                {(authStatus === 'not-logged-in' || authStatus === 'expired') && (
-                  <Button disabled={loginLoading} onClick={login} size="sm" variant="outline">
-                    {loginLoading ? (
-                      <LoaderIcon className="mr-1.5 size-3.5 animate-spin" />
-                    ) : (
-                      <LogInIcon className="mr-1.5 size-3.5" />
-                    )}
-                    {loginLoading ? 'Signing in\u2026' : t('stt_web_login')}
-                  </Button>
-                )}
-
-                {authStatus === 'logged-in' && (
-                  <Button onClick={logout} size="sm" variant="ghost">
-                    <LogOutIcon className="mr-1.5 size-3.5" />
-                    {t('stt_web_logout')}
-                  </Button>
-                )}
-              </div>
-
-              {authError && (
-                <p className="flex items-center gap-1.5 text-xs text-red-600">
-                  <AlertCircleIcon className="size-3" />
-                  {authError}
-                </p>
-              )}
-            </div>
+            <WebAuthRow
+              className="grid gap-2 pl-8"
+              status={authStatus}
+              loginLoading={loginLoading}
+              error={authError}
+              login={login}
+              logout={logout}
+              labels={{
+                checking: t('stt_web_status_checking'),
+                loggedIn: t('stt_web_status_logged_in'),
+                expired: t('stt_web_status_expired'),
+                notLoggedIn: t('stt_web_status_not_logged_in'),
+                login: t('stt_web_login'),
+                signingIn: 'Signing in\u2026',
+                logout: t('stt_web_logout'),
+              }}
+            />
           )}
 
           {isEnabled && <h3 className="text-sm font-medium">Audio Transcription</h3>}
@@ -696,6 +720,93 @@ const SpeechToTextConfig = () => {
                   <p className="text-muted-foreground text-xs">
                     Total: {formatBytes(cachedModels.reduce((sum, m) => sum + m.sizeBytes, 0))}
                   </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {showSenseVoiceFields && (
+            <div className="grid gap-3 pl-8">
+              <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                <ExternalLinkIcon className="size-3" />
+                Source:{' '}
+                <a
+                  className="hover:text-foreground underline underline-offset-2"
+                  href="https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17"
+                  rel="noopener noreferrer"
+                  target="_blank">
+                  sherpa-onnx-sense-voice-zh-en-ja-ko-yue
+                </a>
+              </p>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  disabled={downloadProgress.status === 'downloading'}
+                  id="stt-download-sensevoice"
+                  onClick={handleDownloadSenseVoice}
+                  size="sm"
+                  variant="outline">
+                  {downloadProgress.status === 'downloading' ? (
+                    <LoaderIcon className="mr-1.5 size-4 animate-spin" />
+                  ) : senseVoiceCached ? (
+                    <CheckCircle2Icon className="mr-1.5 size-4" />
+                  ) : (
+                    <DownloadIcon className="mr-1.5 size-4" />
+                  )}
+                  {downloadProgress.status === 'downloading'
+                    ? 'Downloading...'
+                    : senseVoiceCached
+                      ? 'Re-download'
+                      : 'Download Model (~239 MB)'}
+                </Button>
+
+                {downloadProgress.status === 'complete' && (
+                  <span className="flex items-center gap-1 text-xs text-green-600">
+                    <CheckCircle2Icon className="size-4" />
+                    Ready
+                  </span>
+                )}
+
+                {downloadProgress.status === 'error' && (
+                  <span className="flex items-center gap-1 text-xs text-red-600">
+                    <AlertCircleIcon className="size-4" />
+                    {downloadProgress.error || 'Download failed'}
+                  </span>
+                )}
+              </div>
+
+              {downloadProgress.status === 'downloading' && (
+                <Progress className="h-2" value={downloadProgress.percent} />
+              )}
+
+              <p className="text-muted-foreground text-xs">
+                The model downloads on first use. Pre-download to avoid waiting. Requires a
+                Chromium-based browser.
+              </p>
+
+              {senseVoiceCached && (
+                <div className="mt-2 space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <HardDriveIcon className="size-3.5" />
+                    Downloaded Model
+                  </Label>
+                  <div className="divide-border divide-y rounded-md border">
+                    <div className="flex items-center justify-between px-3 py-2 text-sm">
+                      <div>
+                        <span className="font-medium">SenseVoice-Small</span>
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          {formatBytes(senseVoiceCacheBytes)}
+                        </span>
+                      </div>
+                      <Button
+                        className="text-destructive hover:text-destructive h-7 px-2"
+                        onClick={handleClearSenseVoiceCache}
+                        size="sm"
+                        variant="ghost">
+                        <Trash2Icon className="size-3.5" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

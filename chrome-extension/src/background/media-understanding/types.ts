@@ -1,4 +1,4 @@
-type MediaEngine = 'auto' | 'off' | 'openai' | 'transformers' | 'gemini-web';
+type MediaEngine = 'auto' | 'off' | 'openai' | 'transformers' | 'gemini-web' | 'sensevoice';
 
 interface TranscribeOptions {
   apiKey?: string;

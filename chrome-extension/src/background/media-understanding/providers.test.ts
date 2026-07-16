@@ -19,12 +19,21 @@ vi.mock('./providers/gemini-web', () => ({
   geminiWebProvider: { id: 'gemini-web', transcribe: vi.fn() },
 }));
 
+vi.mock('./providers/sensevoice', () => ({
+  sensevoiceProvider: { id: 'sensevoice', transcribe: vi.fn() },
+}));
+
 const { getProvider, PROVIDERS } = await import('./providers');
 
 describe('STT provider registry', () => {
-  it('registers openai, transformers and gemini-web providers', () => {
-    expect(PROVIDERS).toHaveLength(3);
-    expect(PROVIDERS.map(p => p.id).sort()).toEqual(['gemini-web', 'openai', 'transformers']);
+  it('registers openai, transformers, gemini-web and sensevoice providers', () => {
+    expect(PROVIDERS).toHaveLength(4);
+    expect(PROVIDERS.map(p => p.id).sort()).toEqual([
+      'gemini-web',
+      'openai',
+      'sensevoice',
+      'transformers',
+    ]);
   });
 
   it('getProvider("openai") returns the openai provider', () => {
@@ -45,6 +54,13 @@ describe('STT provider registry', () => {
     const provider = getProvider('gemini-web');
     expect(provider).toBeDefined();
     expect(provider!.id).toBe('gemini-web');
+    expect(typeof provider!.transcribe).toBe('function');
+  });
+
+  it('getProvider("sensevoice") returns the sensevoice provider', () => {
+    const provider = getProvider('sensevoice');
+    expect(provider).toBeDefined();
+    expect(provider!.id).toBe('sensevoice');
     expect(typeof provider!.transcribe).toBe('function');
   });
 

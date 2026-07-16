@@ -3,8 +3,10 @@
 // ──────────────────────────────────────────────
 // Uses @huggingface/transformers (ONNX) for local, private transcription.
 
+import { registerSttEngine, getSttEngine } from './stt-engine-registry';
 import { pipeline } from '@huggingface/transformers';
 import * as ort from 'onnxruntime-web';
+import type { SttEngine } from './stt-engine-registry';
 
 // Configure ONNX runtime BEFORE any pipeline() call.
 // Point wasmPaths to same-origin extension files so dynamic import() uses
@@ -45,8 +47,6 @@ debug('ONNX runtime configured', {
   numThreads: ort.env.wasm.numThreads,
   wasmPaths: ort.env.wasm.wasmPaths,
 });
-
-type SttEngine = 'transformers';
 
 const TARGET_SAMPLE_RATE = 16000;
 
@@ -191,6 +191,53 @@ const transcribeWithTransformers = async (
   return result.text.trim();
 };
 
+// ── Model Download (transformers) ───────────────
+
+/** Pre-fetch the Whisper model by instantiating its pipeline. */
+const downloadTransformersModel = async (model: string, downloadId: string): Promise<void> => {
+  sendDownloadProgress(downloadId, 'downloading', 0);
+  const modelId = toTransformersModelId(model);
+  trace('handleModelDownload: creating pipeline', {
+    modelId,
+    wasmPaths: ort.env.wasm.wasmPaths,
+    numThreads: ort.env.wasm.numThreads,
+  });
+  const t0 = performance.now();
+  cachedTranscriber = await pipeline('automatic-speech-recognition', modelId, {
+    dtype: 'q8',
+  });
+  trace('handleModelDownload: pipeline created', {
+    elapsed: Math.round(performance.now() - t0) + 'ms',
+  });
+  cachedTranscriberModel = modelId;
+  sendDownloadProgress(downloadId, 'complete', 100);
+};
+
+// ── Engine Registration ─────────────────────────
+// Each engine registers ONCE. Adding a new engine is a single registerSttEngine
+// call — the transcribe + download dispatch below then routes to it with no
+// further edits, so a new engine can't pass tests yet fail on first hotkey use.
+
+registerSttEngine({
+  id: 'transformers',
+  transcribe: transcribeWithTransformers,
+  download: downloadTransformersModel,
+});
+
+// SenseVoice pulls in the sherpa-wasm engine; import lazily on first use so the
+// transformers-only path never loads the ~13 MB wasm glue.
+registerSttEngine({
+  id: 'sensevoice',
+  transcribe: async (audio, requestId, _model, language) => {
+    const { transcribeWithSenseVoice } = await import('./sensevoice-worker');
+    return transcribeWithSenseVoice(audio, requestId, language);
+  },
+  download: async (_model, downloadId) => {
+    const { handleModelDownload: handleSenseVoiceDownload } = await import('./sensevoice-worker');
+    await handleSenseVoiceDownload(downloadId);
+  },
+});
+
 // ── Dispatch ────────────────────────────────────
 
 const transcribeAudio = async (
@@ -208,9 +255,9 @@ const transcribeAudio = async (
     language: language || 'auto',
     audioBytes: audio.byteLength,
   });
-  if (engine === 'transformers')
-    return transcribeWithTransformers(audio, requestId, model, language);
-  throw new Error(`Unknown STT engine: ${engine}`);
+  const impl = getSttEngine(engine);
+  if (!impl) throw new Error(`Unknown STT engine: ${engine}`);
+  return impl.transcribe(audio, requestId, model, language);
 };
 
 // ── Model Download ──────────────────────────────
@@ -222,26 +269,13 @@ const handleModelDownload = async (
 ): Promise<void> => {
   try {
     trace('handleModelDownload: start', { engine, model, downloadId });
-    sendDownloadProgress(downloadId, 'downloading', 0);
-
-    // transformers — instantiate pipeline to trigger download
-    const modelId = toTransformersModelId(model);
-    trace('handleModelDownload: creating pipeline', {
-      modelId,
-      wasmPaths: ort.env.wasm.wasmPaths,
-      numThreads: ort.env.wasm.numThreads,
-    });
-    const t0 = performance.now();
-    cachedTranscriber = await pipeline('automatic-speech-recognition', modelId, {
-      dtype: 'q8',
-    });
-    trace('handleModelDownload: pipeline created', {
-      elapsed: Math.round(performance.now() - t0) + 'ms',
-    });
-    cachedTranscriberModel = modelId;
-
+    const impl = getSttEngine(engine);
+    if (!impl) throw new Error(`Unknown STT engine: ${engine}`);
+    if (!impl.download) {
+      throw new Error(`STT engine '${engine}' does not support pre-download`);
+    }
+    await impl.download(model, downloadId);
     trace('handleModelDownload: complete');
-    sendDownloadProgress(downloadId, 'complete', 100);
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
     log('error', 'Model download error', error);

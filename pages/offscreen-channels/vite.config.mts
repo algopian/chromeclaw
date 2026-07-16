@@ -40,6 +40,30 @@ const copyOnnxRuntime = (): Plugin => ({
   },
 });
 
+/**
+ * Copy the vendored sherpa-onnx WASM engine (Emscripten glue + JS API + wasm)
+ * into the build output so they load same-origin from the offscreen document.
+ * These power the local SenseVoice STT engine. The glue has had its baked
+ * data-package IIFE stripped so the ~239 MB model is fetched on demand instead.
+ */
+const copySherpaEngine = (): Plugin => ({
+  name: 'copy-sherpa-engine',
+  closeBundle() {
+    const vendorDir = resolve(rootDir, 'vendor', 'sherpa');
+    const outDir = resolve(rootDir, '..', '..', 'dist', 'offscreen-channels', 'assets');
+    mkdirSync(outDir, { recursive: true });
+
+    const files = [
+      'sherpa-onnx-asr.js',
+      'sherpa-onnx-wasm-main-vad-asr.js',
+      'sherpa-onnx-wasm-main-vad-asr.wasm',
+    ];
+    for (const file of files) {
+      copyFileSync(resolve(vendorDir, file), resolve(outDir, file));
+    }
+  },
+});
+
 // Resolve the empty-module polyfill once — kokoro-js imports `fs/promises` and `path`
 // which vite-plugin-node-polyfills maps to node-stdlib-browser's empty.js.  However,
 // the `fs/promises` subpath import confuses Vite into trying to resolve `empty.js/promises`.
@@ -70,6 +94,7 @@ export default withPageConfig({
       include: ['crypto', 'buffer', 'stream', 'events', 'assert', 'util', 'zlib', 'process'],
     }) as unknown as Plugin,
     copyOnnxRuntime(),
+    copySherpaEngine(),
   ],
   optimizeDeps: {
     include: ['@extension/baileys'],

@@ -20,6 +20,7 @@ const requestTranscription = async (
   mimeType: string,
   model: string,
   language?: string,
+  engine: string = 'transformers',
 ): Promise<string> => {
   await ensureOffscreenDocument();
 
@@ -62,7 +63,7 @@ const requestTranscription = async (
         audioBase64: arrayBufferToBase64(audio),
         mimeType,
         requestId,
-        engine: 'transformers',
+        engine,
         model,
         language,
       })
@@ -87,14 +88,17 @@ const requestTranscription = async (
 };
 
 /** Pre-download an STT model via the offscreen document. Returns a downloadId for progress tracking. */
-const requestModelDownload = async (model: string): Promise<string> => {
+const requestModelDownload = async (
+  model: string,
+  engine: string = 'transformers',
+): Promise<string> => {
   await ensureOffscreenDocument();
 
   const downloadId = crypto.randomUUID();
 
   const response = (await chrome.runtime.sendMessage({
     type: 'STT_DOWNLOAD_MODEL',
-    engine: 'transformers',
+    engine,
     model,
     downloadId,
   })) as Record<string, unknown> | undefined;

@@ -33,6 +33,8 @@ export type { SuggestedActionsProps } from './suggested-actions';
 // Setup
 export { FirstRunSetup } from './first-run-setup';
 export type { FirstRunSetupProps } from './first-run-setup';
+export { WebAuthRow } from './web-auth-row';
+export type { WebAuthRowProps, WebAuthRowLabels } from './web-auth-row';
 
 // Artifacts
 export { ArtifactPanel } from './artifact-panel';

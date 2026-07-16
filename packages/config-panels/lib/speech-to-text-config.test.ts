@@ -42,7 +42,7 @@ afterEach(() => {
 
 describe('SpeechToTextConfig — SttConfig defaults', () => {
   it('defaultSttConfig has expected shape', () => {
-    expect(defaultSttConfig.engine).toBe('transformers');
+    expect(defaultSttConfig.engine).toBe('off');
     expect(defaultSttConfig.openai.apiKey).toBe('');
     expect(defaultSttConfig.openai.model).toBe('whisper-1');
     expect(defaultSttConfig.openai.baseUrl).toBe('https://api.openai.com/v1');
@@ -52,7 +52,7 @@ describe('SpeechToTextConfig — SttConfig defaults', () => {
   });
 
   it('defaultSttConfig engine is a valid engine type', () => {
-    const validEngines = ['off', 'openai', 'transformers', 'gemini-web'];
+    const validEngines = ['off', 'openai', 'transformers', 'gemini-web', 'sensevoice'];
     expect(validEngines).toContain(defaultSttConfig.engine);
   });
 });
@@ -278,6 +278,15 @@ describe('SpeechToTextConfig — local model selector visibility logic', () => {
     const engine: SttConfig['engine'] = 'openai';
     const showLocalModelFields = engine === 'transformers';
     expect(showLocalModelFields).toBe(false);
+  });
+
+  it('sensevoice fields show only when engine is sensevoice', () => {
+    const senseEngine: SttConfig['engine'] = 'sensevoice';
+    expect(senseEngine === 'sensevoice').toBe(true);
+    // Whisper local model fields must NOT show for sensevoice (fixed model).
+    expect((senseEngine as string) === 'transformers').toBe(false);
+    const otherEngine: SttConfig['engine'] = 'transformers';
+    expect((otherEngine as string) === 'sensevoice').toBe(false);
   });
 });
 

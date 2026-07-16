@@ -151,6 +151,44 @@ describe('resolveTranscription', () => {
     expect(passedOptions).not.toHaveProperty('model');
   });
 
+  it('explicit sensevoice engine uses sensevoice provider with fixed model', async () => {
+    mockSttConfig.get.mockResolvedValue({
+      ...defaultConfig,
+      engine: 'sensevoice',
+      // A Whisper localModel must not leak into the SenseVoice options.
+      localModel: 'base.en',
+      language: 'zh',
+    });
+    const mockTranscribe = createMockProvider('sensevoice', 'sensevoice transcript');
+
+    const result = await resolveTranscription(audio, 'audio/ogg');
+    expect(result).toBe('sensevoice transcript');
+    // Multilingual fixed model: language hint passes through, model pinned to 'sensevoice'.
+    expect(mockTranscribe).toHaveBeenCalledWith(audio, 'audio/ogg', {
+      language: 'zh',
+      model: 'sensevoice',
+    });
+    const passedOptions = mockTranscribe.mock.calls[0][2];
+    expect(passedOptions).not.toHaveProperty('apiKey');
+  });
+
+  it('sensevoice maps the default en language to auto-detect', async () => {
+    mockSttConfig.get.mockResolvedValue({
+      ...defaultConfig,
+      engine: 'sensevoice',
+      // The global default 'en' would force English decoding; SenseVoice should
+      // auto-detect instead so non-English speech (e.g. Chinese) is not mangled.
+      language: 'en',
+    });
+    const mockTranscribe = createMockProvider('sensevoice', 'sensevoice transcript');
+
+    await resolveTranscription(audio, 'audio/ogg');
+    expect(mockTranscribe).toHaveBeenCalledWith(audio, 'audio/ogg', {
+      language: 'auto',
+      model: 'sensevoice',
+    });
+  });
+
   it('custom localModel passes through to transformers provider', async () => {
     mockSttConfig.get.mockResolvedValue({
       ...defaultConfig,
@@ -329,6 +367,15 @@ describe('detectBestEngine', () => {
     expect(await detectBestEngine(defaultConfig)).not.toBe('gemini-web');
     mockModels.get.mockResolvedValue([]);
     expect(await detectBestEngine(defaultConfig)).not.toBe('gemini-web');
+  });
+
+  it('never auto-selects sensevoice (local heavy engine is opt-in only)', async () => {
+    // sensevoice pulls a ~239 MB model and requires cross-origin isolation, so it
+    // must never be the auto choice — only openai (with key) or transformers.
+    mockModels.get.mockResolvedValue([{ provider: 'openai', apiKey: 'sk-test' }]);
+    expect(await detectBestEngine(defaultConfig)).not.toBe('sensevoice');
+    mockModels.get.mockResolvedValue([]);
+    expect(await detectBestEngine(defaultConfig)).not.toBe('sensevoice');
   });
 });
 

@@ -43,6 +43,18 @@ const resolveTranscription = async (audio: ArrayBuffer, mimeType: string): Promi
         );
       }
     }
+  } else if (engine === 'sensevoice') {
+    // SenseVoice is multilingual; language is a hint (or 'auto'), not a model split.
+    // No Whisper localModel — the worker loads its own fixed model.
+    options.model = 'sensevoice';
+    // The global STT language default is 'en', which forces English decoding and
+    // mangles other languages (e.g. Chinese). SenseVoice is inherently
+    // multilingual, so unless the user explicitly picked a non-default language,
+    // let the model auto-detect per utterance ('' = auto). An explicit choice
+    // other than the 'en' default is still honoured.
+    if (config.language === 'en') {
+      options.language = 'auto';
+    }
   } else {
     options.model = config.localModel || DEFAULT_LOCAL_MODEL;
   }

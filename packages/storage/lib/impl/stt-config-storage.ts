@@ -2,7 +2,7 @@ import { createMergingStorage } from './create-merging-storage.js';
 import { createStorage, StorageEnum } from '../base/index.js';
 
 interface SttConfig {
-  engine: 'auto' | 'off' | 'openai' | 'transformers' | 'gemini-web';
+  engine: 'auto' | 'off' | 'openai' | 'transformers' | 'gemini-web' | 'sensevoice';
   /** `apiVersion` is the Azure OpenAI `api-version` query param; ignored by vanilla OpenAI. */
   openai: { apiKey: string; model: string; baseUrl: string; apiVersion?: string };
   language: string;
@@ -12,7 +12,7 @@ interface SttConfig {
 }
 
 const defaultSttConfig: SttConfig = {
-  engine: 'transformers',
+  engine: 'off',
   openai: {
     apiKey: '',
     model: 'whisper-1',

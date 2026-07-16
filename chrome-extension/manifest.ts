@@ -106,6 +106,16 @@ const manifest = {
     extension_pages:
       "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; img-src 'self' https: data: blob:",
   },
+  // Cross-origin isolation for extension pages (the offscreen document).
+  // Enables SharedArrayBuffer, required by the threaded sherpa-onnx WASM engine
+  // that powers the local SenseVoice STT. Only same-origin resources are loaded,
+  // so require-corp is safe. (Chrome 93+; ignored by Firefox.)
+  cross_origin_embedder_policy: {
+    value: 'require-corp',
+  },
+  cross_origin_opener_policy: {
+    value: 'same-origin',
+  },
   web_accessible_resources: [
     {
       resources: [

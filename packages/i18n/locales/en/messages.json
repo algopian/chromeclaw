@@ -161,6 +161,15 @@
   "firstRun_noSkills": {
     "message": "No skills available yet. You can add skills later in Settings."
   },
+  "firstRun_stepSpeech": {
+    "message": "Speech"
+  },
+  "firstRun_speechTitle": {
+    "message": "Speech to Text"
+  },
+  "firstRun_speechDescription": {
+    "message": "Choose how voice messages and dictation are transcribed. You can change this later in Settings."
+  },
   "firstRun_advancedSetup": {
     "message": "Advanced setup"
   },

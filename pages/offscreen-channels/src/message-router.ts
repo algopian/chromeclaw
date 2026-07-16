@@ -155,10 +155,11 @@ const registerWorkerRouter = (storage: StorageProxy): void => {
           const audio = bytes.buffer;
           const model = typeof message.model === 'string' ? message.model : 'tiny';
           const language = typeof message.language === 'string' ? message.language : '';
+          const engine = message.engine === 'sensevoice' ? 'sensevoice' : 'transformers';
 
           import('./stt-worker')
             .then(({ handleTranscribeRequest }) =>
-              handleTranscribeRequest(audio, mimeType, requestId, 'transformers', model, language),
+              handleTranscribeRequest(audio, mimeType, requestId, engine, model, language),
             )
             .catch(err => {
               chrome.runtime
@@ -180,10 +181,11 @@ const registerWorkerRouter = (storage: StorageProxy): void => {
           if (typeof model !== 'string' || typeof downloadId !== 'string') {
             return false;
           }
+          const dlEngine = message.engine === 'sensevoice' ? 'sensevoice' : 'transformers';
 
           import('./stt-worker')
             .then(({ handleModelDownload }) =>
-              handleModelDownload('transformers', model, downloadId),
+              handleModelDownload(dlEngine, model, downloadId),
             )
             .catch(err => {
               chrome.runtime

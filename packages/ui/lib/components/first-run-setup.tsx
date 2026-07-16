@@ -1,5 +1,4 @@
 import {
-  Badge,
   Button,
   Card,
   CardContent,
@@ -14,12 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui';
+import { WebAuthRow } from './web-auth-row';
+import { IS_FIREFOX } from '@extension/env';
 import { useT } from '@extension/i18n';
 import {
   toolRegistryMeta,
   parseSkillFrontmatter,
   WEB_PROVIDER_OPTIONS,
   useWebProviderAuth,
+  useWebAuth,
   parseAgentBackup,
   PROVIDER_DEFAULT_BASE_URLS,
 } from '@extension/shared';
@@ -37,16 +39,14 @@ import {
   deleteWorkspaceFile,
   createWorkspaceFile,
   listWorkspaceFiles,
+  sttConfigStorage,
+  defaultSttConfig,
 } from '@extension/storage';
-import type { DbWorkspaceFile } from '@extension/storage';
 import {
-  CheckCircleIcon,
   CheckIcon,
   ChevronLeftIcon,
   KeyIcon,
   Loader2Icon,
-  LogInIcon,
-  LogOutIcon,
   RocketIcon,
   SettingsIcon,
   ShieldCheckIcon,
@@ -67,13 +67,14 @@ import {
   HardDriveUploadIcon,
   MailIcon,
   CalendarIcon,
-  XCircleIcon,
   ZapIcon,
+  MicIcon,
 } from 'lucide-react';
-import { IS_FIREFOX } from '@extension/env';
 import { nanoid } from 'nanoid';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TFunction } from '@extension/i18n';
+import type { WebAuthDefinition } from '@extension/shared';
+import type { DbWorkspaceFile, SttConfig } from '@extension/storage';
 import type { ReactNode } from 'react';
 
 type FirstRunSetupProps = {
@@ -105,7 +106,7 @@ const providers = [
   { value: 'custom', label: 'OpenAI Compatible', defaultModel: '', defaultBase: '' },
 ];
 
-const TOTAL_STEPS = IS_FIREFOX ? 6 : 5;
+const TOTAL_STEPS = IS_FIREFOX ? 7 : 6;
 const STEP_LABELS = IS_FIREFOX
   ? ([
       'firstRun_stepModel',
@@ -114,6 +115,7 @@ const STEP_LABELS = IS_FIREFOX
       'firstRun_stepChannels',
       'firstRun_stepTools',
       'firstRun_stepSkills',
+      'firstRun_stepSpeech',
     ] as const)
   : ([
       'firstRun_stepModel',
@@ -121,6 +123,7 @@ const STEP_LABELS = IS_FIREFOX
       'firstRun_stepChannels',
       'firstRun_stepTools',
       'firstRun_stepSkills',
+      'firstRun_stepSpeech',
     ] as const);
 
 /** Groups to exclude from the onboarding tool picker (require OAuth or feature flags). */
@@ -380,45 +383,24 @@ const Step1ModelSetup = ({ onNext, t }: { onNext: () => void; t: TFunction }) =>
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex items-center gap-2">
-              {webAuthStatus === 'checking' && (
-                <Badge variant="outline" className="gap-1">
-                  <Loader2Icon className="size-3 animate-spin" />
-                  {t('firstRun_webChecking')}
-                </Badge>
-              )}
-              {webAuthStatus === 'logged-in' && (
-                <Badge variant="outline" className="gap-1 border-green-500 text-green-600">
-                  <CheckCircleIcon className="size-3" />
-                  {t('firstRun_webLoggedIn')}
-                </Badge>
-              )}
-              {(webAuthStatus === 'not-logged-in' || webAuthStatus === 'unknown') && (
-                <Badge variant="outline" className="gap-1 border-orange-500 text-orange-600">
-                  <XCircleIcon className="size-3" />
-                  {t('firstRun_webNotLoggedIn')}
-                </Badge>
-              )}
-              {webAuthStatus === 'logged-in' ? (
-                <Button onClick={handleWebLogout} size="sm" variant="outline">
-                  <LogOutIcon className="mr-1 size-3" />
-                  {t('firstRun_webLogout')}
-                </Button>
-              ) : (
-                <Button
-                  disabled={webLoginLoading || !webProviderId}
-                  onClick={handleWebLogin}
-                  size="sm"
-                  variant="outline">
-                  {webLoginLoading ? (
-                    <Loader2Icon className="mr-1 size-3 animate-spin" />
-                  ) : (
-                    <LogInIcon className="mr-1 size-3" />
-                  )}
-                  {webLoginLoading ? t('firstRun_webWaiting') : t('firstRun_webLogin')}
-                </Button>
-              )}
-            </div>
+            <WebAuthRow
+              className="grid gap-2"
+              status={webAuthStatus === 'unknown' ? 'not-logged-in' : webAuthStatus}
+              loginLoading={webLoginLoading}
+              loginDisabled={!webProviderId}
+              error={null}
+              login={handleWebLogin}
+              logout={handleWebLogout}
+              labels={{
+                checking: t('firstRun_webChecking'),
+                loggedIn: t('firstRun_webLoggedIn'),
+                expired: t('firstRun_webNotLoggedIn'),
+                notLoggedIn: t('firstRun_webNotLoggedIn'),
+                login: t('firstRun_webLogin'),
+                signingIn: t('firstRun_webWaiting'),
+                logout: t('firstRun_webLogout'),
+              }}
+            />
             {webLoginLoading && (
               <p className="text-muted-foreground text-xs">{t('firstRun_webLoginInstruction')}</p>
             )}
@@ -1214,11 +1196,11 @@ interface SkillEntry {
 }
 
 const Step5SkillsSetup = ({
-  onComplete,
+  onNext,
   onBack,
   t,
 }: {
-  onComplete: () => void;
+  onNext: () => void;
   onBack: () => void;
   t: TFunction;
 }) => {
@@ -1264,13 +1246,13 @@ const Step5SkillsSetup = ({
     setError('');
     try {
       await Promise.all(skills.map(s => updateWorkspaceFile(s.id, { enabled: s.enabled })));
-      onComplete();
+      onNext();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('firstRun_saveFailed'));
     } finally {
       setSaving(false);
     }
-  }, [skills, onComplete, t]);
+  }, [skills, onNext, t]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -1314,6 +1296,172 @@ const Step5SkillsSetup = ({
             ))}
           </div>
         )}
+
+        <div className="mt-auto flex items-center justify-between">
+          <Button data-testid="setup-back-button" onClick={onBack} variant="link">
+            <ChevronLeftIcon className="mr-1 size-4" />
+            {t('firstRun_back')}
+          </Button>
+          <Button
+            data-testid="setup-get-started-button"
+            disabled={saving || loading}
+            onClick={handleGetStarted}>
+            {saving && <Loader2Icon className="mr-2 size-4 animate-spin" />}
+            {t('firstRun_next')}
+          </Button>
+        </div>
+      </CardContent>
+    </div>
+  );
+};
+
+/* ---------- Step6SpeechSetup ---------- */
+
+/** Auth definition for the gemini-web speech engine (browser session). */
+const GEMINI_WEB_SPEECH_AUTH: WebAuthDefinition = {
+  id: 'gemini-web',
+  cookieDomain: '.google.com',
+  sessionIndicators: ['__Secure-1PSID', 'SAPISID'],
+  loginUrl: 'https://gemini.google.com',
+};
+
+const SPEECH_ENGINE_OPTIONS: { value: SttConfig['engine']; label: string; description: string }[] =
+  [
+    { value: 'off', label: 'Off', description: 'Audio transcription is disabled' },
+    {
+      value: 'sensevoice',
+      label: 'SenseVoice (Local)',
+      description:
+        'Runs locally via WASM — no data leaves your browser. Downloads a ~239 MB model on first use.',
+    },
+    {
+      value: 'transformers',
+      label: 'Whisper (Local)',
+      description: 'Runs a transformer model locally via ONNX — no data leaves your browser.',
+    },
+    {
+      value: 'openai',
+      label: 'OpenAI',
+      description: "Uses OpenAI's Whisper API for high-accuracy cloud transcription.",
+    },
+    {
+      value: 'gemini-web',
+      label: 'Gemini (browser, no API key)',
+      description: 'Transcribes using your logged-in Gemini web session — no API key required.',
+    },
+  ];
+
+const Step6SpeechSetup = ({
+  onComplete,
+  onBack,
+  t,
+}: {
+  onComplete: () => void;
+  onBack: () => void;
+  t: TFunction;
+}) => {
+  const [engine, setEngine] = useState<SttConfig['engine']>(defaultSttConfig.engine);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const {
+    status: authStatus,
+    loginLoading,
+    error: authError,
+    login,
+    logout,
+  } = useWebAuth({
+    definition: engine === 'gemini-web' ? GEMINI_WEB_SPEECH_AUTH : undefined,
+    recheckKey: engine,
+  });
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const config = await sttConfigStorage.get();
+        setEngine(config.engine);
+      } catch {
+        // keep default
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const handleGetStarted = useCallback(async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const config = await sttConfigStorage.get();
+      await sttConfigStorage.set({ ...config, engine });
+      onComplete();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('firstRun_saveFailed'));
+    } finally {
+      setSaving(false);
+    }
+  }, [engine, onComplete, t]);
+
+  const selected = SPEECH_ENGINE_OPTIONS.find(o => o.value === engine);
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <CardHeader className="text-center">
+        <CardTitle className="text-xl">{t('firstRun_speechTitle')}</CardTitle>
+        <CardDescription>{t('firstRun_speechDescription')}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
+        {error && (
+          <div className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label className="flex items-center gap-1.5">
+            <MicIcon className="text-muted-foreground size-3.5" />
+            {t('firstRun_stepSpeech')}
+          </Label>
+          <Select
+            disabled={loading}
+            onValueChange={value => setEngine(value as SttConfig['engine'])}
+            value={engine}>
+            <SelectTrigger data-testid="setup-speech-engine">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SPEECH_ENGINE_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selected && (
+            <p className="text-muted-foreground text-xs leading-snug">{selected.description}</p>
+          )}
+          {engine === 'gemini-web' && (
+            <WebAuthRow
+              className="grid gap-2 pt-1"
+              status={authStatus}
+              loginLoading={loginLoading}
+              error={authError}
+              login={login}
+              logout={logout}
+              labels={{
+                checking: t('stt_web_status_checking'),
+                loggedIn: t('stt_web_status_logged_in'),
+                expired: t('stt_web_status_expired'),
+                notLoggedIn: t('stt_web_status_not_logged_in'),
+                login: t('stt_web_login'),
+                signingIn: 'Signing in\u2026',
+                logout: t('stt_web_logout'),
+              }}
+            />
+          )}
+        </div>
 
         <div className="mt-auto flex items-center justify-between">
           <Button data-testid="setup-back-button" onClick={onBack} variant="link">
@@ -1382,7 +1530,14 @@ const FirstRunSetup = ({ onComplete }: FirstRunSetupProps) => {
             />
           )}
           {step === 5 + offset && (
-            <Step5SkillsSetup onBack={() => setStep(4 + offset)} onComplete={onComplete} t={t} />
+            <Step5SkillsSetup
+              onBack={() => setStep(4 + offset)}
+              onNext={() => setStep(6 + offset)}
+              t={t}
+            />
+          )}
+          {step === 6 + offset && (
+            <Step6SpeechSetup onBack={() => setStep(5 + offset)} onComplete={onComplete} t={t} />
           )}
         </div>
 

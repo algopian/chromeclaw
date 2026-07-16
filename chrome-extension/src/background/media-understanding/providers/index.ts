@@ -1,9 +1,15 @@
 import { geminiWebProvider } from './gemini-web';
 import { openaiProvider } from './openai';
+import { sensevoiceProvider } from './sensevoice';
 import { transformersProvider } from './transformers';
 import type { MediaProvider } from '../types';
 
-const PROVIDERS: MediaProvider[] = [openaiProvider, transformersProvider, geminiWebProvider];
+const PROVIDERS: MediaProvider[] = [
+  openaiProvider,
+  transformersProvider,
+  geminiWebProvider,
+  sensevoiceProvider,
+];
 
 const registry = new Map<string, MediaProvider>();
 for (const p of PROVIDERS) registry.set(p.id, p);
